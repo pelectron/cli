@@ -1,0 +1,7 @@
+[wrap-git]
+url=https://github.com/jupyter-xeus/cpp-terminal.git
+revision=head
+patch_directory=cpp_term
+[provide]
+cpp_terminal=cpp_terminal_dep
+
