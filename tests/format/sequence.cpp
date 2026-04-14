@@ -1,10 +1,10 @@
 #include "cli/format.hpp"
-#include "common.hpp"
+#include "cli/vector.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <string>
 
-using Seq1 = cli::FixedSizeVector<int, 10>;
+using Seq1 = cli::FixedCapacityVector<int, 10>;
 
 using Seq2 = std::vector<int>;
 template <class Seq> struct FmtSeqTestVector {

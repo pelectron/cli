@@ -12,7 +12,6 @@
  *   - the command sequence: this sequence specifies the command to execute
  *   - the arg sequence: this sequence specifies the command's arguments
  * - the root is owned by the Cli structure.
- * - commands with the root as parents are called root commands.
  *
  * c++ syntax:
  *  ``auto my_cli = cli::cli(config, commands...);``
@@ -121,21 +120,21 @@ public:
 
   template <Config Cfg_, cli::Output<typename Cfg_::char_type> Out_,
             cli::Command... Cmds>
-  constexpr Cli(Cfg_, Out_ &&out, Commands &&...cmds)
-      : commands{Cfg_{}, std::forward<Commands>(cmds)...},
-        out_(std::forward<Out_>(out)), tracker_(*commands.root()) {}
+  constexpr Cli(Cfg_, Out_ &&out, Cmds &&...cmds)
+      : commands_{Cfg_{}, std::forward<Commands>(cmds)...},
+        out_(std::forward<Out_>(out)), tracker_(*commands_.root()) {}
 
   template <Config Cfg_, cli::Output<typename Cfg_::char_type> Out_,
             cli::Command... Cmds>
   constexpr Cli(Cfg_, Out_ &&out, const std::tuple<Commands...> &cmds)
-      : commands{Cfg_{}, cmds}, out_(std::forward<Out_>(out)),
-        tracker_(*commands.root()) {}
+      : commands_{Cfg_{}, cmds}, out_(std::forward<Out_>(out)),
+        tracker_(*commands_.root()) {}
 
   template <Config Cfg_, cli::Output<typename Cfg_::char_type> Out_,
             cli::Command... Cmds>
   constexpr Cli(Cfg_, Out_ &&out, std::tuple<Commands...> &&cmds)
-      : commands{Cfg_{}, std::move(cmds)}, out_(std::forward<Out_>(out)),
-        tracker_(*commands.root()) {}
+      : commands_{Cfg_{}, std::move(cmds)}, out_(std::forward<Out_>(out)),
+        tracker_(*commands_.root()) {}
 
   // template <Config Cfg_, Command... Cmds>
   // constexpr Cli(Cfg_ &&cfg, output_type &&stream, Cmds &&...cmds)
@@ -471,9 +470,11 @@ private:
     }
   }
 
-  constexpr CommandNode<char_type> &root() noexcept { return *commands.root(); }
+  constexpr CommandNode<char_type> &root() noexcept {
+    return *commands_.root();
+  }
   constexpr const CommandNode<char_type> &root() const noexcept {
-    return *commands.root();
+    return *commands_.root();
   }
 
   const CommandNode<char_type> *get_cmd() const {
@@ -482,7 +483,7 @@ private:
     } else {
       const char_type chars[3]{' ', '(', '='};
       auto cmd_path = line_view().substr(0, line_view().find_first_of(chars));
-      return commands.get_command(cmd_path);
+      return commands_.get_command(cmd_path);
     }
   }
 
@@ -619,9 +620,9 @@ private:
 
   template <Config, Command...> friend class CommandTree;
 
-  CommandTree<Cfg, Commands...> commands;
+  CommandTree<Cfg, Commands...> commands_;
   cli::History<Cfg> history_;
-  FixedSizeVector<char_type, Cfg::max_line_length> current_line_{};
+  FixedCapacityVector<char_type, Cfg::max_line_length> current_line_{};
   std::array<char_type, Cfg::max_line_length> output_line_{};
   input_type in_{};
   output_type out_;

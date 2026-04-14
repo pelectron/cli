@@ -7,10 +7,14 @@
 #include <concepts>
 #include <cstddef>
 #include <limits>
-#include <ostream>
 
 namespace cli {
 
+/**
+ * A view of characters, kinda like std::span.
+ *
+ * @tparam CharType the character type.
+ */
 template <typename CharType> class View {
 public:
   using value_type = CharType;
@@ -74,18 +78,18 @@ public:
     return true;
   }
 
-  template <typename C>
-  constexpr bool operator==(const View<C> &other) const noexcept {
-    if (other.size_ != size_)
-      return false;
-    if (str_ == nullptr and other.str_ == nullptr)
-      return true;
-    for (std::size_t i = 0; i < size_; ++i)
-      if (str_[i] != other.str_[i])
-        return false;
-    return true;
-  }
-
+  // template <typename C>
+  // constexpr bool operator==(const View<C> &other) const noexcept {
+  //   if (other.size_ != size_)
+  //     return false;
+  //   if (str_ == nullptr and other.str_ == nullptr)
+  //     return true;
+  //   for (std::size_t i = 0; i < size_; ++i)
+  //     if (str_[i] != other.str_[i])
+  //       return false;
+  //   return true;
+  // }
+  //
   constexpr bool operator<(const View &other) const noexcept {
     const auto s = std::min(size_, other.size_);
     for (std::size_t i = 0; i < s; ++i)
@@ -284,25 +288,37 @@ static_assert(CharView("hello1") != CharView("hello"));
 template <typename CharT, std::size_t N> struct StringLiteral;
 
 /**
- * @brief A string_constant is a compile time string.
+ * A string_constant is a compile time string.
+ *
+ * To create a string constant, its easiest to use the literal operator _sc.
+ *
+ * Example:
+ * ```
+ *  using cli::operator""_sc;
+ *  constexpr auto s1 = "hi"_sc; // type = string_constant<char, 'h', 'i'>
+ *  constexpr auto s2 = u"hi"_sc; // type = string_constant<char16_t, 'h', 'i'>
+ *  constexpr auto s2 = U"hi"_sc; // type = string_constant<char32_t, 'h', 'i'>
+ * ```
+ * @tparam CharT the character type
+ * @tparam Cs the characters
  */
-template <typename CharT, CharT... c> struct string_constant {
+template <typename CharT, CharT... Cs> struct string_constant {
   using char_type = CharT;
 
-  enum { string_size = sizeof...(c) };
+  enum { string_size = sizeof...(Cs) };
 
-  static constexpr CharT value[]{c..., 0};
+  static constexpr CharT value[]{Cs..., 0};
 
   constexpr operator View<const CharT>() const noexcept {
-    return {value, sizeof...(c)};
+    return {value, sizeof...(Cs)};
   }
 
-  constexpr operator StringLiteral<CharT, sizeof...(c) + 1>() const noexcept {
-    return {c...};
+  constexpr operator StringLiteral<CharT, sizeof...(Cs) + 1>() const noexcept {
+    return {Cs...};
   }
 
   constexpr const CharT *data() const noexcept { return value; }
-  constexpr std::size_t size() const noexcept { return sizeof...(c); }
+  constexpr std::size_t size() const noexcept { return sizeof...(Cs); }
 };
 
 template <typename CharT, CharT... C1, CharT... C2>
@@ -329,6 +345,13 @@ constexpr bool operator!=(const string_constant<CharT, Cs...> &,
   return false;
 }
 
+/**
+ * A class for storing an array of characters. Used for passing strings
+ * as template parameters.
+ *
+ * @tparam CharT the character type
+ * @param N string size
+ */
 template <typename CharT, std::size_t N> struct StringLiteral {
   using char_type = CharT;
   CharT s[N]{0};
@@ -423,6 +446,19 @@ operator+(const string_constant<CharT, C1...> &,
   return {};
 }
 
+/**
+ * creates a string_constant. Combine it with the u and U prefix for different
+ * kinds of character types.
+ *
+ * Example:
+ * ```
+ *  using cli::operator""_sc;
+ *  constexpr auto s1 = "hi"_sc; // type = string_constant<char, 'h', 'i'>
+ *  constexpr auto s2 = u"hi"_sc; // type = string_constant<char16_t, 'h', 'i'>
+ *  constexpr auto s2 = U"hi"_sc; // type = string_constant<char32_t, 'h', 'i'>
+ * ```
+ * @return string_constant containing S
+ */
 template <StringLiteral S> constexpr auto operator""_sc() {
   return []<std::size_t... Is>(std::index_sequence<Is...>) {
     return string_constant<typename decltype(S)::char_type, S.s[Is]...>{};

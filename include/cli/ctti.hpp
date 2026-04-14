@@ -1,8 +1,8 @@
 #ifndef CLI_CTTI_HPP
 #define CLI_CTTI_HPP
+
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
-#include "cli/util.hpp"
 
 #include <array>
 #include <source_location>
@@ -37,6 +37,13 @@
 
 namespace cli::ctti {
 
+/**
+ * a name value pair used for constrcuting an agregate from a tuple /
+ * deconstructing an aggregate into a tuple
+ *
+ * @tparam Name the name of the field
+ * @tparam T the field's type
+ */
 template <SC Name, class T> struct Field {
   using name = Name;
   using type = T;
@@ -1226,21 +1233,52 @@ template <class T, typename CharT = char>
 }
 } // namespace dtl
 
+/**
+ * get the name of T as a string_constant
+ *
+ * @tparam T the type to get the name of
+ * @tparam CharT the character type of the string_constant
+ */
 template <typename T, typename CharT = char>
 using name_t = decltype(::cli::ctti::dtl::name<T, CharT>());
 
+/**
+ * get the name of T as a string_constant
+ *
+ * @tparam T the type to get the name of
+ * @tparam CharT the character type of the returned string_constant
+ */
 template <typename T, typename CharT = char> consteval SC auto name() {
   return ::cli::ctti::dtl::name<T, CharT>();
 }
 
+/**
+ * get the name of a value as a string_constant
+ *
+ * @tparam V the value
+ * @tparam CharT the character type of the returned string_constant
+ */
 template <auto V, typename CharT = char> consteval SC auto value_name() {
   return ::cli::ctti::dtl::value_name<V, CharT>();
 }
 
+/**
+ * get the name of a variable as a string_constant
+ *
+ * @tparam V the variable
+ * @tparam CharT the character type of the returned string_constant
+ */
 template <auto &V, typename CharT = char> consteval SC auto object_name() {
   return ::cli::ctti::dtl::object_name<V, CharT>();
 }
 
+/**
+ * get the name of an enum value
+ *
+ * @tparam E the enums type
+ * @tparam CharT the character type to use
+ * @param value the enum value
+ */
 template <traits::Enum E, typename CharT = char>
   requires(not traits::FlagEnum<E>)
 constexpr View<const CharT> enum_name(E value) {
@@ -1249,9 +1287,17 @@ constexpr View<const CharT> enum_name(E value) {
       return s;
   }
   return string_constant<CharT, '<'>{} + name<E, CharT>() +
-         string_constant<CharT, ':', ':', 'u', 'n', 'k', 'n', 'o', 'w', 'n'>{};
+         string_constant<CharT, ':', ':', 'u', 'n', 'k', 'n', 'o', 'w', 'n',
+                         '>'>{};
 }
 
+/**
+ * get the name of an enum value
+ *
+ * @tparam E the enums type
+ * @tparam CharT the character type to use
+ * @param value the enum value
+ */
 template <traits::Enum E, typename CharT = char>
   requires traits::FlagEnum<E>
 constexpr std::size_t enum_name(E value) {
@@ -1299,25 +1345,27 @@ using field_tuple_t =
     }(std::make_index_sequence<::cli::ctti::dtl::num_members<T>()>()));
 
 /**
- * @brief
+ * deconstructs a T into a tuple of Fields
  *
  * @tparam T
  * @param t
  * @return
  */
 template <class T, typename CharT = char>
+  requires std::is_aggregate_v<std::remove_cvref_t<T>>
 [[nodiscard]] constexpr auto to_tuple(T &&t) /* -> field_tuple_t<T> */ {
   return ::cli::ctti::dtl::to_tuple<decltype(std::forward<T>(t)), CharT>(
       std::forward<T>(t));
 }
 /**
- * @brief
+ * converts a tuple of Fields into a T
  *
  * @tparam T
  * @param tuple
  * @return
  */
 template <class T, typename CharT = char>
+  requires std::is_aggregate_v<std::remove_cvref_t<T>>
 [[nodiscard]] constexpr T from_tuple(const auto /* field_tuple_t<T> */ &tuple) {
   return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
     return T{std::get<Is>(tuple).value...};

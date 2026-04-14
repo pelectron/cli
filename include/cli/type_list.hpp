@@ -3,7 +3,7 @@
  * @file type_list/type_list.hpp
  * @version 1.0
  * @copyright Boost Software License - Version 1.0
- * @brief A single header C++ library for type lists.
+ * A single header C++ library for type lists.
  */
 
 #ifndef TYPE_LIST_HPP
@@ -21,11 +21,11 @@
 
 namespace cli::type_list {
 
-/// @brief constant for indicating an invalid index.
+/// constant for indicating an invalid index.
 TYPELIST_INLINE constexpr size_t npos = std::numeric_limits<size_t>::max();
 
 /**
- * @brief a concrete type list type.
+ * a concrete type list type.
  * @tparam Ts the elements of the type list
  */
 template <class... Ts> struct TypeList {};
@@ -112,7 +112,7 @@ struct filter_impl<List1<Filtered...>, List2<>, Predicate> {
 } // namespace
 
 /**
- * @brief get the first element of List.
+ * get the first element of List.
  * @tparam List a type list
  */
 template <class List> struct head;
@@ -123,13 +123,13 @@ struct head<List<T, Ts...> > {
 };
 
 /**
- * @brief get the first element of List.
+ * get the first element of List.
  * @tparam List a type list
  */
 template <class List> using head_t = typename head<List>::type;
 
 /**
- * @brief returns List with the first element removed.
+ * returns List with the first element removed.
  * @tparam List a type list
  */
 template <class List> struct tail;
@@ -144,13 +144,13 @@ struct tail<List<T, Ts...> > {
 };
 
 /**
- * @brief returns List with the first element removed.
+ * returns List with the first element removed.
  * @tparam List a type list
  */
 template <class List> using tail_t = typename tail<List>::type;
 
 /**
- * @brief get the number of elements in a type list.
+ * get the number of elements in a type list.
  * @tparam List a type list
  */
 template <class List> struct list_size;
@@ -161,7 +161,7 @@ struct list_size<List<Ts...> > {
 };
 
 /**
- * @brief get the index of the first occurrence T in List, or
+ * get the index of the first occurrence T in List, or
  * npos if T is not in the List.
  *
  * @tparam T the type to search for
@@ -173,7 +173,7 @@ template <class T, template <class...> class List, class... Ts>
 struct index_of<T, List<Ts...> > : index_of_impl<0, T, Ts...> {};
 
 /**
- * @brief return List with T added to the front.
+ * return List with T added to the front.
  * @tparam T the type to add
  * @tparam List a type list
  */
@@ -185,7 +185,7 @@ struct push_front<T, List<Ts...> > {
 };
 
 /**
- * @brief return List with T added to the front.
+ * return List with T added to the front.
  * @tparam T the type to add
  * @tparam List a type list
  */
@@ -193,7 +193,7 @@ template <class T, class List>
 using push_front_t = typename push_front<T, List>::type;
 
 /**
- * @brief returns List with the first element removed. If List is empty, 
+ * returns List with the first element removed. If List is empty, 
  * an empty List is returned.
  * @tparam List a type list
  */
@@ -209,14 +209,14 @@ template <template <class...> class List> struct pop_front<List<> > {
 };
 
 /**
- * @brief returns List with the first element removed. If List is empty, 
+ * returns List with the first element removed. If List is empty, 
  * an empty List is returned.
  * @tparam List a type list
  */
 template <class List> using pop_front_t = typename pop_front<List>::type;
 
 /**
- * @brief returns N-th type in type_list List.
+ * returns N-th type in type_list List.
  * @tparam N integer index
  * @tparam List a type list
  */
@@ -226,7 +226,7 @@ template <size_t N, template <class...> class List, class... Ts>
 struct type_at<N, List<Ts...> > : type_at_impl<N, Ts...> {};
 
 /**
- * @brief returns N-th type in type_list List.
+ * returns N-th type in type_list List.
  * @tparam N integer index
  * @tparam List a type list
  */
@@ -234,33 +234,33 @@ template <size_t N, class List>
 using type_at_t = typename type_at<N, List>::type;
 
 /**
- * @brief returns the first element of List
+ * returns the first element of List
  * @tparam List a type list
  */
 template <class List> using first = head<List>;
 
 /**
- * @brief returns the first element of List
+ * returns the first element of List
  * @tparam List a type list
  */
 template <class List> using first_t = head_t<List>;
 
 /**
- * @brief returns the last element of List
+ * returns the last element of List
  * @tparam List a type list
  */
 template <class List>
 using last = type_at<list_size<List>::value - 1, List>;
 
 /**
- * @brief returns the last element of List
+ * returns the last element of List
  * @tparam List a type list
  */
 template <class List>
 using last_t = typename last<List>::type;
 
 /**
- * @brief return List with T added at the end.
+ * return List with T added at the end.
  * @tparam T the element
  * @tparam List a type list
  */
@@ -272,7 +272,7 @@ struct push_back<T, List<Ts...> > {
 };
 
 /**
- * @brief return List with T added at the end.
+ * return List with T added at the end.
  * @tparam T the element
  * @tparam List a type list
  */
@@ -299,7 +299,7 @@ template <template <class...> class List> struct pop_back_impl<List<>, 0> {
 } // namespace
 
 /**
- * @brief returns List with the last element removed.
+ * returns List with the last element removed.
  * @tparam List a type list
  */
 
@@ -307,13 +307,13 @@ template <class List>
 struct pop_back : pop_back_impl<List, list_size<List>::value> {};
 
 /**
- * @brief returns List with the last element removed.
+ * returns List with the last element removed.
  * @tparam List a type list
  */
 template <class List> using pop_back_t = typename pop_back<List>::type;
 
 /**
- * @brief applies List to F, i.e. returns F<Ts...> where Ts are the elements
+ * applies List to F, i.e. returns F<Ts...> where Ts are the elements
  * of List.
  * @tparam F the type to apply to
  * @tparam List a type list
@@ -327,7 +327,7 @@ struct apply<F, List<Ts...> > {
 };
 
 /**
- * @brief applies List to F, i.e. returns F<Ts...> where Ts are the elements
+ * applies List to F, i.e. returns F<Ts...> where Ts are the elements
  * of List.
  * @tparam F the type to apply to
  * @tparam List a type list
@@ -336,7 +336,7 @@ template <template <class...> class F, class List>
 using apply_t = typename apply<F, List>::type;
 
 /**
- * @brief returns the template parameters of Class as a TypeList. If Class does
+ * returns the template parameters of Class as a TypeList. If Class does
  * not have template parameters, an empty list is returned.
  * @note This does not work with non type template parameters.
  */
@@ -348,7 +348,7 @@ struct extract<Class<Ts...> > {
 };
 
 /**
- * @brief returns the template parameters of Class as a TypeList. If Class does
+ * returns the template parameters of Class as a TypeList. If Class does
  * not have template parameters, an empty list is returned.
  * @note This does not work with non type template parameters.
  * @tparam Class any type
@@ -356,7 +356,7 @@ struct extract<Class<Ts...> > {
 template <class Class> using extract_t = typename extract<Class>::type;
 
 /**
- * @brief replaces T with F<T> for each T in List.
+ * replaces T with F<T> for each T in List.
  * @tparam F a meta function returning true or false
  * @tparam List a type list
  */
@@ -368,7 +368,7 @@ struct for_each<F, List<Ts...> > {
 };
 
 /**
- * @brief replaces T with F<T> for each T in List.
+ * replaces T with F<T> for each T in List.
  * @tparam F a meta function returning true or false
  * @tparam List a type list
  */
@@ -376,7 +376,7 @@ template <template <class> class F, class List>
 using for_each_t = typename for_each<F, List>::type;
 
 /**
- * @brief replaces T with F<T>::type for each T in List.
+ * replaces T with F<T>::type for each T in List.
  * @tparam F a meta function returning true or false
  * @tparam List a type list
  */
@@ -391,7 +391,7 @@ template <template <class> class F, class List>
 using transform_t = typename transform<F, List>::type;
 
 /**
- * @brief merges Lists into a single type list.
+ * merges Lists into a single type list.
  *
  * If sizeof...(Lists) is 0 then an TypeList<> is returned.
  * If a mixture of type list templates is used, e.g. mixing TypeList with
@@ -424,7 +424,7 @@ template <> struct merge<> {
 };
 
 /**
- * @brief merges Lists into a single type list.
+ * merges Lists into a single type list.
  *
  * If sizeof...(Lists) is 0 then an TypeList<> is returned.
  * If a mixture of type list templates is used, e.g. mixing TypeList with
@@ -437,7 +437,7 @@ template <class... Lists> using merge_t = typename merge<Lists...>::type;
 
 
 /**
- * @brief returns List filtered with Predicate.
+ * returns List filtered with Predicate.
  *
  * @tparam Predicate a meta function returning true or false
  * @tparam List a type list
@@ -446,7 +446,7 @@ template <template <class> class Predicate, class List>
 struct filter : filter_impl<TypeList<>, List, Predicate> {};
 
 /**
- * @brief returns List filtered with Predicate.
+ * returns List filtered with Predicate.
  *
  * @tparam Predicate a meta function returning true or false
  * @tparam List a type list
@@ -455,7 +455,7 @@ template <template <class> class Predicate, class List>
 using filter_t = typename filter<Predicate, List>::type;
 
 /**
- * @brief returns true if T is an element of List, else false.
+ * returns true if T is an element of List, else false.
  *
  * @tparam T the type to search for
  * @tparam List a type list
@@ -488,14 +488,14 @@ struct remove_duplicates_impl<List1<Filtered...>, List2<> > {
 } // namespace
 
 /**
- * @brief returns List with duplicate elements removed.
+ * returns List with duplicate elements removed.
  * @tparam List a type list
  */
 template <class List>
 struct remove_duplicates : remove_duplicates_impl<TypeList<>, List> {};
 
 /**
- * @brief returns List with duplicate elements removed.
+ * returns List with duplicate elements removed.
  * @tparam List a type list
  */
 template <class List>

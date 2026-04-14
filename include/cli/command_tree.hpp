@@ -10,6 +10,13 @@
 
 namespace cli {
 
+/**
+ * The CommandTree holds all the commands and sets up a tree of
+ * CommandNodes.
+ *
+ * @tparam Cfg the cli configuration
+ * @tparam Commands the commands
+ */
 template <Config Cfg, Command... Commands> class CommandTree {
 public:
   using config = Cfg;
@@ -34,10 +41,20 @@ public:
     init_commands();
   }
 
+  /**
+   * returns the root command
+   */
   constexpr command_node *root() noexcept { return cmds_.data(); }
 
+  /**
+   * returns the root command
+   */
   constexpr const command_node *root() const noexcept { return cmds_.data(); }
 
+  /**
+   * returns the command corresponding to cmd_path, or nullptr if the command
+   * doesn't exist
+   */
   constexpr const command_node *
   get_command(View<const char_type> cmd_path) const {
     if (cmd_path.size() == 0)
@@ -73,8 +90,8 @@ public:
 private:
   using Help = HelpCommand<char_type, config::access_separator>;
 
-  std::tuple<Help, Commands...> commands_;
   std::array<command_node, (num_cmds_v<Commands> + ...) + 2> cmds_{};
+  std::tuple<Help, Commands...> commands_;
 
   static constexpr Help create_help(const CommandNode<char_type> &root) {
     return create_help_cmd<char_type, config::access_separator>(root);

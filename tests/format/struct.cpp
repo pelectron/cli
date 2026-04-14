@@ -2,7 +2,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include "cli/format.hpp"
 #include "cli/util.hpp"
-using IntList = cli::FixedSizeVector<int, 10>;
+using IntList = cli::FixedCapacityVector<int, 10>;
 
 struct S1 {
   uint16_t index;

@@ -9,7 +9,7 @@
 namespace cli {
 
 /**
- * @brief Handles command history with cursor up and down
+ * Handles command history with cursor up and down
  */
 template <Config Cfg> class History {
   using Str = View<const typename Cfg::char_type>;
@@ -96,6 +96,11 @@ template <Config Cfg> class History {
   }
 
 public:
+  /**
+   * adds a new command to the history
+   *
+   * @param cmd the command
+   */
   constexpr void push(Str cmd) {
     copy_into(buffer[head_], cmd);
     current_ = head_;
@@ -111,6 +116,11 @@ public:
     last_action_was_push_ = true;
   }
 
+  /**
+   * goes backward in history
+   *
+   * @return the command
+   */
   constexpr Str cursor_up() {
     if (size_ == 0)
       return {};
@@ -122,6 +132,11 @@ public:
     return ret;
   }
 
+  /**
+   * goes forward in history
+   *
+   * @return the command
+   */
   constexpr Str cursor_down() {
     if (size_ == 0)
       return {};
@@ -133,6 +148,9 @@ public:
     return ret;
   }
 
+  /**
+   * resets the history, i.e. clears it
+   */
   constexpr void reset() {
     current_ = 0;
     head_ = 0;

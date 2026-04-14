@@ -1,7 +1,7 @@
 #include "catch2/catch_all.hpp"
 #include "cli/parse.hpp"
 #include "cli/util.hpp"
-using IntList = cli::FixedSizeVector<int, 10>;
+using IntList = cli::FixedCapacityVector<int, 10>;
 
 struct S {
   IntList ints;

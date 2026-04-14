@@ -141,7 +141,7 @@ public:
   };
 
   /**
-   * @brief processes a character. This could be called within your ISR when a
+   * processes a character. This could be called within your ISR when a
    * character is received, or before calling process on your cli.
    *
    * @param c the received character
@@ -221,8 +221,17 @@ public:
     return Error::implementation_error;
   }
 
+  /**
+   * pops the next event available
+   *
+   * @param event where to store the popped event
+   * @return returns false if no event is available
+   */
   bool pop_event(event_type &event) { return buffer.pop(event); }
 
+  /**
+   * resets/clears the input
+   */
   void reset() {
     state = State::normal;
     buffer.clear();

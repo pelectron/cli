@@ -5,7 +5,7 @@
 #include "common.hpp"
 #include <iostream>
 
-using Seq1 = cli::FixedSizeVector<int, 10>;
+using Seq1 = cli::FixedCapacityVector<int, 10>;
 using Seq2 = std::vector<int>;
 using Result = cli::parse::ParseResult<cli::CharView, char>;
 

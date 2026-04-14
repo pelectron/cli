@@ -7,11 +7,10 @@
 
 #include <concepts>
 #include <type_traits>
-
 namespace cli {
 
 /**
- * @brief A CharStream is used to write a single character to an unbuffered
+ * A CharStream is used to write a single character to an unbuffered
  * output stream.
  *
  * It is a callable that takes a character as input and returns a
@@ -37,7 +36,7 @@ concept CharStream = requires(std::remove_cvref_t<S> &stream, char_type c) {
 };
 
 /**
- * @brief A StringStream is used to write a string of characters to an
+ * A StringStream is used to write a string of characters to an
  * unbuffered output stream.
  *
  * It is a callable that takes a pointer to a string with its length as input
@@ -68,7 +67,7 @@ concept StringStream =
     };
 
 /**
- * @brief A BasicOutputStream is used to write raw characters to an unbuffered
+ * A BasicOutputStream is used to write raw characters to an unbuffered
  * output stream. A BasicOutputStream must satisfy the CharStream or the
  * StringStream concept, or both.
  *
@@ -85,8 +84,8 @@ concept BasicOutputStream =
     StringStream<S, char16_t> or StringStream<S, char32_t>;
 
 /**
- * @brief Output is the interface Cli uses to write
- * to an unbuffered output stream.
+ * Output is the interface Cli uses to write
+ * to an output stream.
  *
  * See cli::io::AnsiOutput for an example of an OutputStream.
  *
@@ -106,6 +105,42 @@ concept Output = requires(std::remove_cvref_t<S> &stream, char_type c,
 
 template <typename T> struct get_stream_char_type;
 
+template <typename Char> struct get_stream_char_type<Error (*)(Char)> {
+  using type = std::remove_const_t<Char>;
+};
+
+template <typename Char> struct get_stream_char_type<Error (*)(Char) noexcept> {
+  using type = std::remove_const_t<Char>;
+};
+
+template <typename Char> struct get_stream_char_type<Error (&)(Char)> {
+  using type = std::remove_const_t<Char>;
+};
+
+template <typename Char> struct get_stream_char_type<Error (&)(Char) noexcept> {
+  using type = std::remove_const_t<Char>;
+};
+
+template <typename Char>
+struct get_stream_char_type<Error (*)(View<const Char>)> {
+  using type = Char;
+};
+
+template <typename Char>
+struct get_stream_char_type<Error (*)(View<const Char>) noexcept> {
+  using type = Char;
+};
+
+template <typename Char>
+struct get_stream_char_type<Error (&)(View<const Char>)> {
+  using type = std::remove_const_t<Char>;
+};
+
+template <typename Char>
+struct get_stream_char_type<Error (&)(View<const Char>) noexcept> {
+  using type = std::remove_const_t<Char>;
+};
+
 template <typename T>
   requires CharStream<T, char> or StringStream<T, char>
 struct get_stream_char_type<T> {
@@ -114,9 +149,7 @@ struct get_stream_char_type<T> {
 
 template <typename T>
   requires CharStream<T, signed char> or StringStream<T, signed char>
-struct get_stream_char_type<T> {
-  using type = signed char;
-};
+struct get_stream_char_type<T> {};
 
 template <typename T>
   requires CharStream<T, unsigned char> or StringStream<T, unsigned char>
@@ -146,20 +179,22 @@ template <typename T>
 using get_stream_char_type_t = typename get_stream_char_type<T>::type;
 
 /**
- * @brief The output device for ansi terminals. It relies on a BasicOutputStream
+ * The output device for ansi terminals. It relies on a BasicOutputStream
  * to actually output characters. Next to passing through character and string
  * writes, AnsiOutputStream transforms special events, such as backspace,
  * cursor movement, etc., into ansi escape sequences.
+ *
  * @tparam char_type the character type
  * @param Stream the BasicOutputStream used for actually writing characters
  */
 template <Config Cfg, BasicOutputStream Stream> class AnsiOutput {
   Stream stream; //< the underlying output stream
 public:
-  template <Config Cfg_, BasicOutputStream S>
-  AnsiOutput(Cfg_, S &&s) : stream(std::forward<S>(s)) {}
-
   using char_type = get_stream_char_type_t<Stream>;
+
+  template <Config Cfg_, BasicOutputStream S>
+  AnsiOutput(Cfg_ &&, S &&s) : stream(std::forward<S>(s)) {}
+
   constexpr Error write(char_type c) {
     if constexpr (CharStream<Stream, char_type>) {
       return stream(c);
@@ -171,7 +206,8 @@ public:
   constexpr Error write(View<const char_type> s) {
     if constexpr (CharStream<Stream, char_type>) {
       for (const auto &ch : s)
-        return stream(ch);
+        if (auto err = stream(ch); err != Error::none)
+          return err;
     } else {
       return stream(s);
     }
@@ -227,7 +263,8 @@ public:
 };
 
 template <Config Cfg, BasicOutputStream S>
-AnsiOutput(Cfg, S &&) -> AnsiOutput<Cfg, std::remove_cvref_t<S>>;
+AnsiOutput(Cfg &&, S &&)
+    -> AnsiOutput<std::remove_cvref_t<Cfg>, std::remove_cvref_t<S>>;
 
 } // namespace cli
 

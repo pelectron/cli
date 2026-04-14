@@ -781,7 +781,7 @@ class Float {
 
 template <traits::Sequence T, typename CharT,
           FormatterOf<typename T::value_type, CharT> ElementFormatter,
-          char Delimiter = ','>
+          CharT Delimiter = ','>
 struct Sequence {
   constexpr FormatResult operator()(View<CharT> buf, const T &seq) const {
     if (buf.size() < 2)
@@ -828,7 +828,7 @@ struct DefaultFormat<T, CharT>
 template <traits::Enum Enum, typename CharT> struct DefaultFormat<Enum, CharT> {
   constexpr FormatResult operator()(View<CharT> buf, Enum value) const {
     if constexpr (traits::FlagEnum<Enum>) {
-      cli::CharView name{};
+      View<const CharT> name{};
       std::size_t written = 0;
       bool first = true;
       for (std::size_t i = 0; i < sizeof(Enum) * 8; ++i) {
@@ -836,7 +836,7 @@ template <traits::Enum Enum, typename CharT> struct DefaultFormat<Enum, CharT> {
              static_cast<std::underlying_type_t<Enum>>(value)) == 0)
           continue;
 
-        name = cli::ctti::enum_name(value);
+        name = cli::ctti::enum_name<Enum, CharT>(value);
         if ((first and buf.size() < name.size()) or
             (buf.size() < (name.size() + 1))) {
           return Error::buffer_overflow;
@@ -862,7 +862,7 @@ template <traits::Enum Enum, typename CharT> struct DefaultFormat<Enum, CharT> {
 
       return written;
     } else {
-      const cli::CharView name = cli::ctti::enum_name(value);
+      const View<const CharT> name = cli::ctti::enum_name<Enum, CharT>(value);
       if (buf.size() < name.size()) {
         return Error::buffer_overflow;
       }

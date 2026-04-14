@@ -35,7 +35,7 @@ struct u64 {
     return a;
   }
   /**
-   * @brief a = a/b and returns a % b
+   * a = a/b and returns a % b
    *
    * @param a
    * @param b
@@ -292,7 +292,7 @@ struct u64 {
   constexpr friend u64 operator/(u64 a, u64 b) { return {a.v / b.v}; }
 
   /**
-   * @brief a = a/b and returns a % b
+   * a = a/b and returns a % b
    *
    * @param a
    * @param b

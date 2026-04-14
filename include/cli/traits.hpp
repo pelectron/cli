@@ -2,8 +2,8 @@
 #define CLI_TRAITS_HPP
 #include "cli/string.hpp"
 #include "cli/vector.hpp"
+
 #include <concepts>
-#include <iterator>
 #include <limits>
 #include <type_traits>
 
@@ -36,7 +36,7 @@ template <typename CharType>
 struct is_string<View<const CharType>> : std::true_type {};
 
 template <class T, std::size_t Cap>
-struct is_sequence<FixedSizeVector<T, Cap>> : std::true_type {};
+struct is_sequence<FixedCapacityVector<T, Cap>> : std::true_type {};
 
 template <typename T>
 concept Character =
@@ -78,39 +78,42 @@ concept String =
     };
 
 template <class T>
-concept Sequence = is_sequence<T>::value and
-                   requires(T a, const T b, typename T::value_type value) {
-                     // requires std::regular<T>;
-                     // requires std::swappable<T>;
-                     // requires std::destructible<typename T::value_type>;
-                     // requires std::same_as<typename T::reference, typename
-                     // T::value_type &>; requires std::same_as<typename
-                     // T::const_reference,
-                     //                       const typename T::value_type &>;
-                     // requires std::forward_iterator<typename T::iterator>;
-                     // requires std::forward_iterator<typename
-                     // T::const_iterator>; requires
-                     // std::signed_integral<typename T::difference_type>;
-                     // requires std::same_as<
-                     //     typename T::difference_type,
-                     //     typename std::iterator_traits<typename
-                     //     T::iterator>::difference_type>;
-                     // requires std::same_as<typename T::difference_type,
-                     //                       typename std::iterator_traits<
-                     //                           typename
-                     //                           T::const_iterator>::difference_type>;
-                     // { a.begin() } -> std::same_as<typename T::iterator>;
-                     // { a.end() } -> std::same_as<typename T::iterator>;
-                     // { b.begin() } -> std::same_as<typename
-                     // T::const_iterator>; { b.end() } -> std::same_as<typename
-                     // T::const_iterator>; { a.cbegin() } ->
-                     // std::same_as<typename T::const_iterator>; { a.cend() }
-                     // -> std::same_as<typename T::const_iterator>; { a.size()
-                     // } -> std::same_as<typename T::size_type>; { a.max_size()
-                     // } -> std::same_as<typename T::size_type>; { a.empty() }
-                     // -> std::same_as<bool>;
-                     { a.push_back(value) };
-                   };
+concept Sequence =
+    is_sequence<T>::value and requires(T a, typename T::value_type value) {
+      // requires std::regular<T>;
+      // requires std::swappable<T>;
+      // requires std::destructible<typename T::value_type>;
+      // requires std::same_as<typename T::reference, typename
+      // T::value_type &>; requires std::same_as<typename
+      // T::const_reference,
+      //                       const typename T::value_type &>;
+      // requires std::forward_iterator<typename T::iterator>;
+      // requires std::forward_iterator<typename
+      // T::const_iterator>; requires
+      // std::signed_integral<typename T::difference_type>;
+      // requires std::same_as<
+      //     typename T::difference_type,
+      //     typename std::iterator_traits<typename
+      //     T::iterator>::difference_type>;
+      // requires std::same_as<typename T::difference_type,
+      //                       typename std::iterator_traits<
+      //                           typename
+      //                           T::const_iterator>::difference_type>;
+      // { a.begin() } -> std::same_as<typename T::iterator>;
+      // { a.end() } -> std::same_as<typename T::iterator>;
+      // { b.begin() } -> std::same_as<typename
+      // T::const_iterator>; { b.end() } -> std::same_as<typename
+      // T::const_iterator>; { a.cbegin() } ->
+      // std::same_as<typename T::const_iterator>; { a.cend() }
+      // -> std::same_as<typename T::const_iterator>; { a.size()
+      // } -> std::same_as<typename T::size_type>; { a.max_size()
+      // } -> std::same_as<typename T::size_type>; { a.empty() }
+      // -> std::same_as<bool>;
+      { T() };
+      { a.begin() };
+      { a.end() };
+      { a.push_back(value) };
+    };
 
 template <class T>
 concept Struct = is_struct<T>::value;

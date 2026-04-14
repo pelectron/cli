@@ -11,6 +11,11 @@
 
 namespace cli {
 
+/**
+ * the elements of the command tree
+ *
+ * @tparam CharT the character type
+ */
 template <typename CharT> struct CommandNode {
   /// holds the command's name
   View<const CharT> name{};
@@ -19,14 +24,17 @@ template <typename CharT> struct CommandNode {
   /// the commands type as a string, i.e. the value type for parameters and the
   /// function signatures for functions.
   View<const CharT> type{};
+  /// points to the actual command
   void *this_ = nullptr;
+  /// executes the command
   Error (*exec_)(void *, ExecType, View<const CharT>, View<CharT> &) = nullptr;
   // the parent command
   CommandNode *parent = nullptr;
   /// the next sibling command
   CommandNode *next = nullptr;
-  /// pointers to the firstand last sub command of this
+  /// pointers to the first sub command
   CommandNode *subcommand = nullptr;
+  /// pointers to the last sub command
   CommandNode *last_subcommand = nullptr;
 
   class iterator {
@@ -65,6 +73,15 @@ template <typename CharT> struct CommandNode {
   constexpr iterator begin() { return subcommand; }
   constexpr iterator end() const { return nullptr; }
   constexpr const iterator begin() const { return subcommand; }
+
+  /**
+   * executes the command
+   *
+   * @param exec_type the expected type to execute
+   * @param args the arguments
+   * @param out where to put the results
+   * @return the error
+   */
   constexpr Error execute(ExecType exec_type, View<const CharT> args,
                           View<CharT> &out) const {
     if (this_ and exec_)
@@ -72,6 +89,11 @@ template <typename CharT> struct CommandNode {
     return Error::invalid_cmd;
   }
 
+  /**
+   * adds a subcommand to this
+   *
+   * @param c the command to add
+   */
   constexpr void add_sub(CommandNode &c) {
     c.parent = this;
     c.next = nullptr;
@@ -108,14 +130,24 @@ template <typename CharT> struct CommandNode {
   }
 };
 
-template <class Derived, SC CmdName, SC Description, SC Type,
+/**
+ * The CRTP base class for commands
+ *
+ * @tparam Derived the derived class
+ * @tparam Name the command name
+ * @tparam Description the command description
+ * @tparam Type the command type as a string, i.e. the parameters type or the
+ * function signature
+ * @tparam SubCommands the sub commands
+ */
+template <class Derived, SC Name, SC Description, SC Type,
           Command... SubCommands>
 class CommandBase {
 public:
-  using char_type = typename CmdName::char_type;
+  using char_type = typename Name::char_type;
   using sub_command_list = TypeList<SubCommands...>;
-  using name_type = CmdName;
-  static constexpr CmdName name{};
+  using name_type = Name;
+  static constexpr Name name{};
   static constexpr Description description{};
   static constexpr Type type{};
 
@@ -135,6 +167,14 @@ public:
   constexpr CommandBase(const std::tuple<SubCommands...> &cmds)
       : subcommands{cmds} {}
 
+  /**
+   * executes the command
+   *
+   * @param exec_type the expected type to execute
+   * @param args the arguments
+   * @param out where to put the results
+   * @return the error
+   */
   constexpr Error execute(ExecType type, View<const char_type> args,
                           View<char_type> &out) {
     return static_cast<Derived *>(this)->execute(type, args, out);
@@ -156,6 +196,15 @@ protected:
   std::tuple<SubCommands...> subcommands{};
 };
 
+/**
+ * The CRTP base class for commands without subcommands
+ *
+ * @tparam Derived the derived class
+ * @tparam Name the command name
+ * @tparam Description the command description
+ * @tparam Type the command type as a string, i.e. the parameters type or the
+ * function signature
+ */
 template <class Derived, SC CmdName, SC Description, SC Type>
 class CommandBase<Derived, CmdName, Description, Type> {
   template <Config, Command...> friend class CommandTree;
@@ -173,6 +222,14 @@ public:
   constexpr CommandBase &operator=(const CommandBase &) = default;
   constexpr CommandBase &operator=(CommandBase &&) = default;
 
+  /**
+   * executes the command
+   *
+   * @param exec_type the expected type to execute
+   * @param args the arguments
+   * @param out where to put the results
+   * @return the error
+   */
   constexpr Error execute(ExecType type, View<const char_type> args,
                           View<char_type> &out) const {
     return static_cast<Derived *>(this)->execute(type, args, out);

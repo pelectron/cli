@@ -1,3 +1,8 @@
+/**
+ * @file cli/enums.hpp
+ * This file defines core enumerations of cli
+ */
+
 #ifndef CLI_ENUMS_HPP
 #define CLI_ENUMS_HPP
 
@@ -5,44 +10,64 @@
 
 namespace cli {
 
+/**
+ * This enumerates every possible error occuring in cli
+ */
 enum class Error : std::uint32_t {
-  none,
-  unimplemented,
-  implementation_error,
-  io_error,
-  invalid_argument,
-  cant_set_param,
-  cant_read_param,
-  invalid_cmd,
+  none,                 //< no error
+  unimplemented,        //< functionality is not implemented
+  implementation_error, //< error in the implementation
+  io_error,             //< error during IO
+  invalid_argument,     //< invalid argument
+  cant_set_param,       //< cant set a parameter
+  cant_read_param,      //< cant read a parameter
+  invalid_cmd,          //< an invalid command has been entered
   too_many_splits,
   dual_separators,
-  buffer_overflow,
-  buffer_underflow,
-  incorrect_num_params,
-  too_many_argments,
-  too_few_arguments,
-  invalid_esc_seq,
-  invalid_state,
-  expected_value,
-  unexpected_characters_after_closing_paren,
-  expected_rparen,
+  buffer_overflow,      //< a buffer would overflow
+  buffer_underflow,     //< a buffer would underflow
+  incorrect_num_params, //< an incorrect number of parameters/arguments has been
+                        // provided
+  too_many_argments,    //< too many arguments have been provided
+  too_few_arguments,    //< too few arguments have been provided
+  invalid_esc_seq,      //< an invalid escape sequence has been encountered
+  invalid_state,        //< an invalid sate has been encountered
+  expected_value,       //< expected a value but none has been given
+  unexpected_characters_after_closing_paren, //< characters after closing
+                                             // parentheses
+  expected_rparen,                           //< expected closing parentheses
+  //
   // parse errors
-  too_few_characters,
-  invalid_character,
-  unescaped_string,
-  invalid_value,
-
-  unknown
+  too_few_characters, //< expected more characters
+  invalid_character,  //< encountered invalid character
+  unescaped_string,   //< a string started with a quote doesn't hae a closing
+                      // quote
+  invalid_value,      //< encountered an invalid value
+  unknown             //< unkown error
 };
 
-enum class ExecType : std::uint8_t { none, get, set, call };
+/**
+ * The execution type
+ */
+enum class ExecType : std::uint8_t {
+  none, //< invalid type
+  get,  //< a get command
+  set,  //< a set command
+  call  //< a call command
+};
 
+/**
+ * This enumerates the possible delimiters of the input/output system
+ */
 enum class Delimiter {
   lf,  //< line feed, i.e. '\n'
   cr,  //< carriage return, i.e. '\r'
   crlf //< carriage return and linefeed, i.e. "\r\n"
 };
 
+/**
+ * This enumerates the different types of control of the input/output system
+ */
 enum class Control {
   bell,
   backspace,
@@ -56,42 +81,34 @@ enum class Control {
   enter
 };
 
-namespace ansi {
-enum ASCII_Codes : std::uint8_t {
-  BEL = 0x07,
-  BS = 0x08,
-  HT = 0x09,
-  LF = 0x0A,
-  VT = 0x0B,
-  FF = 0x0C,
-  CR = 0x0D,
-  ESC = 0x1B,
-  DEL = 0x7F
-};
 /**
- * Wikipedia: If the ESC is followed by a byte in the range 0x40 to 0x5F, the
- * escape sequence is of type Fe. Its interpretation is delegated to the
- * applicable C1 control code standard
+ * This enumerates the possible options for formatting and parsing integers and
+ * characters. Can be or'ed for multiple options.
  */
-enum C1 {
-  SS2 = 0x8E,
-  SS3 = 0x8F,
-  DCS = 0x90,
-  CSI = 0x9B,
-  ST = 0x9C,
-  OSC = 0x9D,
-  SOS = 0x98,
-  PM = 0x9E,
-  APC = 0x9F
+enum class Fmt {
+  normal = 1 << 0, //< default format
+  hex = 1 << 1,    //< hex format, i.e. 0x or 0X
+  binary = 1 << 2  //< binary format, i.e. 0b or 0B
 };
-} // namespace ansi
 
-enum class Fmt { normal = 1 << 0, hex = 1 << 1, binary = 1 << 2 };
-
+/**
+ * combines two format options
+ *
+ * @param a a format option
+ * @param b a format option
+ * @return the combination of a and b
+ */
 constexpr Fmt operator|(Fmt a, Fmt b) noexcept {
   return static_cast<Fmt>(static_cast<unsigned>(a) | static_cast<unsigned>(b));
 }
 
+/**
+ * intersects two format options
+ *
+ * @param a a format option
+ * @param b a format option
+ * @return the intersection of a and b
+ */
 constexpr Fmt operator&(Fmt a, Fmt b) noexcept {
   return static_cast<Fmt>(static_cast<unsigned>(a) & static_cast<unsigned>(b));
 }

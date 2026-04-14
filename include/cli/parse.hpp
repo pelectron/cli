@@ -1,7 +1,6 @@
 #ifndef CLI_PARSE_HPP
 #define CLI_PARSE_HPP
 
-#include "cli/concepts.hpp"
 #include "cli/ctti.hpp"
 #include "cli/enums.hpp"
 #include "cli/traits.hpp"
@@ -90,19 +89,8 @@ template <typename CharT> constexpr View<CharT> skip_ws(View<CharT> str) {
   return str.substr(str.find_first_not_of(" \n\r\t\v\f"));
 }
 
-static_assert(skip_ws(CharView()) == CharView());
-static_assert(skip_ws(CharView("hello")) == CharView("hello"));
-static_assert(skip_ws(CharView(" hello")) == CharView("hello"));
-static_assert(skip_ws(CharView("   hello")) == CharView("hello"));
-
-template <typename T, typename CharT> class DefaultParse;
-
-template <typename T, typename CharT>
-ParseResult<T, CharT> parse(View<const CharT> s) {
-  return DefaultParse<T, CharT>{}(s);
-}
 /**
- * @brief A parser for integers.
+ * A parser for integers.
  *
  * @tparam T
  */
@@ -321,18 +309,18 @@ public:
         return Error::too_few_characters;
       if (str[2] != '\'')
         return Error::invalid_character;
-      return {str[1], str.substr(3)};
+      return {static_cast<T>(str[1]), str.substr(3)};
     } else if (c >= '0' and c <= '9') {
       Int<T, CharT> parse;
       return parse(str);
     } else {
-      return {c, str.substr(1)};
+      return {static_cast<T>(c), str.substr(1)};
     }
   }
 };
 
 /**
- * @brief A parser for strings. Strings in this context are a continous sequence
+ * A parser for strings. Strings in this context are a continous sequence
  * of visible/printable characters, that is characters in the range 0x21 to 0x7E
  * inclusive.
  *
@@ -818,26 +806,28 @@ template <traits::Sequence T, typename CharT>
 class DefaultParse<T, CharT>
     : public Sequence<T, CharT, DefaultParse<typename T::value_type, CharT>> {};
 
-template <typename CharT, class Name, class Type, auto DefaultValue>
+template <typename CharT, class Name, auto DefaultValue,
+          class Parser =
+              DefaultParse<std::remove_cvref_t<decltype(DefaultValue)>, CharT>>
 struct Field {
+  using parser = Parser;
+  using type = parse::value_type_t<CharT, Parser>;
   using name = Name;
   static constexpr bool has_default = true;
-  Type value = Type(DefaultValue);
-
-  ParseResult<Type, CharT> parse_(View<const CharT> s) {
-    return parse<Type, CharT>(s);
-  }
+  static constexpr auto defautl_value = DefaultValue;
+  type value = type(DefaultValue);
+  Parser parse;
 };
 
-template <typename CharT, class Name, class Type> struct FieldWithOutDefault {
+template <typename CharT, class Name, class Type,
+          class Parser = DefaultParse<Type, CharT>>
+struct FieldWithOutDefault {
+  using parser = Parser;
   using type = Type;
   using name = Name;
   static constexpr bool has_default = false;
   Type value{};
-  ParseResult<Type, CharT> parse_(View<const CharT> s) {
-    return parse<Type, CharT>(s);
-  }
-  // Parser parse{};
+  Parser parse{};
 };
 
 template <typename CharT, CharT Assignment = '=', CharT MemberSeparator = ',',
@@ -856,16 +846,15 @@ class FieldGroup {
     bool optional[sizeof...(Fields)]{};
     std::tuple<Fields...> fields{};
   };
-
-  // TODO: change CharView to View<CharT>
-  using Pair = std::pair<CharView, void (*)(State &, CharView &)>;
+  using Pair =
+      std::pair<View<const CharT>, void (*)(State &, View<const CharT> &)>;
 
   static constexpr Pair parsers[]{
       Pair{View<const CharT>(typename Fields::name{}),
-           +[](State &state, CharView &sv) {
+           +[](State &state, View<const CharT> &sv) {
              constexpr auto index =
                  type_list::index_of_v<Fields, std::tuple<Fields...>>;
-             auto res = std::get<index>(state.fields).parse_(sv);
+             auto res = std::get<index>(state.fields).parse(sv);
              if (not res) {
                state.error = res.error;
                return;
@@ -879,8 +868,71 @@ class FieldGroup {
              sv = skip_ws(res.rest);
            }}...};
 
+  State s;
+
+  void reset_state() {
+    s.error = Error::none;
+    s.consumed = 0;
+    for (auto &b : s.initialized)
+      b = false;
+    for_each(
+        [](auto &field) {
+          using F = std::remove_cvref_t<decltype(field)>;
+          if constexpr (F::has_default)
+            field = F::DefaultValue;
+          else
+            field = F{};
+        },
+        s.fields);
+  }
+
 public:
-  constexpr FieldGroup() {}
+  template <class... Fs>
+  constexpr FieldGroup(Fs &&...fields)
+      : s{.fields{std::forward<Fs>(fields)...}} {
+    for_each(
+        [](const auto &f, State &self) {
+          using F = std::remove_cvref_t<decltype(f)>;
+          constexpr auto index =
+              type_list::index_of_v<F, std::tuple<Fields...>>;
+          if constexpr (F::has_default) {
+            /// self.initialized[index] = true;
+            self.optional[index] = true;
+          }
+        },
+        s.fields, s);
+  }
+
+  template <class... Fs>
+  constexpr FieldGroup(std::tuple<Fs...> &&fields)
+      : s{.fields = std::move(fields)} {
+    for_each(
+        [](const auto &f, State &self) {
+          using F = std::remove_cvref_t<decltype(f)>;
+          constexpr auto index =
+              type_list::index_of_v<F, std::tuple<Fields...>>;
+          if constexpr (F::has_default) {
+            /// self.initialized[index] = true;
+            self.optional[index] = true;
+          }
+        },
+        s.fields, s);
+  }
+
+  template <class... Fs>
+  constexpr FieldGroup(const std::tuple<Fs...> &fields) : s{.fields = fields} {
+    for_each(
+        [](const auto &f, State &self) {
+          using F = std::remove_cvref_t<decltype(f)>;
+          constexpr auto index =
+              type_list::index_of_v<F, std::tuple<Fields...>>;
+          if constexpr (F::has_default) {
+            /// self.initialized[index] = true;
+            self.optional[index] = true;
+          }
+        },
+        s.fields, s);
+  }
 
   constexpr FieldGroup(const FieldGroup &) = default;
   constexpr FieldGroup(FieldGroup &&) = default;
@@ -888,7 +940,7 @@ public:
   constexpr FieldGroup &operator=(FieldGroup &&) = default;
 
   constexpr ParseResult<std::tuple<Fields...>, CharT>
-  operator()(View<const CharT> sv) const {
+  operator()(View<const CharT> sv) {
     State s{};
     if (sv.size() == 0) {
       if constexpr ((Fields::has_default && ...))
@@ -930,6 +982,7 @@ public:
           // stripping name
           auto str = skip_ws(sv.substr(name.size()));
           if (str.size() == 0) {
+            reset_state();
             return Error::too_few_characters;
           }
 
@@ -942,6 +995,7 @@ public:
           // consume the assignment character and trailing whitespace
           str = skip_ws(str.substr(1));
           if (str.size() == 0) {
+            reset_state();
             return Error::too_few_characters;
           }
 
@@ -969,50 +1023,70 @@ public:
               break;
             }
           }
-          if (not found)
+          if (not found) {
+            reset_state();
             return Error::implementation_error;
+          }
         }
         parser_index = pos_index;
       }
       (*(parsers[parser_index].second))(s, sv);
 
       if (s.error != Error::none) {
-        return s.error;
+        auto err = s.error;
+        reset_state();
+        return err;
       }
+
       if (s.consumed == sizeof...(Fields)) {
         // TODO: check that fields are initialized
         if constexpr (Postfix == ' ') {
-          return {s.fields, sv};
+          auto fields = s.fields;
+          reset_state();
+          return {std::move(fields), sv};
         } else {
-          if (sv.size() == 0)
+          if (sv.size() == 0) {
+            reset_state();
             return Error::too_few_characters;
-          if (sv[0] != Postfix)
+          }
+          if (sv[0] != Postfix) {
+            reset_state();
             return Error::invalid_character;
-          else
-            return {s.fields, sv.substr(1)};
+          } else {
+            auto fields = s.fields;
+            reset_state();
+            return {std::move(fields), sv.substr(1)};
+          }
         }
       } else {
         if (sv.size() == 0) {
+          reset_state();
           return Error ::too_few_characters;
         }
 
-        if (sv[0] != MemberSeparator)
+        if (sv[0] != MemberSeparator) {
+          reset_state();
           return Error::invalid_character;
+        }
 
         sv = skip_ws(sv.substr(1));
       }
     }
-    if (s.error != Error::none)
-      return s.error;
+    auto err = s.error;
+    auto fields = s.fields;
+    reset_state();
+    if (err != Error::none)
+      return err;
     else
-      return s.fields;
+      return fields;
   }
 };
 
 template <typename CttiField, typename CharT> struct to_parse_field {
   using name = typename CttiField::name;
   using type_ = typename CttiField::type;
-  using type = FieldWithOutDefault<CharT, name, type_>;
+  using parser = DefaultParse<type_, CharT>;
+  using type = FieldWithOutDefault<CharT, name, type_, parser>;
 };
 
 template <traits::Struct T, typename CharT, CharT Assignment = '=',
@@ -1029,16 +1103,15 @@ struct field_parser_for {
 };
 
 template <traits::Struct T, typename CharT, class Name = string_constant<CharT>,
-          char Assignment = '=', char MemberSeparator = ',', char Prefix = '{',
-          char Postfix = '}'>
+          CharT Assignment = '=', CharT MemberSeparator = ',',
+          CharT Prefix = '{', CharT Postfix = '}'>
 class Struct : field_parser_for<T, CharT, Assignment, MemberSeparator, Prefix,
                                 Postfix>::type {
   using Base = typename field_parser_for<T, CharT, Assignment, MemberSeparator,
                                          Prefix, Postfix>::type;
 
 public:
-  constexpr Struct() = default;
-  constexpr ParseResult<T, CharT> operator()(View<const CharT> sv) const {
+  constexpr ParseResult<T, CharT> operator()(View<const CharT> sv) {
     if (sv.size() == 0)
       return Error::too_few_characters;
 
@@ -1066,7 +1139,7 @@ public:
       }
     }
 
-    if (auto res = static_cast<const Base *>(this)->operator()(sv))
+    if (auto res = static_cast<Base *>(this)->operator()(sv))
       return {ctti::from_tuple<T>(res.value), res.rest};
     else
       return res.error;
@@ -1111,6 +1184,11 @@ constexpr Error parse_args(Tuple &t, View<const CharT> v) {
     return parse_args_impl(
         t, v, std::make_index_sequence<std::tuple_size_v<Tuple>>());
   }
+}
+
+template <typename T, typename CharT>
+ParseResult<T, CharT> parse(View<const CharT> s) {
+  return DefaultParse<T, CharT>{}(s);
 }
 
 // template <char Assignment = '=', char MemberSeparator = ' ',

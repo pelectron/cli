@@ -1,7 +1,7 @@
 /**
  * @file cli/param.hpp
  *
- * @brief This file contains the utilities to create parameters, namely the
+ * This file contains the utilities to create parameters, namely the
  * functions:
  * - param(..): creates a parameter
  * - obj(...): creates a parameter, and further also accepts member functions
@@ -51,7 +51,7 @@ using setter_value_type_t =
     typename setter_value_type<std::remove_cvref_t<T>>::type;
 
 /**
- * @brief concept for a Getter with value type V
+ * concept for a Getter with value type V
  *
  * @tparam G the getter type
  * @tparam V the value type
@@ -62,7 +62,7 @@ concept GetterOf = requires(G &&getter, V &value) {
 };
 
 /**
- * @brief concept for a Setter with value type V
+ * concept for a Setter with value type V
  *
  * @tparam S the setter type
  * @tparam V the value type
@@ -73,7 +73,7 @@ concept SetterOf = requires(S &&setter, const V &value) {
 };
 
 /**
- * @brief A Getter G retrieves the value of a parameter. An instance of G must
+ * A Getter G retrieves the value of a parameter. An instance of G must
  * be callable with an l value reference and return a cli::Error. The reference
  * denotes the place where the getter should store it value. If G cannot produce
  * a value, it should return the error that occurred.
@@ -88,7 +88,7 @@ concept Getter = requires(G &&getter, getter_value_type_t<G> &value) {
 };
 
 /**
- * @brief A Setter S sets the value of a parameter. An instance of S must be
+ * A Setter S sets the value of a parameter. An instance of S must be
  * callable with a const l value reference and return a cli::Error.
  *
  * @tparam S the type to test
@@ -101,7 +101,9 @@ concept Setter = requires(S &&setter, const setter_value_type_t<S> &value) {
 namespace dtl {
 
 /**
- * @brief the thing returned by calls to cli::params::param
+ * the thing returned by calls to cli::params::param
+ *
+ * TODO: forward subcommands of struct to struct parser
  *
  * @tparam Name the name of the parameter
  * @tparam Description the description
@@ -497,7 +499,7 @@ constexpr auto transform(T &obj, CommandOrMemberDataOrMemberFunction &&mem) {
  */
 
 /**
- * @brief creates a "virtual" command, i.e. a parameter without a value to set
+ * creates a "virtual" command, i.e. a parameter without a value to set
  * or get, but subcommands. Requires at least one sub command.
  *
  * Example:
@@ -524,7 +526,7 @@ constexpr auto param(Name name, SubCommands &&...cmds) {
 }
 
 /**
- * @brief creates a "virtual" command, i.e. a parameter without a value ot set
+ * creates a "virtual" command, i.e. a parameter without a value ot set
  * or get, but subcommands. Requires at least one sub command.
  *
  * Example:
@@ -556,7 +558,7 @@ constexpr auto param(Name name, Description description,
 }
 
 /**
- * @brief creates a parameter command. The value of the parameter, i.e. t, can
+ * creates a parameter command. The value of the parameter, i.e. t, can
  * then be retrieved by its name. This uses the default getter, setter, parsing,
  * formatting, and validation facilities.
  *
@@ -591,7 +593,7 @@ constexpr auto param(Name name, T &t, SubCommands &&...cmds) {
 }
 
 /**
- * @brief creates a parameter command. The value of the parameter, i.e. t, can
+ * creates a parameter command. The value of the parameter, i.e. t, can
  * then be retrieved by its name. This uses the default getter, setter, parsing,
  * formatting, and validation facilities.
  *
@@ -630,7 +632,7 @@ constexpr auto param(Name name, Description description, T &t,
 }
 
 /**
- * @brief creates a parameter command from its individual parts.
+ * creates a parameter command from its individual parts.
  *
  * @param name the name of the parameter. Must be a cli::string_constant.
  * @param description the parameter description, used by the help functionality.
@@ -667,13 +669,81 @@ constexpr auto param(Name name, Description description, Type type, Get &&get,
                std::forward<Get>(get),
                std::forward<Set>(set),
                std::forward<Parse>(parse),
-               std::forward<Format>(parse),
+               std::forward<Format>(format),
                std::forward<Validate>(validate),
                std::forward<SubCommands>(cmds)...};
 }
 
 /**
- * @brief creates a parameter command. The value of the parameter, i.e. t, can
+ * creates a parameter command from its individual parts.
+ *
+ * @param name the name of the parameter. Must be a cli::string_constant.
+ * @param description the parameter description, used by the help functionality.
+ * Must be a cli::string_constant.
+ * @param type the parameter type as a string, used by the help functionality.
+ * Must be a cli::string_constant.
+ * @param get the getter of the parameter. See cli::params::Getter for
+ * additional info.
+ * @param set the setter of the parameter. See cli::params::Setter for
+ * additional info.
+ * @param cmds additional optional subcommands
+ * @return a Command
+ */
+template <SC Name, SC Description, typename T, GetterOf<T> Get, SetterOf<T> Set,
+          Command... SubCommands>
+constexpr auto param(Name name, Description description, T &t, Get &&get,
+                     Set &&set, SubCommands &&...cmds) {
+  (void)name;
+  (void)description;
+  using namespace dtl;
+  using Char = typename Name::char_type;
+  return Param{Name{},
+               Description{},
+               ctti::name<T>(),
+               std::forward<Get>(get),
+               std::forward<Set>(set),
+               parse::DefaultParse<T, Char>{},
+               format::DefaultFormat<T, Char>{},
+               validate::DefaultValidate<T>{},
+               std::forward<SubCommands>(cmds)...};
+}
+
+/**
+ * creates a parameter command from its individual parts.
+ *
+ * @param name the name of the parameter. Must be a cli::string_constant.
+ * @param description the parameter description, used by the help functionality.
+ * Must be a cli::string_constant.
+ * @param type the parameter type as a string, used by the help functionality.
+ * Must be a cli::string_constant.
+ * @param get the getter of the parameter. See cli::params::Getter for
+ * additional info.
+ * @param set the setter of the parameter. See cli::params::Setter for
+ * additional info.
+ * @param cmds additional optional subcommands
+ * @return a Command
+ */
+template <SC Name, SC Description, typename T, SetterOf<T> Set,
+          Command... SubCommands>
+constexpr auto param(Name name, Description description, T &t, Set &&set,
+                     SubCommands &&...cmds) {
+  (void)name;
+  (void)description;
+  using namespace dtl;
+  using Char = typename Name::char_type;
+  return Param{Name{},
+               Description{},
+               ctti::name<T>(),
+               DefaultGet<T>{t},
+               std::forward<Set>(set),
+               parse::DefaultParse<T, Char>{},
+               format::DefaultFormat<T, Char>{},
+               validate::DefaultValidate<T>{},
+               std::forward<SubCommands>(cmds)...};
+}
+
+/**
+ * creates a parameter command. The value of the parameter, i.e. t, can
  * then be retrieved by its name. This opverload can take member data and member
  * functions in addition to sub commands. Uses the default getter, setter,
  * parsing, formatting, and validation facilities.
@@ -704,7 +774,7 @@ constexpr auto param(Name name, T &obj,
                      std::forward<CommandOrMemberDataOrMemberFunction>(m))...};
 }
 /**
- * @brief creates a parameter command. The value of the parameter, i.e. t, can
+ * creates a parameter command. The value of the parameter, i.e. t, can
  * then be retrieved by its name. This overload can take member data and member
  * functions in addition to sub commands. Uses the default getter, setter,
  * parsing, formatting, and validation facilities.
@@ -740,7 +810,7 @@ constexpr auto param(Name name, T &obj,
 // }
 //
 /**
- * @brief creates a parameter command. The value of the parameter, i.e. Obj, can
+ * creates a parameter command. The value of the parameter, i.e. Obj, can
  * then be retrieved by its name, which is deduced. This overload can take
  * member data and member functions in addition to sub commands. Uses the
  * default getter, setter, parsing, formatting, and validation facilities.
@@ -776,7 +846,7 @@ constexpr auto param(CommandOrMemberDataOrMemberFunction &&...m) {
                      std::forward<CommandOrMemberDataOrMemberFunction>(m))...};
 }
 /**
- * @brief creates a parameter command. The value of the parameter, i.e. Obj, can
+ * creates a parameter command. The value of the parameter, i.e. Obj, can
  * then be retrieved by its name, which is deduced. This overload can take
  * member data and member functions in addition to sub commands. Uses the
  * default getter, setter, parsing, formatting, and validation facilities.

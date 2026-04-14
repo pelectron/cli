@@ -10,22 +10,34 @@
 namespace cli {
 
 /**
- * @brief The Tracker is responsible for parsing the command name input into a
+ * The Tracker is responsible for parsing the command name input into a
  * CommandNode. Optionally provides autocomplete functionality.
  * TODO: add differentiation between functions and params for autocomplete
  *
  * Thsi class only tracks command names, but not values (in case of params) or
  * arguments (in case of functions)
  *
- * @tparam Depth the command tree depth
- * @tparam Depth the maximum length of any command name in the tree
- * @tparam AccessSeparator the character used to separate individual command
- * names
- * @tparam UseAutoComplete if true, autocomplete is enabled, else it is disabled
+ * @tparam Cfg the cli configuration
+ * @tparam Commands the cli commands
+ * @tparam Cfg::use_autocomplete if true, autocomplete is enabled, else it is
+ * disabled
+ *
+ * @{
  */
+
+template <Config Cfg, typename... Commands> class Tracker {
+  using CharT = typename Cfg::char_type;
+  constexpr Tracker(CommandNode<CharT> &) {}
+  constexpr Error on_char(uint8_t c) { return Error::none; }
+  constexpr void on_backspace() {}
+  constexpr View<CharT> on_autocomplete() { return {}; }
+  constexpr CommandNode<CharT> *cmd() { return nullptr; }
+  constexpr void clear() {}
+};
+
 template <Config Cfg, Command... Commands>
   requires Cfg::use_autocomplete
-class Tracker {
+class Tracker<Cfg, Commands...> {
   using CharT = typename Cfg::char_type;
   // the maximum depth of the command tree
   static constexpr std::size_t Depth =
@@ -36,7 +48,7 @@ class Tracker {
 
   const CommandNode<CharT> &root;
   const CommandNode<CharT> *command_{};
-  FixedSizeVector<CharT, MaxNameLength> buffer;
+  FixedCapacityVector<CharT, MaxNameLength> buffer;
   std::array<CommandNode<CharT> *, Depth> cmds{nullptr};
   smallest_type_for_value_t<Depth> size = 0;
   smallest_type_for_value_t<MaxNameLength + 1> cmd_size = 0;
@@ -50,18 +62,18 @@ class Tracker {
 
 public:
   /**
-   * @brief create a tracker
+   * create a tracker
    * @param root the command tree root node
    */
   constexpr Tracker(CommandNode<CharT> &root) : root(root), command_(&root) {}
 
   /**
-   * @brief needs to be called when a character is encountered
+   * needs to be called when a character is encountered
    *
-   * @param c
-   * @return
+   * @param c the character
+   * @return the rror, if any occured
    */
-  Error on_char(CharT c) {
+  constexpr Error on_char(CharT c) {
     if (command_ == &root and buffer.size() == 0) {
       for (const auto &cmd : root) {
         if (cmd.name[0] == c) {
@@ -113,7 +125,10 @@ public:
     return Error::none;
   }
 
-  void on_backspace() {
+  /**
+   * needs to be called when a backspace is encountered
+   */
+  constexpr void on_backspace() {
     if (command_ == &root) {
       assert(buffer.size() == 0);
       return;
@@ -147,7 +162,10 @@ public:
     }
   }
 
-  View<const CharT> on_autocomplete() {
+  /**
+   * returns the remaining string for autocomplete
+   */
+  constexpr View<const CharT> on_autocomplete() {
     if (buffer.size() == 0 or last_char == Cfg::access_separator)
       return {};
 
@@ -162,8 +180,14 @@ public:
     return ret;
   }
 
-  const CommandNode<CharT> *cmd() const { return command_; }
+  /**
+   * returns the command that the tracker resolves to.
+   */
+  constexpr const CommandNode<CharT> *cmd() const { return command_; }
 
+  /**
+   * clears the tracker, i.e. resets its state.
+   */
   constexpr void clear() {
     buffer.clear();
     last_char = Cfg::access_separator;
@@ -171,15 +195,7 @@ public:
   }
 };
 
-template <Config Cfg, Command... Commands> class TrackerWihoutAutocomplete {
-  using CharT = typename Cfg::char_type;
-  constexpr TrackerWihoutAutocomplete(CommandNode<CharT> &) {}
-  constexpr Error on_char(uint8_t c) { return Error::none; }
-  constexpr void on_backspace() {}
-  constexpr View<CharT> on_autocomplete() { return {}; }
-  constexpr CommandNode<CharT> *cmd() { return nullptr; }
-  constexpr void clear() {}
-};
+/// @}
 
 } // namespace cli
 

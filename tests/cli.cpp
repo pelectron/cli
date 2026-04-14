@@ -1,12 +1,8 @@
 #include "cli/cli.hpp"
-#include "cli/command.hpp"
-#include "cli/config.hpp"
-#include "cli/output.hpp"
 
 #include <cstdio>
 #include <ostream>
-#include <string>
-#include <vector>
+#include <string_view>
 
 // #include <cstdio>
 // #include <source_location>
@@ -36,7 +32,7 @@
 #include "cpp-terminal/version.hpp"
 
 cli::Error stream(cli::View<const char> s) {
-  Term::cout << std::string(s.data(), s.size()) << std::flush;
+  Term::cout << std::string_view(s.data(), s.size()) << std::flush;
   return cli::Error::none;
 }
 
@@ -137,9 +133,7 @@ int main() {
 
         );
     // clang-format on
-    cli::View<const char> s = "settings.apply";
     my_cli.print();
-    my_cli.reset();
     while (1) {
       Term::Event event = Term::read_event();
       switch (event.type()) {

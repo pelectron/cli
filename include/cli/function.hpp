@@ -1,7 +1,7 @@
 /**
  * @file cli/function.hpp
  *
- * @brief This file defines the utilities to add functions and their arguments
+ * This file defines the utilities to add functions and their arguments
  * to a cli in the namespace cli::funcs, namely:
  *
  * - the literal operator _arg
@@ -255,8 +255,8 @@ template <SC ArgName, SC Description, class T, auto DefaultValue,
 constexpr auto
 parse_field_from_arg(const FunctionArg<ArgName, Description, T, DefaultValue,
                                        Parse, Validate> &arg) {
-  return parse::Field<typename ArgName::char_type, ArgName, T, DefaultValue>{
-      DefaultValue};
+  return parse::Field<typename ArgName::char_type, ArgName, DefaultValue,
+                      Parse>{DefaultValue, arg.parse};
 }
 
 template <SC ArgName, SC Description, typename T,
@@ -265,8 +265,8 @@ template <SC ArgName, SC Description, typename T,
 constexpr auto
 parse_field_from_arg(const FunctionArgWithoutDefault<ArgName, Description, T,
                                                      Parse, Validate> &arg) {
-  return parse::FieldWithOutDefault<typename ArgName::char_type, ArgName, T>{
-      T{}};
+  return parse::FieldWithOutDefault<typename ArgName::char_type, ArgName, T,
+                                    Parse>{T{}, arg.parse};
 }
 
 template <class... Args>
@@ -331,7 +331,7 @@ constexpr auto parse_field_from_args(const std::tuple<Args...> &args) {
  */
 
 /**
- * @brief creates an optional argument. The value type of the argument is deduced
+ * creates an optional argument. The value type of the argument is deduced
  * from the value type of parse.
  *
  * Intended usage:
@@ -367,7 +367,7 @@ constexpr auto arg(ArgName name, Description description, Parse &&parse,
 
 // clang-format off
 /**
- * @brief creates an optional argument of type T.
+ * creates an optional argument of type T.
  *
  * Intended usage:
  * ```
@@ -406,7 +406,7 @@ constexpr auto arg(ArgName name, Description description, Parse &&parse,
 
 // clang-format off
 /**
- * @brief creates an optional argument of type T. The default parser and
+ * creates an optional argument of type T. The default parser and
  * validator are used.
  *
  * Intended usage:
@@ -438,7 +438,7 @@ constexpr auto arg(ArgName name, Description description) {
 
 // clang-format off
 /**
- * @brief creates an optional argument of type T. The default parser and
+ * creates an optional argument of type T. The default parser and
  * validator are used.
  *
  * Intended usage:
@@ -475,7 +475,7 @@ constexpr auto arg(ArgName name) {
  */
 
 /**
- * @brief creates a required argument of type T.
+ * creates a required argument of type T.
  *
  * Intended usage:
  * ```
@@ -505,7 +505,7 @@ constexpr auto arg(ArgName name, Description description, Parse &&parse,
 }
 
 /**
- * @brief creates a required argument. Its type, parser, and validator will be
+ * creates a required argument. Its type, parser, and validator will be
  * deduced.
  *
  * Intended usage:
@@ -527,7 +527,7 @@ constexpr auto arg(ArgName name, Description description) {
 }
 
 /**
- * @brief creates a required argument. Its type, parser, and validator will be
+ * creates a required argument. Its type, parser, and validator will be
  * deduced.
  *
  * Intended usage:
@@ -547,7 +547,7 @@ template <SC ArgName> constexpr auto arg(ArgName name) {
 }
 
 /**
- * @brief the literal operator for arguments.
+ * the literal operator for arguments.
  *
  * This is equivalent to ``arg(Name)``
  *
@@ -594,17 +594,17 @@ public:
 
   template <Callable Func, FuncArg... A>
   constexpr Function(FuncName, Description, Type, Func &&function, A &&...args)
-      : func_(std::forward<Func>(function)), args(std::forward<A>(args)...) {}
+      : func_(std::forward<Func>(function)), args_(std::forward<A>(args)...) {}
 
   template <Callable Func>
   constexpr Function(FuncName, Description, Type, Func &&function,
                      const std::tuple<Args...> &args)
-      : func_(std::forward<Func>(function)), args(args) {}
+      : func_(std::forward<Func>(function)), args_(args) {}
 
   template <Callable Func>
   constexpr Function(FuncName, Description, Type, Func &&function,
                      std::tuple<Args...> &&args)
-      : func_(std::forward<Func>(function)), args(std::move(args)) {}
+      : func_(std::forward<Func>(function)), args_(std::move(args)) {}
 
   Error execute(ExecType type, View<const char_type> args,
                 [[maybe_unused]] View<char_type> &out) {
@@ -613,7 +613,7 @@ public:
     if (type != ExecType::call)
       return Error::invalid_cmd;
 
-    const Parser parse{};
+    Parser parse{dtl::parse_field_from_args(this->args_)};
 
     auto res = parse(args);
     if (not res)
@@ -657,7 +657,7 @@ public:
 
 private:
   F func_{};
-  std::tuple<Args...> args;
+  std::tuple<Args...> args_;
 };
 
 template <SC FuncName, SC Description, SC Type, Callable F>
@@ -924,7 +924,7 @@ MemberFunction(FuncName &&, Description &&, Help &&, Function &&)
  */
 
 /**
- * @brief creates a member function command. This command cannot be used
+ * creates a member function command. This command cannot be used
  * standalone. Its parent command must be an object that this member function
  * can be called on.
  *
@@ -976,7 +976,7 @@ constexpr auto mem_fun(FuncName name, MemberFunctionPointer mem_fun,
 }
 
 /**
- * @brief creates a member function command. This command cannot be used
+ * creates a member function command. This command cannot be used
  * standalone. Its parent command must be an object that this member function
  * can be called on.
  *
@@ -1037,7 +1037,7 @@ constexpr auto mem_fun(Args &&...args) {
 
 namespace dtl {
 /**
- * @brief create a Function from an object reference and a MemberFunction
+ * create a Function from an object reference and a MemberFunction
  */
 template <class T, SC CmdName, SC Description, SC Help, class F, class... Args>
 constexpr auto
@@ -1050,8 +1050,9 @@ to_cmd(T &obj, const MemberFunction<CmdName, Description, Help, F, Args...>
     return Function(CmdName{}, Description{}, Help{},
                     MemFunBinder(obj, member_function.f), member_function.args);
 }
+
 /**
- * @brief create a Function from an object referenece and a MemberFunction
+ * create a Function from an object referenece and a MemberFunction
  */
 template <class T, SC CmdName, SC Description, SC Help, class F, class... Args>
 constexpr auto to_cmd(const T &obj,

@@ -8,11 +8,23 @@
 
 namespace cli {
 
+/**
+ * The help function
+ *
+ * @tparam CharT the character type
+ * @tparam AccessSeparator the access separator
+ */
 template <class CharT, CharT AccessSeparator> struct Help {
   using char_type = CharT;
   using error_message =
       string_constant<char_type, 'n', 'o', ' ', 's', 'u', 'c', 'h', ' ', 'c',
                       'o', 'm', 'm', 'a', 'n', 'd'>;
+
+  /**
+   * returns the description of cmd
+   *
+   * @param cmd the command
+   */
   constexpr View<const char_type> operator()(View<const char_type> cmd) const {
     if (cmd.size() == 0) {
       return error_message{};

@@ -23,6 +23,9 @@ concept Command =
     };
 
 template <typename T>
+concept TriviallyDestructible = std::is_trivially_destructible_v<T>;
+
+template <typename T>
 concept Printer = requires(T t) {
   { t.print() };
 };

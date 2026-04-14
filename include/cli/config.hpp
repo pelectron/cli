@@ -8,6 +8,14 @@
 
 namespace cli {
 
+/**
+ * The Config is used by cli to configure its relevant parts. It is a type trait
+ * like structure.
+ *
+ * @sa cli::default_config
+ *
+ * @tparam T
+ */
 template <typename T>
 concept Config = requires(typename std::remove_cvref_t<T>::char_type) {
   /** the character that separates commands, for example '.' */
