@@ -196,7 +196,8 @@ public:
   constexpr FixedCapacityVector &operator=(const FixedCapacityVector &other) {
     this->clear();
     while (this->size_ < other.size_) {
-      this->values_[this->size_++] = other.values_[this->size_];
+      this->values_[this->size_] = other.values_[this->size_];
+      ++this->size_;
     }
     return *this;
   }
@@ -204,7 +205,8 @@ public:
   constexpr FixedCapacityVector &operator=(FixedCapacityVector &&other) {
     this->clear();
     while (this->size_ < other.size_) {
-      this->values_[this->size_++] = std::move(other.values_[this->size_]);
+      this->values_[this->size_] = std::move(other.values_[this->size_]);
+      ++this->size_;
     }
     other.clear();
     return *this;

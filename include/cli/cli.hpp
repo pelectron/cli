@@ -381,6 +381,8 @@ private:
         return Error::implementation_error;
       }
     }
+    default:
+      return Error::implementation_error;
     }
   }
 
@@ -521,12 +523,6 @@ private:
     if (err != Error::none)
       return err;
     return out_.write(View<const char_type>(Cfg::command_terminator));
-  }
-
-  Error process_message() {
-    // a whole message block is received, i.e. a complete command is
-    // available.
-    // 1. parse string and split it into the path and arguments
   }
 
   template <Config, Command...> friend class CommandTree;
