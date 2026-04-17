@@ -3,13 +3,11 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#include <type_traits>
 
 namespace cli {
 #if !defined(UINT64_MAX)
 /**
  * @class u64
- * @brief
  *
  */
 struct u64 {

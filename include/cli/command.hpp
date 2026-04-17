@@ -170,7 +170,7 @@ public:
   /**
    * executes the command
    *
-   * @param exec_type the expected type to execute
+   * @param type the expected execution type
    * @param args the arguments
    * @param out where to put the results
    * @return the error
@@ -225,7 +225,7 @@ public:
   /**
    * executes the command
    *
-   * @param exec_type the expected type to execute
+   * @param type the expected execution type
    * @param args the arguments
    * @param out where to put the results
    * @return the error

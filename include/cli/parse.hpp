@@ -25,23 +25,35 @@ concept Result = requires(R &&r) {
   { static_cast<bool>(r) };
 };
 
-template <class P, typename CharT>
-concept Parser = requires(std::remove_cvref_t<P> &p, View<const CharT> str) {
-  { p(str) } -> Result<CharT>;
-};
-
-template <typename CharT, Parser<CharT> P> struct value_type {
+template <typename CharT, typename P> struct value_type {
   using type =
       std::remove_cvref_t<decltype(std::declval<decltype(std::declval<P &>()(
                                        std::declval<View<const CharT>>()))>()
                                        .value)>;
 };
 
-template <typename CharT, Parser<CharT> P>
-using value_type_t = typename value_type<CharT, std::remove_cvref_t<P>>::type;
+template <typename P> struct buffer_type {
+  using type = std::remove_cvref_t<type_list::type_at_t<
+      0, typename function_traits<std::decay_t<P>>::arguments>>;
+};
 
-template <class P, class T, typename CharT>
-concept ParserOf = Parser<P, CharT> and std::same_as<T, value_type_t<CharT, P>>;
+template <typename P> using buffer_type_t = typename buffer_type<P>::type;
+
+template <typename P> struct result_type {
+  using type = typename function_traits<std::decay_t<P>>::return_type;
+};
+
+template <typename P> using result_type_t = typename result_type<P>::type;
+
+template <typename P> struct value_type_ {
+  using type = std::remove_cvref_t<
+      decltype(std::declval<decltype(std::declval<P &>()(
+                   std::declval<typename buffer_type<P>::type>()))>()
+                   .value)>;
+};
+
+template <typename CharT, typename P>
+using value_type_t = typename value_type<CharT, std::remove_cvref_t<P>>::type;
 
 constexpr inline struct from_error_t {
 } from_error;
@@ -49,29 +61,100 @@ constexpr inline struct from_error_t {
 constexpr inline struct from_value_t {
 } from_value;
 
+/**
+ * This struct is the result of a parse operation. It contains an error, a
+ * value, and a rest.
+ *
+ * The error indicates if this is a successful parse result. cli::Error::none
+ * means successful, any other Error means unsuccessful.
+ *
+ * The value is the parsed value.
+ *
+ * The rest is the remaining unparsed string.
+ *
+ * @tparam T the value type
+ * @tparam CharT the character type of rest
+ */
 template <class T, typename CharT> struct ParseResult {
 
+  /// constructs a failed parse with the error reason
   constexpr ParseResult(Error error) : error{error}, value{}, rest{} {}
 
+  /**
+   * construct a successful parse result from a value and the rest of the string
+   * that hasn't been parsed.
+   *
+   * @param value the parse value
+   * @param rest the unparsed rest of the string
+   */
   constexpr ParseResult(const T &value, View<const CharT> rest = {})
       : error{Error::none}, value{value}, rest{rest} {}
 
+  /**
+   * construct a successful parse result from a value and the rest of the string
+   * that hasn't been parsed.
+   *
+   * @param value the parse value
+   * @param rest the unparsed rest of the string
+   */
   constexpr ParseResult(T &&value, View<const CharT> rest = {})
       : error{Error::none}, value{std::move(value)}, rest{rest} {}
 
+  /**
+   * construct a successful parse result from a value and the rest of the string
+   * that hasn't been parsed.
+   *
+   * @param value the parse value
+   * @param rest the unparsed rest of the string
+   */
   template <class U>
   constexpr ParseResult(from_value_t, U &&value, View<const CharT> rest = {})
       : error{Error::none}, value{std::forward<U>(value)}, rest{rest} {}
 
+  /// constructs a failed parse with the error reason
   constexpr ParseResult(from_error_t, Error e) : error{e}, value{}, rest{} {}
 
+  /// returns true if this is a successful parse result, i.e. if the error is
+  /// Error::none.
   constexpr operator bool() const noexcept { return error == Error::none; }
 
   constexpr auto operator<=>(const ParseResult &) const = default;
+
   Error error;
   T value;
   View<const CharT> rest;
 };
+
+template <typename T> inline constexpr bool is_parse_result_v = false;
+
+template <typename T, typename CharT>
+inline constexpr bool is_parse_result_v<ParseResult<T, CharT>> = true;
+
+/**
+ * A parser of T is a callable that parses a T from a string and returns a
+ * ParseResult. It takes a cli::View<const CharT> as its first and only argument
+ * and returns a cli::parse::ParseResult<T, CharT>.
+ *
+ * @tparam P the parser
+ * @tparam T the type of value to parse
+ * @tparam CharT the character type
+ */
+template <class P, class T, typename CharT>
+concept ParserOf =
+    requires(std::remove_cvref_t<P> &parse, View<const CharT> str) {
+      { parse(str) } -> std::same_as<ParseResult<T, CharT>>;
+    };
+
+/**
+ * A parser turns a string into a T. It is a callable that takes a
+ * cli::View<const CharT> as its first and only argument and returns a
+ * cli::parse::ParseResult<T, CharT>.
+ *
+ * @tparam P the parser
+ */
+template <class P>
+concept Parser = Callable<P> and is_const_view_v<buffer_type_t<P>> and
+                 is_parse_result_v<result_type_t<P>>;
 
 template <typename CharT, class T>
 constexpr ParseResult<std::remove_cvref_t<T>, CharT> ok(T &&t) {
@@ -84,6 +167,12 @@ constexpr ParseResult<T, CharT> error(Error e) {
 }
 
 static_assert(Result<ParseResult<int, char>, char>);
+
+template <typename T, typename CharT> struct NoParse {
+  ParseResult<T, CharT> operator()(View<const CharT>) const {
+    return {Error::unimplemented};
+  }
+};
 
 template <typename CharT> constexpr View<CharT> skip_ws(View<CharT> str) {
   return str.substr(str.find_first_not_of(" \n\r\t\v\f"));
@@ -814,7 +903,7 @@ struct Field {
   using type = parse::value_type_t<CharT, Parser>;
   using name = Name;
   static constexpr bool has_default = true;
-  static constexpr auto defautl_value = DefaultValue;
+  static constexpr auto default_value = DefaultValue;
   type value = type(DefaultValue);
   Parser parse;
 };
@@ -879,9 +968,9 @@ class FieldGroup {
         [](auto &field) {
           using F = std::remove_cvref_t<decltype(field)>;
           if constexpr (F::has_default)
-            field = F::DefaultValue;
+            field.value = typename F::type(F::default_value);
           else
-            field = F{};
+            field.value = typename F::type{};
         },
         s.fields);
   }

@@ -1,5 +1,6 @@
 /**
- * This file provides a CLI enginge to build a remote interface upon a byte
+ * @file cli/cli.hpp
+ * This file provides a CLI engine to build a remote interface upon a byte
  * stream.
  *
  * The basics:
@@ -7,30 +8,8 @@
  * - a command has the following properties:
  *   - a name: a string to identify the command
  *   - a description: a string to display for help messages
- *   - the function to execute
+ *   - the function to execute or a parameter to set and retrieve
  *   - and optionally, any amount of sub commands
- *   - the command sequence: this sequence specifies the command to execute
- *   - the arg sequence: this sequence specifies the command's arguments
- * - the root is owned by the Cli structure.
- *
- * c++ syntax:
- *  ``auto my_cli = cli::cli(config, commands...);``
- *  a command:
- *  ``cli::cmd("[any.path.]name", func)``: a "free function" command. This
- * cannot have subcommands.
- *  ``cli::cmd("[any.path.]name", obj_reference, sub_commands...)``: an "object"
- * command is added. This must have subcommands
- *  ``cli::cmd("[any.path.]name", const_obj_reference, get)``: a retrievable
- * parameter is added.
- *
- * syntax:
- * - "cmd [args...]": invoke the command "cmd" with optional args
- * - "cmd.sub [args...]"/"cmd sub [args...]": invoke the command "cmd" with
- * optional args
- * - "get obj.property": returns the obj's property's value
- * - "get.obj.property": returns the obj's property's value
- * - "set obj.property arg": set obj's property value to arg
- * - "set.obj.property arg": set obj's property value to arg
  */
 #ifndef CLI_CLI_HPP
 #define CLI_CLI_HPP
@@ -59,41 +38,7 @@ using funcs::arg;
 using funcs::operator""_arg;
 using funcs::func;
 using funcs::mem_fun;
-using params::mem_data;
 using params::param;
-
-template <class Tuple> constexpr Error parse_args(Tuple &t, const ArgVector &v);
-
-struct Deduced {};
-
-template <template <class...> class L, class... Commands>
-constexpr auto generate_names(L<Commands...>)
-    -> std::array<CharView, sizeof...(Commands)> {
-  return {Commands::name...};
-}
-
-struct ControlSequence {
-  CharView introducer;
-  CharView params;
-  CharView intermediate;
-  uint8_t final;
-  constexpr operator CharView() const noexcept {
-    return {introducer.data(),
-            introducer.size() + params.size() + intermediate.size() + 1};
-  }
-  constexpr void reset() {}
-};
-
-enum class State {
-  active, // the cli is receiving a sequence of events that make up a
-          // command name.
-  args_start,
-  args,
-  //   set_params_start, // a param set
-  //   call_params_start,
-  //   call_params,
-  //   set_params,
-};
 
 /**
  * @brief
@@ -106,8 +51,6 @@ enum class State {
 template <Config Cfg, cli::Output<typename Cfg::char_type> Out,
           Command... Commands>
 class Cli {
-  using This = Cli<Cfg, Out, Commands...>;
-
 public:
   using config = Cfg;
   using char_type = typename Cfg::char_type;
@@ -116,7 +59,6 @@ public:
   using output_type = Out;
   static_assert(Cfg::access_separator != ' ',
                 "The access_separator cannot be the space character");
-  using enum State;
 
   template <Config Cfg_, cli::Output<typename Cfg_::char_type> Out_,
             cli::Command... Cmds>
@@ -135,45 +77,6 @@ public:
   constexpr Cli(Cfg_, Out_ &&out, std::tuple<Commands...> &&cmds)
       : commands_{Cfg_{}, std::move(cmds)}, out_(std::forward<Out_>(out)),
         tracker_(*commands_.root()) {}
-
-  // template <Config Cfg_, Command... Cmds>
-  // constexpr Cli(Cfg_ &&cfg, output_type &&stream, Cmds &&...cmds)
-  //     : commands_{std::forward<Cmds>(cmds)...},
-  //       out_(io::AnsiOutputStream{std::forward<S>(stream)}) {
-  //   init_tree();
-  // }
-
-  // constexpr Cli(Cli &&other)
-  //     : commands_{std::move(other.commands_)}, out_(std::move(other.out_)) {
-  //   init_tree();
-  // }
-  //
-  // constexpr Cli(const Cli &other)
-  //     : commands_{other.commands_}, out_(other.out_) {
-  //   init_tree();
-  // }
-  //
-  // constexpr Cli &operator=(Cli &&other) {
-  //   commands_ = std::move(other.commands_);
-  //   out_ = std::move(other.out_);
-  //   in_.reset();
-  //   current_line_.clear();
-  //   state_ = active;
-  //   tracker_.clear();
-  //   init_tree();
-  //   return *this;
-  // }
-  //
-  // constexpr Cli &operator=(const Cli &other) {
-  //   commands_ = other.commands_;
-  //   out_ = other.out_;
-  //   in_.reset();
-  //   current_line_.clear();
-  //   state_ = active;
-  //   tracker_.clear();
-  //   init_tree();
-  //   return *this;
-  // }
 
   constexpr Error process() {
     while (1) {
@@ -199,6 +102,17 @@ public:
   }
 
 private:
+  enum State {
+    active, // the cli is receiving a sequence of events that make up a
+            // command name.
+    args_start,
+    args,
+    //   set_params_start, // a param set
+    //   call_params_start,
+    //   call_params,
+    //   set_params,
+  };
+
   constexpr Error write_char(char_type c) {
     if (not current_line_.push_back(c))
       return Error::buffer_overflow;
@@ -540,9 +454,6 @@ private:
   constexpr Error process_set_param(View<const char_type> args) {
     View<char_type> out{output_line_.data(), output_line_.size()};
     auto cmd = get_cmd();
-
-    if (auto err = out_.control(Control::enter); err != Error::none)
-      return err;
 
     if (cmd == nullptr) {
       return return_to_idle(Error::invalid_cmd);

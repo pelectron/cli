@@ -2,8 +2,10 @@
 #define CLI_HISTORY_HPP
 
 #include "cli/config.hpp"
+#include "cli/string.hpp"
 #include "cli/util.hpp"
 
+#include <array>
 #include <cstddef>
 
 namespace cli {

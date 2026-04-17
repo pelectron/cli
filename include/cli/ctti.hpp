@@ -300,7 +300,7 @@ inline constexpr auto enum_name_map = generate_enum_names<E, CharT>(
     std::make_index_sequence<traits::enum_traits<E>::max -
                              traits::enum_traits<E>::min + 1>{});
 
-template <class E, typename CharT = char>
+template <class E, typename CharT>
   requires traits::FlagEnum<E>
 inline constexpr auto enum_name_map<E, CharT> =
     generate_enum_names<E, CharT>(std::make_index_sequence<sizeof(E) * 8>{});

@@ -32,7 +32,7 @@ namespace cli {
  */
 template <class S, typename char_type>
 concept CharStream = requires(std::remove_cvref_t<S> &stream, char_type c) {
-  { std::invoke(stream, c) }; // -> std::same_as<Error>;
+  { stream(c) }; // -> std::same_as<Error>;
 };
 
 /**
@@ -63,7 +63,7 @@ concept CharStream = requires(std::remove_cvref_t<S> &stream, char_type c) {
 template <class S, typename char_type>
 concept StringStream =
     requires(std::remove_cvref_t<S> &stream, View<const char_type> s) {
-      { std::invoke(stream, s) } -> std::same_as<Error>;
+      { stream(s) } -> std::same_as<Error>;
     };
 
 /**
@@ -193,7 +193,7 @@ public:
   using char_type = get_stream_char_type_t<Stream>;
 
   template <Config Cfg_, BasicOutputStream S>
-  AnsiOutput(Cfg_ &&, S &&s) : stream(std::forward<S>(s)) {}
+  constexpr AnsiOutput(Cfg_ &&, S &&s) : stream(std::forward<S>(s)) {}
 
   constexpr Error write(char_type c) {
     if constexpr (CharStream<Stream, char_type>) {

@@ -98,7 +98,8 @@ private:
   }
 
   template <Command... Cmds>
-  std::tuple<Help, Commands...> init_tuple(const std::tuple<Cmds...> &t) {
+  constexpr std::tuple<Help, Commands...>
+  init_tuple(const std::tuple<Cmds...> &t) {
     return [&t, this]<std::size_t... Is>(
                std::index_sequence<Is...>) -> std::tuple<Help, Commands...> {
       return {create_help(cmds_[0]), std::get<Is>(t)...};
@@ -106,7 +107,7 @@ private:
   }
 
   template <Command... Cmds>
-  std::tuple<Help, Commands...> init_tuple(std::tuple<Cmds...> &&t) {
+  constexpr std::tuple<Help, Commands...> init_tuple(std::tuple<Cmds...> &&t) {
     return [&t, this]<std::size_t... Is>(
                std::index_sequence<Is...>) -> std::tuple<Help, Commands...> {
       return {create_help(cmds_[0]), std::move(std::get<Is>(t))...};
@@ -114,7 +115,8 @@ private:
   }
 
   template <Command Cmd>
-  void init_cmd(std::size_t &index, CommandNode<char_type> &parent, Cmd &cmd) {
+  constexpr void init_cmd(std::size_t &index, CommandNode<char_type> &parent,
+                          Cmd &cmd) {
     // initialize the node
     CommandNode<char> &node = cmds_[index];
     node.name = Cmd::name;
@@ -130,16 +132,17 @@ private:
     // initialize sub commands of cmd
     if constexpr (requires { cmd.subcommands; })
       for_each([this, &index,
-                &node](Command auto &c) { init_cmd(++index, node, c); },
+                &node](Command auto &c) { this->init_cmd(++index, node, c); },
                cmd.subcommands);
   }
 
-  void init_commands() {
+  constexpr void init_commands() {
     auto &root = cmds_[0];
     root.name = config::name;
     root.description = config::description;
     std::size_t index = 0;
-    for_each([this, &index, &root](auto &cmd) { init_cmd(++index, root, cmd); },
+    for_each([this, &index,
+              &root](auto &cmd) { this->init_cmd(++index, root, cmd); },
              commands_);
   }
 };

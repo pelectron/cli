@@ -67,7 +67,8 @@ constexpr auto create_help_cmd(const CommandNode<CharT> &root) {
   return funcs::func(
       string_constant<CharT, 'h', 'e', 'l', 'p'>{},
       cli::Help<CharT, AccessSeparator>{root},
-      funcs::arg(string_constant<CharT, 'c', 'o', 'm', 'm', 'a', 'n', 'd'>{}));
+      funcs::arg<cli::View<const CharT>, string_constant<CharT>{}>(
+          string_constant<CharT, 'c', 'o', 'm', 'm', 'a', 'n', 'd'>{}));
 }
 
 template <class CharT, CharT AccessSeparator>

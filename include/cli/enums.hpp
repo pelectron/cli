@@ -38,12 +38,17 @@ enum class Error : std::uint32_t {
   expected_rparen,                           //< expected closing parentheses
   //
   // parse errors
-  too_few_characters, //< expected more characters
-  invalid_character,  //< encountered invalid character
-  unescaped_string,   //< a string started with a quote doesn't hae a closing
-                      // quote
-  invalid_value,      //< encountered an invalid value
-  unknown             //< unkown error
+  too_few_characters,    //< expected more characters
+  unexpected_characters, //< unexpected or too many characters
+  invalid_character,     //< encountered invalid character
+  unescaped_string,      //< a string started with a quote doesn't hae a closing
+                         // quote
+  // validation errors
+  invalid_value, //< encountered an invalid value
+  out_of_range,
+  value_too_small,
+  value_too_large,
+  unknown //< unkown error
 };
 
 /**

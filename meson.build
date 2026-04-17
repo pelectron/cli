@@ -50,13 +50,14 @@ executable(
   'tests/parse/string.cpp',
   'tests/parse/struct.cpp',
   'tests/history.cpp',
+  'tests/param.cpp',
   'tests/string.cpp',
   # 'tests/tracker.cpp',
   include_directories: [inc, include_directories('tests')],
   dependencies: [deps, native_deps, catch_dep],
 )
 
-executable('led-example',
-  'examples/led.cpp',
-  include_directories: inc,
-  dependencies: cli_dep)
+# executable('led-example',
+#   'examples/led.cpp',
+#   include_directories: inc,
+#   dependencies: cli_dep)

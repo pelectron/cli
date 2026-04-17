@@ -13,17 +13,40 @@ enum class Kind { Integer, FixPoint, Float, String, Struct, Sequence };
 template <class T> struct kind;
 
 /**
+ * @defgroup type-categories Type Categories
  * The basic categories of types the library can handle. These must be
  * overridden in order to opt in to the corresponding concept.
+ *
+ * Example:
+ * ```
+ * // custom_string.hpp
+ * #include "cli/traits.hpp"
+ * namespace abc{
+ *   class CustomString{...};
+ * }
+ *
+ * namespace cli::traits{
+ * template<>
+ *   struct is_string<abc::CustomString> : std::true_type{};
+ * }
+ * ```
  * @{
  */
+/// type category predicate for chars
 template <class T> struct is_char : std::false_type {};
+/// type category predicate for integers
 template <class T> struct is_integer : std::false_type {};
+/// type category predicate for floats
 template <class T> struct is_float : std::false_type {};
+/// type category predicate for fixpoint
 template <class T> struct is_fixpoint : std::false_type {};
+/// type category predicate for strings
 template <class T> struct is_string : std::false_type {};
+/// type category predicate for sequences
 template <class T> struct is_sequence : std::false_type {};
+/// type category predicate for structs/aggregates
 template <class T> struct is_struct : std::is_aggregate<T> {};
+/// type category predicate for enums
 template <class T> struct is_enum : std::is_enum<T> {};
 /**
  * @}
@@ -47,8 +70,8 @@ concept Character =
 
 template <class T>
 concept Integer =
-    (not Character<T>) and
-    ((std::integral<T> and not std::same_as<T, bool>) or is_integer<T>::value);
+    is_integer<T>::value or
+    ((not Character<T>) and std::integral<T> and not std::same_as<T, bool>);
 
 template <class T>
 concept FixPoint =
@@ -71,7 +94,8 @@ concept Float = std::floating_point<T> or is_float<T>::value;
 template <class T>
 concept String =
     is_string<T>::value and std::integral<typename T::value_type> and
-    std::constructible_from<T, const char *, std::size_t> and requires(T &&t) {
+    std::constructible_from<T, const typename T::value_type *, std::size_t> and
+    requires(T &&t) {
       { t.size() } -> std::convertible_to<std::size_t>;
       { t.begin() } -> std::forward_iterator;
       { t.end() } -> std::forward_iterator;
@@ -80,35 +104,6 @@ concept String =
 template <class T>
 concept Sequence =
     is_sequence<T>::value and requires(T a, typename T::value_type value) {
-      // requires std::regular<T>;
-      // requires std::swappable<T>;
-      // requires std::destructible<typename T::value_type>;
-      // requires std::same_as<typename T::reference, typename
-      // T::value_type &>; requires std::same_as<typename
-      // T::const_reference,
-      //                       const typename T::value_type &>;
-      // requires std::forward_iterator<typename T::iterator>;
-      // requires std::forward_iterator<typename
-      // T::const_iterator>; requires
-      // std::signed_integral<typename T::difference_type>;
-      // requires std::same_as<
-      //     typename T::difference_type,
-      //     typename std::iterator_traits<typename
-      //     T::iterator>::difference_type>;
-      // requires std::same_as<typename T::difference_type,
-      //                       typename std::iterator_traits<
-      //                           typename
-      //                           T::const_iterator>::difference_type>;
-      // { a.begin() } -> std::same_as<typename T::iterator>;
-      // { a.end() } -> std::same_as<typename T::iterator>;
-      // { b.begin() } -> std::same_as<typename
-      // T::const_iterator>; { b.end() } -> std::same_as<typename
-      // T::const_iterator>; { a.cbegin() } ->
-      // std::same_as<typename T::const_iterator>; { a.cend() }
-      // -> std::same_as<typename T::const_iterator>; { a.size()
-      // } -> std::same_as<typename T::size_type>; { a.max_size()
-      // } -> std::same_as<typename T::size_type>; { a.empty() }
-      // -> std::same_as<bool>;
       { T() };
       { a.begin() };
       { a.end() };

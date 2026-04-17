@@ -78,18 +78,41 @@ inline struct Settings {
 
 using P = cli::parse::String<cli::View<const char>, char>;
 static_assert(traits::String<cli::View<const char>>);
-static_assert(cli::Config<cli::default_config>);
 static_assert(cli::Output<
               decltype(cli::AnsiOutput{cli::default_config{}, &stream}), char>);
-static_assert(
-    cli::Command<decltype(param<settings>(
-        mem_data<&Settings::a>(), mem_data("b"_sc, &Settings::b),
-        mem_data("c"_sc, &Settings::c), mem_fun<&Settings::apply>()))>);
-using sub = decltype(param<settings>(
-    mem_data<&Settings::a>(), mem_data("b"_sc, &Settings::b),
-    mem_data("c"_sc, &Settings::c),
-    mem_fun<&Settings::apply>()))::sub_command_list;
+// clang-format off
+static constinit cli::Cli my_cli(
+    cli::default_config{},
+    cli::AnsiOutput{cli::default_config{},&stream},
+    // functions
+    // @{
+    // free functions
+    func("free1"_sc, &free1, funcs::arg("param"_sc)) ,
+    // lambdas without templated call operator
+    func("lambda"_sc, 
+        [](int i, char c) {},
+          "i"_arg, 
+          "c"_arg),
+    // and any other functor without templated call operator
+    func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
+    func(MyFunctor2{}, "f"_arg),
+    // member functions
+    func("free2"_sc, s, &S::free2, "x"_arg),
+  // @}
+  // global objects
+    param("enable"_sc,"enables stuff"_sc, enable),
+    // virtual hierarchies
+    param("virtual"_sc,"virtual group"_sc, virtual_,
+          param("enable"_sc,"virtual enable"_sc, enable_virtual,
+          param("opts"_sc, "enable options"_sc, enable_opts))),
+    param("settings"_sc, "core settings"_sc, settings,
+        param("b"_sc, &Settings::b),
+        param<&Settings::a>(),
+        param("c"_sc, &Settings::c),
+        mem_fun<&Settings::apply>())
 
+    );
+// clang-format on
 int main() {
   try {
     // check if the terminal is capable of handling input
@@ -100,39 +123,6 @@ int main() {
       throw Term::Exception("The terminal is not attached to a TTY and "
                             "therefore can't catch user input. Exiting...");
     }
-    // clang-format off
-    cli::Cli my_cli(
-        cli::default_config{},
-        cli::AnsiOutput{cli::default_config{},&stream},
-        // functions
-        // @{
-        // free functions
-        func("free1"_sc, &free1, funcs::arg("param"_sc)) ,
-        // lambdas without templated call operator
-        func("lambda"_sc, 
-            [](int i, char c) {},
-              "i"_arg, 
-              "c"_arg),
-        // and any other functor without templated call operator
-        func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
-        func(MyFunctor2{}, "f"_arg),
-        // member functions
-        func("free2"_sc, s, &S::free2, "x"_arg),
-      // @}
-      // global objects
-        param("enable"_sc, enable),
-        // virtual hierarchies
-        param("virtual"_sc, virtual_,
-              param("enable"_sc, enable_virtual,
-              param("opts"_sc, enable_opts))),
-        param<settings>(
-            mem_data("b"_sc, &Settings::b),
-            mem_data<&Settings::a>(),
-            mem_data("c"_sc, &Settings::c),
-            mem_fun<&Settings::apply>())
-
-        );
-    // clang-format on
     my_cli.print();
     while (1) {
       Term::Event event = Term::read_event();

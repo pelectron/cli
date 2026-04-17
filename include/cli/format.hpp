@@ -15,32 +15,115 @@
 
 namespace cli::format {
 
+/**
+ * This class represent the result of a formatting operation.
+ *
+ * It contains an error and the number of characters formatted. Although it has
+ * both memebrs, it should be thought of as a variant/union. If the error is
+ * Error::none, then size_written contains the number of characters used for
+ * formatting. If the error is not Error::none, then size_written is always 0.
+ *
+ */
 struct FormatResult {
 
-  constexpr FormatResult(Error error) : error(error), size_written(0) {}
+  constexpr FormatResult(Error error) : error(error) {}
 
   constexpr FormatResult(std::size_t size_written)
-      : error(Error::none), size_written(size_written) {}
+      : size_written(size_written) {}
 
+  /// returns true if error is Error::none, else false.
   constexpr operator bool() const noexcept { return error == Error::none; }
 
-  Error error;
-  std::size_t size_written;
+  Error error{cli::Error::none};
+  std::size_t size_written{0};
 };
 
 template <class F> struct formatter_value_type {
-  using type = std::decay_t<type_list::type_at_t<
+  using type = std::remove_cvref_t<type_list::type_at_t<
       1, typename function_traits<std::decay_t<F>>::arguments>>;
 };
 
+template <class F> struct formatter_buffer_type {
+  using type = std::remove_cvref_t<type_list::type_at_t<
+      0, typename function_traits<std::decay_t<F>>::arguments>>;
+};
+
+/**
+ * This concept denotes a formatter for T, i.e. a callable that turns a T
+ * into a string.
+ *
+ * A Formatter takes a cli::View<CharT> as its first argument and a T as its
+ * second argument, and returns a FormatResult. The first argument specifies the
+ * buffer into which the second argument should be formatted into.
+ *
+ * Example:
+ *
+ * ```
+ * // a simple function
+ * FormatResult format_int(cli::View<char> buffer,int i);
+ *
+ * static_assert(FormatterOf<decltype(format), int, char>);
+ *
+ * char buffer[20]{};
+ * int i = 5;
+ * FormatResult res = format_int(buffer, i);
+ *
+ * assert(res);
+ * assert(res.size_written == 1);
+ * ```
+ * @tparam F the formatter
+ * @tparam T the type to format
+ * @tparam CharT the character type of the buffer
+ */
 template <typename F, typename T, typename CharT>
 concept FormatterOf = requires(F &&f, View<CharT> buf, const T &t) {
   { f(buf, t) } -> std::same_as<FormatResult>;
-};
+} and not std::is_const_v<CharT>;
 
+// clang-format off
+/**
+ * A Formatter takes a cli::View<CharT> as its first argument and a ``T`` as its
+ * second argument, and returns a cli::format::FormatResult. The first argument
+ * specifies the buffer into which the second argument should be formatted into.
+ *
+ * An example for a char formatter:
+ * ```
+ * auto format_char(cli::View<char> output, char c) -> cli::format::FormatResult{
+ *   if(output.size() == 0)
+ *     return cli::Error::buffer_overflow;
+ *   output[0] = c;
+ *   return 1;
+ * }
+ *
+ * auto format_quoted_char(cli::View<char> output, char c) -> cli::format::FormatResult{
+ *   if(output.size() < 3)
+ *     return cli::Error::buffer_overflow;
+ *   output[0] = '\'';
+ *   output[1] = c;
+ *   output[2] = '\'';
+ *   return 3;
+ * }
+ * ```
+ *
+ * Default implementations of formatters can be found in the cli::format namespace.
+ * There are default formatters for:
+ * - bool
+ * - characters
+ * - enumerations
+ * - integers
+ * - fixpoint numbers
+ * - sequences, i.e. arrays/lists/vectors
+ * - strings
+ * - aggregates, i.e. simple structs
+ * - TODO: floating point numbers
+ *
+ * @tparam F the formatter
+ */
+// clang-format on
 template <class F>
 concept Formatter =
-    not std::same_as<void, typename formatter_value_type<F>::type>;
+    is_non_const_view_v<typename formatter_buffer_type<F>::type> and
+    (not std::same_as<void, typename formatter_value_type<F>::type>);
 
 template <class T, typename CharT> struct DefaultFormat {
   constexpr FormatResult operator()(View<CharT> buf, const T &t) const {
@@ -53,11 +136,26 @@ template <typename CharT> struct NullFormat {
     return 0;
   }
 };
+template <typename T, typename CharT> struct NoFormat {
+  constexpr FormatResult operator()(View<CharT> buf, const T &) const {
+    // TODO: add no_format_available to Error.
+    return Error::unimplemented;
+  }
+};
 
+/**
+ * Formatter for void.
+ * @tparam CharT the character type
+ */
 template <typename CharT> struct DefaultFormat<void, CharT> {
   constexpr FormatResult operator()(View<CharT> buf) const { return 0; }
 };
 
+/**
+ * @brief The default formatter for bool
+ *
+ * @tparam CharT the character type
+ */
 template <typename CharT> struct DefaultFormat<bool, CharT> {
   constexpr FormatResult operator()(View<CharT> buf, bool b) const {
     if (b) {
@@ -78,6 +176,16 @@ template <typename CharT> struct DefaultFormat<bool, CharT> {
   }
 };
 
+/**
+ * An integer formatter.
+ *
+ * @tparam T the integer type
+ * @tparam CharT the character type
+ * @tparam Format the number format to used. Can be normal (i.e. decimal), hex,
+ * or binary.
+ * @tparam UseSignForPositive if true, a leading '+' character will be used for
+ * positive values.
+ */
 template <typename T, typename CharT, Fmt Format = Fmt::normal,
           bool UseSignForPositive = false>
 struct Int {
@@ -353,9 +461,24 @@ struct Int {
   }
 };
 
+/**
+ * The default formatter for integers.
+ *
+ * @tparam T the integer type
+ * @tparam CharT the character type
+ */
 template <traits::Integer T, typename CharT>
 struct DefaultFormat<T, CharT> : public Int<T, CharT> {};
 
+/**
+ * @brief A character formatter. This will format the characters quoted if
+ * Format is Fmt::normal. Else it will format the values as the corresponding
+ * hex/binary value.
+ *
+ * @tparam T the type of the character to format
+ * @tparam CharT the buffer character type
+ * @tparam Format how to format characters
+ */
 template <traits::Character T, typename CharT, Fmt Format = Fmt::normal>
 struct Char {
   constexpr FormatResult operator()(View<CharT> buf, T value) const {
@@ -373,12 +496,27 @@ struct Char {
   }
 };
 
+/**
+ * @brief The default character formatter.
+ *
+ * @tparam T the type of the character to format
+ * @tparam CharT the buffer character type
+ */
 template <traits::Character T, typename CharT>
 struct DefaultFormat<T, CharT> : public Char<T, CharT> {};
 
+/**
+ * @brief a formatter for fixpoint numbers.
+ * To use this formatter, you must tell cli to enable use of T by implementing
+ * cli::traits::is_fixpoint and implmenting or conforming to
+ * cli::traits::fixpoint_traits. See the cli/traits.hpp header for more
+ * information.
+ *
+ * @tparam CharT
+ */
 template <traits::FixPoint T, typename CharT, std::size_t Precision = 11,
           bool PrintTrailingZeros = false, Fmt Format = Fmt::normal,
-          bool UseSignForPositive = false, char FixPointSeparator = '.'>
+          bool UseSignForPositive = false, CharT FixPointSeparator = '.'>
 class FixPoint {
   using traits = traits::fixpoint_traits<T>;
   using raw_value = typename traits::raw_value_type;
@@ -779,6 +917,38 @@ class Float {
   static_assert(always_false<T>, "Not implemented yet");
 };
 
+/**
+ * @brief This is a formatter for sequences. To use this with your custom type,
+ * cli::traits::is_sequence must be overridden.
+ *
+ * Example:
+ * ```
+ *  // my_vec.hpp
+ *  #include "cli/traits.hpp"
+ *  namespace abc{
+ *    class Vector{
+ *      public:
+ *      using value_type = T;
+ *      using iterator = T*;
+ *
+ *      Vector();
+ *      void push_back(const T& t);
+ *      iterator begin();
+ *      iterator end();
+ *    };
+ *  }
+ *
+ *  namespace cli::traits{
+ *    template<>
+ *    struct is_sequence<abc::Vector> : std::true_type {};
+ *  }
+ * ```
+ *
+ * @tparam T the sequence
+ * @tparam CharT the buffer's character type
+ * @tparam ElementFormatter the formatter of the sequence's value_type
+ * @tparam Delimiter the character used to seperate elements of the sequence
+ */
 template <traits::Sequence T, typename CharT,
           FormatterOf<typename T::value_type, CharT> ElementFormatter,
           CharT Delimiter = ','>
@@ -821,10 +991,25 @@ struct Sequence {
   }
 };
 
+/**
+ * @brief The default formatter for sequences. This uses DefaultFormat for the
+ * sequence's value_type.
+ *
+ * @tparam T the sequence
+ * @tparam CharT the buffer's character type
+ */
 template <traits::Sequence T, typename CharT>
 struct DefaultFormat<T, CharT>
     : Sequence<T, CharT, DefaultFormat<typename T::value_type, CharT>> {};
 
+/**
+ * @brief The default formatter for enumerations.
+ * If your enum is signed and has values outside the range of [-128, 127], or if
+ * your enum is unsigned and has values outsde the range of [0, 255], you must
+ * adjust cli::traits::enum_traits.
+ * @tparam Enum the enumeration type
+ * @tparam CharT the buffer's character type
+ */
 template <traits::Enum Enum, typename CharT> struct DefaultFormat<Enum, CharT> {
   constexpr FormatResult operator()(View<CharT> buf, Enum value) const {
     if constexpr (traits::FlagEnum<Enum>) {
@@ -874,6 +1059,14 @@ template <traits::Enum Enum, typename CharT> struct DefaultFormat<Enum, CharT> {
   }
 };
 
+/**
+ * @brief This is a formatter for strings.
+ *
+ * @tparam CharT
+ * @param buf
+ * @param str
+ * @return
+ */
 template <traits::String T, typename CharT, bool UseQuotes = false>
 struct String {
   constexpr FormatResult operator()(View<CharT> buf, const T &str) const {
@@ -905,6 +1098,12 @@ struct String {
   }
 };
 
+/**
+ * @brief The default formatter for strings.
+ *
+ * @tparam T the string type
+ * @tparam CharT
+ */
 template <traits::String T, typename CharT>
 struct DefaultFormat<T, CharT> : public String<T, CharT> {};
 
@@ -1001,6 +1200,12 @@ struct field_formatter_for {
   using type = type_list::apply_t<type_, fields>;
 };
 
+/**
+ * @brief A foramtter fro struct aggregates.
+ *
+ * @tparam T the struct type
+ * @tparam CharT
+ */
 template <traits::Struct T, typename CharT, class Name = string_constant<CharT>,
           CharT Assignment = '=', CharT MemberSeparator = ',',
           CharT Prefix = '{', CharT Postfix = '}', bool UseNames = true>
@@ -1039,13 +1244,15 @@ public:
   }
 };
 
+/**
+ * @brief The default formatter for struct aggregates.
+ *
+ * @tparam T the struct type
+ * @tparam CharT
+ */
 template <traits::Struct T, typename CharT>
 struct DefaultFormat<T, CharT> : public Struct<T, CharT> {};
 
-template <typename T, typename CharT>
-FormatResult format(View<CharT> buf, const T &t) {
-  return DefaultFormat<T, CharT>{}(buf, t);
-}
 } // namespace cli::format
 
 #endif
