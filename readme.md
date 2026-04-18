@@ -2,7 +2,7 @@
 
 CLI is a C++20 header only library to build hierarchical ANSI command line
 interfaces for embedded systems. It can be used to set and retrieve
-parameters and call functions.
+parameters and call functions on the embedded device.
 
 ## Components
 

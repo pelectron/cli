@@ -127,17 +127,17 @@ TEST_CASE("operator _sc") {
   using cli::operator""_sc;
   SECTION("char") {
     STATIC_REQUIRE(
-        std::is_same_v<decltype("hello"_sc),
-                       string_constant<char, 'h', 'e', 'l', 'l', 'o'>>);
+      std::is_same_v<decltype("hello"_sc),
+                     string_constant<char, 'h', 'e', 'l', 'l', 'o'>>);
   }
   SECTION("char16") {
     STATIC_REQUIRE(
-        std::is_same_v<decltype(u"hello"_sc),
-                       string_constant<char16_t, 'h', 'e', 'l', 'l', 'o'>>);
+      std::is_same_v<decltype(u"hello"_sc),
+                     string_constant<char16_t, 'h', 'e', 'l', 'l', 'o'>>);
   }
   SECTION("char32") {
     STATIC_REQUIRE(
-        std::is_same_v<decltype(U"hello"_sc),
-                       string_constant<char32_t, 'h', 'e', 'l', 'l', 'o'>>);
+      std::is_same_v<decltype(U"hello"_sc),
+                     string_constant<char32_t, 'h', 'e', 'l', 'l', 'o'>>);
   }
 }

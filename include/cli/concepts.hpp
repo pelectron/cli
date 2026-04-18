@@ -8,12 +8,13 @@
 
 namespace cli {
 
-template <class T>
-concept SC = is_string_constant_v<std::remove_cvref_t<T>>;
+  template<class T>
+  concept SC = is_string_constant_v<std::remove_cvref_t<T>>;
 
-template <class C>
-concept Command =
-    requires(std::remove_cvref_t<C> &c, ExecType type,
+  template<class C>
+  concept Command =
+    requires(std::remove_cvref_t<C> &c,
+             ExecType type,
              View<const typename std::remove_cvref_t<C>::char_type> args,
              View<typename std::remove_cvref_t<C>::char_type> &out) {
       { typename std::remove_cvref_t<C>::sub_command_list{} };
@@ -22,13 +23,13 @@ concept Command =
       { c.execute(type, args, out) } -> std::same_as<Error>;
     };
 
-template <typename T>
-concept TriviallyDestructible = std::is_trivially_destructible_v<T>;
+  template<typename T>
+  concept TriviallyDestructible = std::is_trivially_destructible_v<T>;
 
-template <typename T>
-concept Printer = requires(T t) {
-  { t.print() };
-};
+  template<typename T>
+  concept Printer = requires(T t) {
+    { t.print() };
+  };
 
 } // namespace cli
 #endif

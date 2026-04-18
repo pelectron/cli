@@ -9,7 +9,8 @@ using Seq1 = cli::FixedCapacityVector<int, 10>;
 using Seq2 = std::vector<int>;
 using Result = cli::parse::ParseResult<cli::CharView, char>;
 
-template <class Seq> struct SeqTestVector {
+template<class Seq>
+struct SeqTestVector {
   cli::CharView input;
   cli::parse::ParseResult<Seq, char> output;
 };
@@ -36,7 +37,7 @@ template <class Seq> struct SeqTestVector {
 
 #define PASS(...)                                                              \
   PASS_TV(__VA_ARGS__), PASS_TV1(__VA_ARGS__), PASS_TV2(__VA_ARGS__),          \
-      PASS_TV3(__VA_ARGS__)
+    PASS_TV3(__VA_ARGS__)
 
 #define PASS_TVR(...)                                                          \
   SeqTestVector<Seq> {                                                         \
@@ -60,7 +61,7 @@ template <class Seq> struct SeqTestVector {
 
 #define PASSR(...)                                                             \
   PASS_TVR(__VA_ARGS__), PASS_TV1R(__VA_ARGS__), PASS_TV2R(__VA_ARGS__),       \
-      PASS_TV3R(__VA_ARGS__)
+    PASS_TV3R(__VA_ARGS__)
 
 #define str(x) std::string(x.data(), x.size())
 

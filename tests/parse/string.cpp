@@ -60,13 +60,14 @@ TEST_CASE("parse::String") {
   SECTION("valid strings") {
     SECTION("unqoted") {
       StringTestVector vectors[]{
-          StringTestVector{vis_chars_view, {vis_chars_view, {}}},
-          PASS_TV("hello"),
-          PASS_TV("kw341§$%=)(?\\^°~+-_.:,;<>|"),
-          PASS_TV("kw341§$%=)(?\\^°"),
-          PASS_TV_R("hello", "\"world"),
-          PASS_TV_R("hello", "\tworld"),
-          PASS_TV_R("hello", "\x7Fworld")};
+        StringTestVector{vis_chars_view, {vis_chars_view, {}}},
+        PASS_TV("hello"),
+        PASS_TV("kw341§$%=)(?\\^°~+-_.:,;<>|"),
+        PASS_TV("kw341§$%=)(?\\^°"),
+        PASS_TV_R("hello", "\"world"),
+        PASS_TV_R("hello", "\tworld"),
+        PASS_TV_R("hello", "\x7Fworld")
+      };
 
       for (const auto &tv : vectors) {
         auto res = parse(tv.input);
@@ -78,15 +79,16 @@ TEST_CASE("parse::String") {
 
     SECTION("quoted") {
       StringTestVector vectors[]{
-          StringTestVector{quoted_vis_chars_view, {vis_chars_view, {}}},
-          PASS_TV_Q("hello"),
-          PASS_TV_Q("kw341§$%=)(?\\^°~+-_.:,;<>|"),
-          PASS_TV_Q("kw341§$%=)(?\\^°"),
-          PASS_TV_Q("\\\"kw341§$%=)(?\\^°"),
-          PASS_TV_Q("kw341§$%=\\\")(?\\^°"),
-          PASS_TV_R_Q("hello", "\"world"),
-          PASS_TV_R_Q("hello", "\tworld"),
-          PASS_TV_R_Q("hello", "\x7Fworld")};
+        StringTestVector{quoted_vis_chars_view, {vis_chars_view, {}}},
+        PASS_TV_Q("hello"),
+        PASS_TV_Q("kw341§$%=)(?\\^°~+-_.:,;<>|"),
+        PASS_TV_Q("kw341§$%=)(?\\^°"),
+        PASS_TV_Q("\\\"kw341§$%=)(?\\^°"),
+        PASS_TV_Q("kw341§$%=\\\")(?\\^°"),
+        PASS_TV_R_Q("hello", "\"world"),
+        PASS_TV_R_Q("hello", "\tworld"),
+        PASS_TV_R_Q("hello", "\x7Fworld")
+      };
 
       for (const auto &tv : vectors) {
         auto res = parse(tv.input);

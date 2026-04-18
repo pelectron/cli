@@ -6,9 +6,11 @@
 
 struct S1 {};
 
-template <char c> struct S2 {};
+template<char c>
+struct S2 {};
 
-template <int a> struct S3 {};
+template<int a>
+struct S3 {};
 
 struct F1 {
   int a;
@@ -29,7 +31,7 @@ std::ostream &operator<<(std::ostream &s, cli::CharView str) {
   return s;
 }
 
-template <class Field, class... Fields>
+template<class Field, class... Fields>
 void print_fields(cli::TypeList<Field, Fields...>, std::size_t indent = 0) {
   if constexpr (sizeof...(Fields) == 0) {
     std::cout << std::string(2 * indent, ' ')
@@ -44,7 +46,8 @@ void print_fields(cli::TypeList<Field, Fields...>, std::size_t indent = 0) {
   }
 }
 
-template <class T> void print_struct(std::size_t indent = 0) {
+template<class T>
+void print_struct(std::size_t indent = 0) {
   using Info = cli::ctti::StructInfo<T>;
   std::cout << std::string(2 * indent, ' ')
             << cli::CharView(cli::ctti::name<T>()).data() << ":\n";
@@ -55,11 +58,11 @@ template <class T> void print_struct(std::size_t indent = 0) {
 void free_func(int i) {}
 
 constexpr cli::CharView names[]{
-    cli::ctti::name<int>(),
-    cli::ctti::name<S1>(),
-    cli::ctti::name<S2<'c'>>(),
-    cli::ctti::name<S3<1234>>(),
-    cli::ctti::name<decltype(free_func)>(),
+  cli::ctti::name<int>(),
+  cli::ctti::name<S1>(),
+  cli::ctti::name<S2<'c'>>(),
+  cli::ctti::name<S3<1234>>(),
+  cli::ctti::name<decltype(free_func)>(),
 };
 
 using int_t = cli::ctti::TypeInfo<int>;
@@ -67,7 +70,7 @@ using void_t = cli::ctti::TypeInfo<void>;
 using F1_t = cli::ctti::TypeInfo<F1>;
 using F2_t = cli::ctti::TypeInfo<F2>;
 namespace n {
-struct Type {};
+  struct Type {};
 } // namespace n
 using cli::operator""_sc;
 
@@ -98,24 +101,22 @@ int main() {
 
   std::cout << "\nto_tuple(F2{.i=10,.c='c'}):\n";
   cli::for_each(
-      [](const auto &field) {
-        std::cout <<
-            typename std::remove_cvref_t<decltype(field)>::name{}.data() << ": "
-                  << field.value << std::endl;
-      },
-      cli::ctti::to_tuple(F2{.i = 10, .c = 'c'}));
+    [](const auto &field) {
+      std::cout << typename std::remove_cvref_t<decltype(field)>::name{}.data()
+                << ": " << field.value << std::endl;
+    },
+    cli::ctti::to_tuple(F2{.i = 10, .c = 'c'}));
 
   F2 f2{.i = 10, .c = 'x'};
   auto tup = cli::ctti::to_tuple(f2);
   F2 f3 = cli::ctti::from_tuple<F2>(tup);
   std::cout << "\nto_tuple(f2):\n";
   cli::for_each(
-      [](const auto &field) {
-        std::cout <<
-            typename std::remove_cvref_t<decltype(field)>::name{}.data() << ": "
-                  << field.value << std::endl;
-      },
-      tup);
+    [](const auto &field) {
+      std::cout << typename std::remove_cvref_t<decltype(field)>::name{}.data()
+                << ": " << field.value << std::endl;
+    },
+    tup);
   std::cout << "\nfrom_tuple(to_tuple(f2)):\n";
   std::cout << "i: " << f3.i << "\nc: " << f3.c << std::endl;
 }
