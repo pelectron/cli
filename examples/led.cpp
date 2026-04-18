@@ -39,14 +39,14 @@ void UartTransmit(char c);
 /// @}
 
 /**
- * The LED driver functions that need to be implemented fot the example to work
+ * The LED driver functions that need to be implemented for the example to work
  * @{
  */
-
 void LedEnable(bool enable) { (void)enable; }
+bool LedIsEnabled() { return false; }
 void LedSetColor(RGB color) { (void)color; }
-void LedSetInterval(Milliseconds interval) { (void)interval; }
-void LedFlashing(bool enable) { (void)enable; }
+// an interval of 0 means no flashing
+void LedSetFlashingInterval(Milliseconds interval) { (void)interval; }
 /// @}
 
 cli::Error write(char c);
@@ -55,11 +55,17 @@ static_assert(cli::CharStream<decltype(write), char>);
 
 static RGB color{};
 static Milliseconds interval;
+static bool flashing_enabled;
 
-auto get_color = [](RGB &c) -> cli::Error {
-  c = color;
+cli::Error set_enable(bool enable) {
+  LedEnable(enable);
   return cli::Error::none;
-};
+}
+
+cli::Error get_enable(bool &enable) {
+  enable = LedIsEnabled();
+  return cli::Error::none;
+}
 
 auto set_color = [](const RGB &c) -> cli::Error {
   color = c;
@@ -69,7 +75,7 @@ auto set_color = [](const RGB &c) -> cli::Error {
 
 cli::Error set_interval(Milliseconds i) {
   interval = i;
-  LedSetInterval(interval);
+  LedSetFlashingInterval(interval);
   return cli::Error::none;
 };
 
@@ -78,34 +84,45 @@ cli::Error get_interval(Milliseconds &i) {
   return cli::Error::none;
 };
 
+bool validate_interval(Milliseconds i) { return i < 10000; }
+
+cli::Error set_flashing(bool enabled) {
+  flashing_enabled = enabled;
+  if (enabled) {
+    LedSetFlashingInterval(interval);
+  } else {
+    LedSetFlashingInterval(0);
+  }
+  return cli::Error::none;
+}
+
 using config = cli::default_config;
 using cli::operator""_sc;
+
 // clang-format off
 static cli::Cli control{
-    config{}, 
-    cli::AnsiOutput(config{}, &write),
-    cli::param("color"_sc, 
-               "the led color"_sc, 
-               color, 
-               get_color,
-               set_color),
-    cli::func("enable"_sc,
-              "turn the led on or off"_sc,
-              &LedEnable,
-                cli::arg("enable"_sc)),
-    cli::func("flashing"_sc, 
-              "enable or disable LED flashing"_sc,
-              &LedFlashing,
-              cli::arg("enable"_sc)),
-    cli::param("interval"_sc,
-               "the flashing interval"_sc,
-               interval,
-               &get_interval,
-               &set_interval)
+  config{}, 
+  cli::AnsiOutput(config{}, &write),
+  cli::param("color"_sc, 
+             "the led color"_sc, 
+             color, 
+             set_color),
+  cli::param<bool>("enable"_sc, 
+                   "turn the led on or off"_sc,
+                   &get_enable,
+                   &set_enable),
+  cli::param("flashing"_sc, 
+             "enable or disable LED flashing"_sc,
+             flashing_enabled,
+             &set_flashing),
+  cli::param("interval"_sc,
+             "the flashing interval"_sc,
+             interval,
+             &get_interval,
+             &set_interval,
+             &validate_interval)
 };
 // clang-format on
-
-int main() {}
 
 void UartCallback() {
   char c = UartGetChar();
@@ -120,4 +137,11 @@ cli::Error write(char c) {
   // transmit c over uart
   UartTransmit(c);
   return cli::Error::none;
+}
+
+int main() {
+  while (1) {
+    control.process();
+  }
+  return 0;
 }
