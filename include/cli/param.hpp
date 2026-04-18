@@ -211,8 +211,8 @@ public:
 
   // Param(SC /*name*/, const T &value, Get getter, Set setter);
 
-  Error execute(ExecType type, View<const char_type> args,
-                View<char_type> &out) {
+  constexpr Error execute(ExecType type, View<const char_type> args,
+                          View<char_type> &out) {
     switch (type) {
     case ExecType::set:
       return set_value(args);
@@ -227,7 +227,7 @@ public:
   }
 
 private:
-  Error set_value(View<const char_type> args) {
+  constexpr Error set_value(View<const char_type> args) {
     if (args.size() == 0)
       return Error::too_few_arguments;
 
@@ -244,7 +244,7 @@ private:
     return set_(parse_result.value);
   }
 
-  Error get_value(View<char_type> &out) {
+  constexpr Error get_value(View<char_type> &out) {
     value_type t{};
     if (auto err = get_(t); err != Error::none)
       return err;

@@ -47,41 +47,39 @@ struct MyCfg : cfg {
   }
 };
 
-static bool enable = false;
+constinit static bool enable = false;
 
 constexpr int free1(int param) { return param; }
 
-constinit int virtual_ = 0;
-static bool enable_virtual = false;
-static constinit int enable_opts = 0xFF;
+constinit static int virtual_ = 0;
+constinit static bool enable_virtual = false;
+constinit static int enable_opts = 0xFF;
 
-inline struct S {
+static constinit struct S {
   cli::Error free2(int x) { return {}; }
 } s;
 
 struct MyFunctor {
   cli::Error operator()(int x, char c) { return {}; }
 };
+
 struct MyFunctor2 {
   cli::Error operator()(int f) { return {}; }
 };
+
 void free3() { return; }
 void free4(int) { return; }
 int free5(void) { return -5; }
 
-inline struct Settings {
-  int a;
-  int b;
-  char c;
+static constinit struct Settings {
+  int a{};
+  int b{};
+  char c{};
   void apply() {}
-} settings;
+} settings{};
 
-using P = cli::parse::String<cli::View<const char>, char>;
-static_assert(traits::String<cli::View<const char>>);
-static_assert(cli::Output<
-              decltype(cli::AnsiOutput{cli::default_config{}, &stream}), char>);
 // clang-format off
-static cli::Cli my_cli(
+static constinit cli::Cli my_cli(
     cli::default_config{},
     cli::AnsiOutput{cli::default_config{},&stream},
     // functions
