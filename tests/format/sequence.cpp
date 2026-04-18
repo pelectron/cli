@@ -1,6 +1,6 @@
 #include "cli/format.hpp"
 #include "cli/vector.hpp"
-
+#include "common.hpp"
 #include <catch2/catch_all.hpp>
 #include <string>
 
@@ -28,9 +28,9 @@ TEMPLATE_TEST_CASE("format::Sequence", "[format][sequence]", Seq1, Seq2) {
   for (auto &tv : vectors) {
     auto res = cli::format::DefaultFormat<TestType, char>{}(
         {tv.buffer.data(), tv.buffer.size()}, tv.input);
-    CHECK(res);
-    CHECK(res.size_written == tv.str.size());
+    REQUIRE(res);
+    REQUIRE(res.size_written == tv.str.size());
     tv.buffer.resize(res.size_written);
-    CHECK(tv.str == tv.buffer);
+    REQUIRE(tv.str == tv.buffer);
   }
 }

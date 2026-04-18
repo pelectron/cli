@@ -61,7 +61,7 @@ static constinit struct Settings {
 } settings{};
 
 // clang-format off
-static constinit cli::Cli my_cli(
+static cli::Cli my_cli(
     cli::default_config{},
     cli::AnsiOutput{cli::default_config{},&stream},
     // functions

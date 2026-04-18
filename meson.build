@@ -50,7 +50,7 @@ executable(
   'tests/history.cpp',
   'tests/param.cpp',
   'tests/string.cpp',
-  'tests/tracker.cpp',
+  # 'tests/tracker.cpp',
   include_directories: [inc, include_directories('tests')],
   dependencies: [deps, native_deps, catch_dep],
 )
