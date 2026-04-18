@@ -17,8 +17,8 @@ template <Config Cfg> class History {
   using Str = View<const typename Cfg::char_type>;
   using Array = std::array<typename Cfg::char_type, Cfg::max_line_length>;
   struct Line {
-    Array contents;
-    std::size_t size;
+    Array contents{};
+    std::size_t size{};
     constexpr operator Str() const noexcept { return {contents.data(), size}; }
   };
   using Index = smallest_type_for_value_t<Cfg::history_depth>;

@@ -939,7 +939,7 @@ public:
 
 private:
   F func_{};
-  std::tuple<Args...> args_;
+  std::tuple<Args...> args_{};
 };
 
 template <SC Name, SC Description, SC Type, Callable F>

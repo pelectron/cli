@@ -91,7 +91,7 @@ private:
   using Help = HelpCommand<char_type, config::access_separator>;
 
   std::array<command_node, (num_cmds_v<Commands> + ...) + 2> cmds_{};
-  std::tuple<Help, Commands...> commands_;
+  std::tuple<Help, Commands...> commands_{};
 
   static constexpr Help create_help(const CommandNode<char_type> &root) {
     return create_help_cmd<char_type, config::access_separator>(root);

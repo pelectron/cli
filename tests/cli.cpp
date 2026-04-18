@@ -4,24 +4,6 @@
 #include <ostream>
 #include <string_view>
 
-// #include <cstdio>
-// #include <source_location>
-
-// template <typename T> void info() {
-//   const std::source_location &loc = std::source_location::current();
-//   std::printf("%s", loc.function_name());
-// }
-/*
- * cpp-terminal
- * C++ library for writing multi-platform terminal applications.
- *
- * SPDX-FileCopyrightText: 2019-2025 cpp-terminal
- *
- * SPDX-License-Identifier: MIT
- */
-
-#include "cli/parse.hpp"
-#include "cli/string.hpp"
 #include "cpp-terminal/exception.hpp"
 #include "cpp-terminal/input.hpp"
 #include "cpp-terminal/iostream.hpp"
@@ -85,19 +67,19 @@ static constinit cli::Cli my_cli(
     // functions
     // @{
     // free functions
-    func("free1"_sc, &free1, funcs::arg("param"_sc)) ,
+    func("free1"_sc, &free1, funcs::arg("param"_sc)),
     // lambdas without templated call operator
     func("lambda"_sc, 
-        [](int i, char c) {},
-          "i"_arg, 
-          "c"_arg),
-    // and any other functor without templated call operator
-    func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
-    func(MyFunctor2{}, "f"_arg),
-    // member functions
-    func("free2"_sc, s, &S::free2, "x"_arg),
-  // @}
-  // global objects
+         [](int i, char c) {},
+        "i"_arg, 
+        "c"_arg),
+          // and any other functor without templated call operator
+          func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
+          func(MyFunctor2{}, "f"_arg),
+          // member functions
+          func("free2"_sc, s, &S::free2, "x"_arg),
+   // @}
+   // global objects
     param("enable"_sc,"enables stuff"_sc, enable),
     // virtual hierarchies
     param("virtual"_sc,"virtual group"_sc, virtual_,
@@ -108,8 +90,7 @@ static constinit cli::Cli my_cli(
         param<&Settings::a>(),
         param("c"_sc, &Settings::c),
         mem_fun<&Settings::apply>())
-
-    );
+     );
 // clang-format on
 int main() {
   try {

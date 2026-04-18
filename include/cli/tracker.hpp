@@ -48,15 +48,17 @@ class Tracker<Cfg, Commands...> {
 
   const CommandNode<CharT> &root;
   const CommandNode<CharT> *command_{};
-  FixedCapacityVector<CharT, MaxNameLength> buffer;
+  FixedCapacityVector<CharT, MaxNameLength> buffer{};
   std::array<CommandNode<CharT> *, Depth> cmds{nullptr};
   smallest_type_for_value_t<Depth> size = 0;
   smallest_type_for_value_t<MaxNameLength + 1> cmd_size = 0;
   CharT last_char = 0;
 
-  View<const CharT> buf_view() const { return {buffer.data(), buffer.size()}; }
+  constexpr View<const CharT> buf_view() const {
+    return {buffer.data(), buffer.size()};
+  }
 
-  CommandNode<CharT> *candidate() {
+  constexpr CommandNode<CharT> *candidate() {
     return size < Depth ? cmds[size] : nullptr;
   }
 

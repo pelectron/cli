@@ -50,7 +50,7 @@ constexpr bool operator!=(TypeList<Ts...>, TypeList<Us...>) {
   return true;
 }
 
-namespace {
+namespace dtl {
 
 template <size_t N, class T, class... Ts> struct index_of_impl;
 
@@ -170,7 +170,7 @@ struct list_size<List<Ts...> > {
 template <class T, class List> struct index_of;
 
 template <class T, template <class...> class List, class... Ts>
-struct index_of<T, List<Ts...> > : index_of_impl<0, T, Ts...> {};
+struct index_of<T, List<Ts...> > : dtl::index_of_impl<0, T, Ts...> {};
 
 /**
  * return List with T added to the front.
@@ -223,7 +223,7 @@ template <class List> using pop_front_t = typename pop_front<List>::type;
 template <size_t N, class List> struct type_at;
 
 template <size_t N, template <class...> class List, class... Ts>
-struct type_at<N, List<Ts...> > : type_at_impl<N, Ts...> {};
+struct type_at<N, List<Ts...> > : dtl::type_at_impl<N, Ts...> {};
 
 /**
  * returns N-th type in type_list List.
@@ -443,7 +443,7 @@ template <class... Lists> using merge_t = typename merge<Lists...>::type;
  * @tparam List a type list
  */
 template <template <class> class Predicate, class List>
-struct filter : filter_impl<TypeList<>, List, Predicate> {};
+struct filter : dtl::filter_impl<TypeList<>, List, Predicate> {};
 
 /**
  * returns List filtered with Predicate.
@@ -463,7 +463,7 @@ using filter_t = typename filter<Predicate, List>::type;
 template <class T, class List> struct contains;
 
 template <class T, template <class...> class List, class... Ts>
-struct contains<T, List<Ts...> > : disjunction<std::is_same<T, Ts>...> {};
+struct contains<T, List<Ts...> > : dtl::disjunction<std::is_same<T, Ts>...> {};
 
 namespace {
 template <class FilteredList, class ToFilterList> struct remove_duplicates_impl;

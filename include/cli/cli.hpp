@@ -24,7 +24,6 @@
 #include "cli/param.hpp"
 #include "cli/parse.hpp"
 #include "cli/tracker.hpp"
-#include "cli/util.hpp"
 
 #include <array>
 #include <cassert>
@@ -527,12 +526,12 @@ private:
 
   template <Config, Command...> friend class CommandTree;
 
-  CommandTree<Cfg, Commands...> commands_;
-  cli::History<Cfg> history_;
+  CommandTree<Cfg, Commands...> commands_{};
+  cli::History<Cfg> history_{};
   FixedCapacityVector<char_type, Cfg::max_line_length> current_line_{};
   std::array<char_type, Cfg::max_line_length> output_line_{};
   input_type in_{};
-  output_type out_;
+  output_type out_{};
   Tracker<Cfg, Commands...> tracker_{};
   std::size_t cmd_size_{0};
   std::size_t start_of_args_{0};

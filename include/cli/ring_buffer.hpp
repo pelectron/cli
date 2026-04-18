@@ -11,13 +11,13 @@ namespace cli {
  * @tparam T the element type
  */
 template <typename T> class RingBufView {
-  T *arr_;
+  T *arr_{};
   // the head points to the position that was last written to
-  T *head;
+  T *head{};
   // the tail points to the position that can be read from
-  T *tail;
-  std::size_t size_;
-  std::size_t capacity_;
+  T *tail{};
+  std::size_t size_{};
+  std::size_t capacity_{};
 
   constexpr T *incr(T *p) {
     ++p;

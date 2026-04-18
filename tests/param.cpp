@@ -30,7 +30,7 @@ static_assert(cli::parse::Parser<decltype(parse)>);
 TEST_CASE("params without object") {
   // base form
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param<int>(name, description, get, set, parse, format, validate);
     (void)p;
   }
@@ -38,23 +38,25 @@ TEST_CASE("params without object") {
   // missing one parameter{
   // no validate
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param<int>(name, description, get, set, parse, format);
     (void)p;
   }
   // no format and parse
   {
-    constexpr auto p = cli::param<int>(name, description, get, set, validate);
+    static constinit auto p =
+        cli::param<int>(name, description, get, set, validate);
     (void)p;
   }
   // no get -> format not used
   {
-    constexpr auto p = cli::param<int>(name, description, set, parse, validate);
+    static constinit auto p =
+        cli::param<int>(name, description, set, parse, validate);
     (void)p;
   }
   // no set -> parse not used
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param<int>(name, description, get, format, validate);
     (void)p;
   }
@@ -63,23 +65,23 @@ TEST_CASE("params without object") {
   // missing two parameters{
   // no validate and format and parse
   {
-    constexpr auto p = cli::param<int>(name, description, get, set);
+    static constinit auto p = cli::param<int>(name, description, get, set);
     (void)p;
   }
   // no validate and get -> format not used
   {
-    constexpr auto p = cli::param<int>(name, description, set, parse);
+    static constinit auto p = cli::param<int>(name, description, set, parse);
     (void)p;
   }
   // no validate and set -> parse not used
   {
-    constexpr auto p = cli::param<int>(name, description, get, format);
+    static constinit auto p = cli::param<int>(name, description, get, format);
     (void)p;
   }
 
   // no format/parse and get
   {
-    constexpr auto p = cli::param<int>(name, description, set, validate);
+    static constinit auto p = cli::param<int>(name, description, set, validate);
     (void)p;
   }
   // }
@@ -87,12 +89,12 @@ TEST_CASE("params without object") {
   // missing three parameters {
   // no validate, format/parse and set
   {
-    constexpr auto p = cli::param<int>(name, description, get);
+    static constinit auto p = cli::param<int>(name, description, get);
     (void)p;
   }
   // no validate, format/parse and get
   {
-    constexpr auto p = cli::param<int>(name, description, set);
+    static constinit auto p = cli::param<int>(name, description, set);
     (void)p;
   }
   // }
@@ -102,7 +104,7 @@ TEST_CASE("params with object") {
   static int i;
   // base form
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param(name, description, i, get, set, parse, format, validate);
     (void)p;
   }
@@ -110,24 +112,25 @@ TEST_CASE("params with object") {
   // missing one parameter{
   // no validate
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param(name, description, i, get, set, parse, format);
     (void)p;
   }
   // no format and parse
   {
-    constexpr auto p = cli::param(name, description, i, get, set, validate);
+    static constinit auto p =
+        cli::param(name, description, i, get, set, validate);
     (void)p;
   }
   // no get
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param(name, description, i, set, parse, format, validate);
     (void)p;
   }
   // no set
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param(name, description, i, get, parse, format, validate);
     (void)p;
   }
@@ -136,33 +139,35 @@ TEST_CASE("params with object") {
   // missing two parameters{
   // no validate and format/parse
   {
-    constexpr auto p = cli::param(name, description, i, get, set);
+    static constinit auto p = cli::param(name, description, i, get, set);
     (void)p;
   }
   // no validate and get
   {
-    constexpr auto p = cli::param(name, description, i, set, parse, format);
+    static constinit auto p =
+        cli::param(name, description, i, set, parse, format);
     (void)p;
   }
   // no validate and set
   {
-    constexpr auto p = cli::param(name, description, i, get, parse, format);
+    static constinit auto p =
+        cli::param(name, description, i, get, parse, format);
     (void)p;
   }
 
   // no format/parse and get
   {
-    constexpr auto p = cli::param(name, description, i, set, validate);
+    static constinit auto p = cli::param(name, description, i, set, validate);
     (void)p;
   }
   // no format/parse and set
   {
-    constexpr auto p = cli::param(name, description, i, get, validate);
+    static constinit auto p = cli::param(name, description, i, get, validate);
     (void)p;
   }
   // no set and get
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param(name, description, i, parse, format, validate);
     (void)p;
   }
@@ -171,28 +176,28 @@ TEST_CASE("params with object") {
   // missing three parameters {
   // no validate, format/parse and set
   {
-    constexpr auto p = cli::param(name, description, i, get);
+    static constinit auto p = cli::param(name, description, i, get);
     (void)p;
   }
   // no validate, format/parse and get
   {
-    constexpr auto p = cli::param(name, description, i, set);
+    static constinit auto p = cli::param(name, description, i, set);
     (void)p;
   }
   // no get, set and validate
   {
-    constexpr auto p = cli::param(name, description, i, parse, format);
+    static constinit auto p = cli::param(name, description, i, parse, format);
     (void)p;
   }
   // no get, set and format/parse
   {
-    constexpr auto p = cli::param(name, description, i, validate);
+    static constinit auto p = cli::param(name, description, i, validate);
     (void)p;
   }
   // }
   //
   {
-    constexpr auto p = cli::param(name, description, i);
+    static constinit auto p = cli::param(name, description, i);
     (void)p;
   }
 }
@@ -203,7 +208,7 @@ TEST_CASE("params with const object") {
 
   // base form
   {
-    constexpr auto p = cli::param(name, description, i, get, format);
+    static constinit auto p = cli::param(name, description, i, get, format);
     (void)p;
   }
 
@@ -211,19 +216,19 @@ TEST_CASE("params with const object") {
   //{
   //  no format
   {
-    constexpr auto p = cli::param(name, description, i, get);
+    static constinit auto p = cli::param(name, description, i, get);
     (void)p;
   }
   // no get
   {
-    constexpr auto p = cli::param(name, description, i, format);
+    static constinit auto p = cli::param(name, description, i, format);
     (void)p;
   }
   //}
 
   // missing two parameters
   {
-    constexpr auto p = cli::param(name, description, i);
+    static constinit auto p = cli::param(name, description, i);
     (void)p;
   }
 }
@@ -237,7 +242,7 @@ TEST_CASE("member data commands") {
   static S s;
   // base form
   {
-    constexpr auto p = cli::param(
+    static constinit auto p = cli::param(
         name, description, s,
         cli::param("foo"_sc, "foo mode"_sc, &S::foo, parse, format, validate));
     (void)p;
@@ -245,7 +250,7 @@ TEST_CASE("member data commands") {
 
   // no validate
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param(name, description, s,
                    cli::param("foo"_sc, "foo mode"_sc, &S::foo, parse, format));
     (void)p;
@@ -253,15 +258,15 @@ TEST_CASE("member data commands") {
 
   // no parse/format
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param(name, description, s,
                    cli::param("foo"_sc, "foo mode"_sc, &S::foo, validate));
     (void)p;
   }
   // no parse/format and validate
   {
-    constexpr auto p = cli::param(name, description, s,
-                                  cli::param("foo"_sc, "foo mode"_sc, &S::foo));
+    static constinit auto p = cli::param(
+        name, description, s, cli::param("foo"_sc, "foo mode"_sc, &S::foo));
     (void)p;
   }
 }
@@ -270,27 +275,27 @@ TEST_CASE("const member data commands") {
   static const S s{};
   // base form
   {
-    constexpr auto p =
+    static constinit auto p =
         cli::param(name, description, s,
                    cli::param("foo"_sc, "foo mode"_sc, &S::foo, format));
     (void)p;
   }
   {
-    constexpr auto p = cli::param(
+    static constinit auto p = cli::param(
         name, description, s, cli::param("k"_sc, "k mode"_sc, &S::k, format));
     (void)p;
   }
 
   // no parse/format and validate
   {
-    constexpr auto p = cli::param(name, description, s,
-                                  cli::param("foo"_sc, "foo mode"_sc, &S::foo));
+    static constinit auto p = cli::param(
+        name, description, s, cli::param("foo"_sc, "foo mode"_sc, &S::foo));
     (void)p;
   }
 
   {
-    constexpr auto p = cli::param(name, description, s,
-                                  cli::param("k"_sc, "k mode"_sc, &S::k));
+    static constinit auto p = cli::param(
+        name, description, s, cli::param("k"_sc, "k mode"_sc, &S::k));
     (void)p;
   }
 }

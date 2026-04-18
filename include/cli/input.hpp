@@ -255,8 +255,8 @@ private:
   using event_t = std::conditional_t<Cfg::use_volatile_input_buffer,
                                      volatile event_type, event_type>;
 
-  State state;
-  RingBuffer<event_t, Cfg::rx_size> buffer;
+  State state{State::normal};
+  RingBuffer<event_t, Cfg::rx_size> buffer{};
 };
 } // namespace cli
 #endif
