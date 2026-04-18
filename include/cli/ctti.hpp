@@ -11,10 +11,10 @@
 
 // clang-format off
 #if defined(__clang__) && !defined(_MSC_VER)
-  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval CharView cli::ctti::dtl::name_impl() [T = "
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(__GNUC__) && !defined(__clang__)
-  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [T = "
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(_MSC_VER)
   #if defined(__clang__)
