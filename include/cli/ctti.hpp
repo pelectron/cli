@@ -55,7 +55,7 @@ template <typename T> consteval CharView name_impl() {
   constexpr CharView name{std::source_location::current().function_name()};
   const auto split = name.substr(0, name.find_last_of("]"));
   return split.substr(split.find_last_of(" ") + 1);
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) and !defined(__clang__)
   constexpr CharView name{__PRETTY_FUNCTION__};
   const auto split = name.substr(0, name.find_last_of("]"));
   return split.substr(split.find_last_of(" ") + 1);
