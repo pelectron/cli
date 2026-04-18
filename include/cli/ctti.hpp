@@ -11,17 +11,21 @@
 
 // clang-format off
 #if defined(__clang__) && !defined(_MSC_VER)
+  #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(__GNUC__) && !defined(__clang__)
+  #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(_MSC_VER)
   #if defined(__clang__)
-    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView __cdecl cli::ctti::dtl::name_impl(void) [T = "
+  #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
+    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "cli::CharView __cdecl cli::ctti::dtl::name_impl(void) [T = "
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
   #else
-    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class std::basic_string_view<char,struct std::char_traits<char> > __cdecl cli::ctti::dtl::name_impl<"
+  #define CLI_FUNCTION_NAME __FUNCSIG__
+    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class cli::View<char const > __cdecl cli::ctti::dtl::name_impl<"
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
   #endif
 #else
@@ -51,30 +55,24 @@ template <SC Name, class T> struct Field {
 
 namespace dtl {
 template <typename T> consteval CharView name_impl() {
+  constexpr CharView name{CLI_FUNCTION_NAME};
+  // static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
 #if defined(__clang__) and not defined(_MSC_VER)
-  constexpr CharView name{std::source_location::current().function_name()};
-  static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
-  const auto split = name.substr(sizeof(CTTI_TYPE_PRETTY_FUNCTION_PREFIX) - 1,
-                                 name.find_last_of("]"));
-  return split;
+  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, name.find_last_of("]"));
 #elif defined(__GNUC__) and !defined(__clang__)
-  constexpr CharView name{__PRETTY_FUNCTION__};
-  static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
-  const auto split = name.substr(sizeof(CTTI_TYPE_PRETTY_FUNCTION_PREFIX) - 1);
-  return split.substr(0, split.find_first_of(";"));
+  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, split.find_first_of(";"));
 #elif defined(_MSC_VER)
-  constexpr CharView name{std::source_location::current().function_name()};
 #if defined(__clang__)
   const auto split = name.substr(0, name.find_last_of("]"));
   return split.substr(split.find_last_of(" ") + 1);
 #else
-  const auto split = name.substr(0, name.find_last_of(">"));
-  const auto pos = split.find("impl<");
-  const auto split2 = split.substr(pos + 5);
-  if (const auto pos = split2.find(" "); pos != CharView::npos)
-    return split2.substr(pos + 1);
-  else
-    return split2;
+  const auto split = name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT,
+                                 name.size() - CTTI_TYPE_PRETTY_FUNCTION_LEFT -
+                                     CTTI_TYPE_PRETTY_FUNCTION_RIGHT);
+  const auto idx = split.find(' ');
+  if (idx == CharView::npos)
+    return split;
+  return split.substr(idx + 1);
 #endif
 #endif
 }
