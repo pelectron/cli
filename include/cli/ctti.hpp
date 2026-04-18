@@ -14,7 +14,7 @@
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(__GNUC__) && !defined(__clang__)
-  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "cli::CharView cli::ctti::dtl::name_impl() [T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(_MSC_VER)
   #if defined(__clang__)
