@@ -28,11 +28,11 @@ namespace cli {
    * ```
    *
    * @tparam S the stream type
-   * @tparam char_type the character type
+   * @tparam CharT the character type
    */
-  template<class S, typename char_type>
-  concept CharStream = requires(std::remove_cvref_t<S> &stream, char_type c) {
-    { stream(c) }; // -> std::same_as<Error>;
+  template<class S, typename CharT>
+  concept CharStream = requires(std::remove_cvref_t<S> &stream, CharT c) {
+    { stream(c) } -> std::same_as<cli::Error>;
   };
 
   /**
@@ -58,12 +58,12 @@ namespace cli {
    * ```
    *
    * @tparam S the stream type
-   * @tparam char_type the character type of the stream
+   * @tparam CharT the character type of the stream
    */
-  template<class S, typename char_type>
+  template<class S, typename CharT>
   concept StringStream =
-    requires(std::remove_cvref_t<S> &stream, View<const char_type> s) {
-      { stream(s) } -> std::same_as<Error>;
+    requires(std::remove_cvref_t<S> &stream, cli::View<const CharT> s) {
+      { stream(s) } -> std::same_as<cli::Error>;
     };
 
   /**
@@ -92,11 +92,11 @@ namespace cli {
    * @tparam S the stream type
    * @tparam char_type the character type
    */
-  template<class S, typename char_type>
+  template<class S, typename CharT>
   concept Output = requires(std::remove_cvref_t<S> &stream,
-                            char_type c,
-                            View<const char_type> s,
-                            Control ctrl) {
+                            CharT c,
+                            cli::View<const CharT> s,
+                            cli::Control ctrl) {
     // writes a raw character c
     { stream.write(c) } -> std::same_as<Error>;
     // writes the raw string s
@@ -199,6 +199,10 @@ namespace cli {
     Stream stream; //< the underlying output stream
   public:
     using char_type = get_stream_char_type_t<Stream>;
+
+    static_assert(
+      std::is_same_v<char_type, typename Cfg::char_type>,
+      "the configs character type and the streams character type must match!");
 
     template<Config Cfg_, BasicOutputStream S>
     constexpr AnsiOutput(Cfg_ &&, S &&s)

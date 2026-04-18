@@ -3251,7 +3251,7 @@ namespace cli::params {
    * @defgroup memdata Member Data
    *
    * Member data commands are used to easily setup subcommands for parameters
-   * with objects.
+   * with subobjects.
    *
    * This is easiest explainable by example.
    * Take this struct and its variabe definition:

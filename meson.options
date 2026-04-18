@@ -1,2 +1,3 @@
 option('tests', type: 'feature', value: 'auto', description: 'enable building the test executable')
 option('examples', type: 'feature', value: 'auto', description: 'enable building the examples')
+option('sim', type: 'feature', value: 'auto', description: 'enable simulation')

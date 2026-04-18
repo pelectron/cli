@@ -1,32 +1,45 @@
-project('cli', 'cpp', default_options: ['cpp_std=c++20'])
+project('cli', 'cpp', meson_version: '>=1.1.0', default_options: ['cpp_std=c++20'])
 
 inc = include_directories('include')
 
 build_tests = get_option('tests')
 build_examples = get_option('examples')
-# testing and building examples can only be done for o none embeded targets
-build_tests.disable_auto_if(meson.is_cross_build())
-build_examples.disable_auto_if(meson.is_cross_build())
+simulation = get_option('sim')
+
+# testing, building examples, and simulation can only be done for  non-embeded targets
+build_tests.disable_if(meson.is_cross_build(), error_message: 'cant build tests for embedded targets')
+build_examples.disable_if(meson.is_cross_build(), error_message: 'cant build examples on embedded targets')
+simulation.disable_if(meson.is_cross_build(), error_message: 'cant have simulation with embedded targets')
 
 deps = [
   dependency('gcem', required: true),
 ]
 
-cli_dep = declare_dependency(include_directories:inc, dependencies: deps)
+if(not simulation.disabled())
+  deps += dependency('cpp-terminal', required: true)
+endif
+
+cli_dep = declare_dependency(
+  include_directories:inc, 
+  dependencies: deps
+)
+
 meson.override_dependency('cli',cli_dep)
 
 if(not build_examples.disabled())
-  terminal_dep = dependency('cpp-terminal', required: true)
 
-  executable(
-    'cli',
-    'examples/cli.cpp',
-    dependencies: [cli_dep, terminal_dep]
-  )
+  if(not simulation.disabled())
+    executable(
+      'cli',
+      'examples/cli.cpp',
+      dependencies: cli_dep
+    )
+  endif
 
   executable('led-example',
     'examples/led.cpp',
-    dependencies: cli_dep)
+    dependencies: cli_dep
+  )
 endif
 
 if(not build_tests.disabled())

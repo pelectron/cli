@@ -4,21 +4,7 @@
  * PC and played around with.
  */
 
-#include "cli/cli.hpp"
-
-#include "cpp-terminal/exception.hpp"
-#include "cpp-terminal/input.hpp"
-#include "cpp-terminal/iostream.hpp"
-#include "cpp-terminal/key.hpp"
-#include "cpp-terminal/options.hpp"
-#include "cpp-terminal/terminal.hpp"
-#include "cpp-terminal/tty.hpp"
-
-// the cli output stream
-cli::Error stream(cli::View<const char> s) {
-  Term::cout << std::string_view(s.data(), s.size()) << std::flush;
-  return cli::Error::none;
-}
+#include "cli/sim.hpp"
 
 // the parameters and functions used in this example
 constinit static bool enable = false;
@@ -78,102 +64,60 @@ using cli::func;
 using cli::mem_fun;
 using cli::param;
 
-// clang-format off
-// the cli object itself
-static cli::Cli my_cli(
-    cli::default_config{},
-    cli::AnsiOutput{cli::default_config{},&stream},
-    param<int>("foo"_sc, "foo description"_sc, &foo_getter, &foo_setter, &validate_foo),
-    // functions
-    // @{
-    // free functions
-    func("free1"_sc, &free1, cli::arg("param"_sc)),
-    // lambdas without templated call operator
-    func("lambda"_sc, 
-         [](int i, char c) {},
-        "i"_arg, 
-        "c"_arg),
-    // and any other functor without templated call operator
-    func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
-    func(MyFunctor2{}, "f"_arg),
-    // member functions
-    func("free2"_sc, s, &S::free2, "x"_arg),
-   // @}
-   // global objects
-    param("enable"_sc,"enables stuff"_sc, enable),
-    // virtual hierarchies
-    param("virtual"_sc,
-          "virtual group"_sc, 
-          virtual_,
-          param("enable"_sc,
-                "virtual enable"_sc, 
-                enable_virtual,
-          param("opts"_sc, 
-                "enable options"_sc, 
-                enable_opts))),
-    param("settings"_sc,
-          "core settings"_sc, 
-          settings,
-          param("b"_sc, &Settings::b),
-          param<&Settings::a>(),
-          param("c"_sc, &Settings::c),
-          mem_fun<&Settings::apply>())
-);
-// clang-format on
-
 int main() {
-  try {
-    // check if the terminal is capable of handling input
-    Term::terminal.setOptions(Term::Option::NoClearScreen,
-                              Term::Option::NoSignalKeys,
-                              Term::Option::Cursor,
-                              Term::Option::Raw);
-    if (!Term::is_stdin_a_tty()) {
-      throw Term::Exception("The terminal is not attached to a TTY and "
-                            "therefore can't catch user input. Exiting...");
-    }
+  // clang-format off
+  // the cli object itself
+  cli::Cli my_cli = cli::sim::create_cli(
+      cli::default_config{},
+      param<int>("foo"_sc, 
+                "foo description"_sc, 
+                &foo_getter, 
+                &foo_setter, 
+                &validate_foo),
+      // functions
+      // @{
+      // free functions
+      func("free1"_sc, &free1, cli::arg("param"_sc)),
+      // lambdas without templated call operator
+      func("lambda"_sc, 
+          [](int i, char c) {},
+          "i"_arg, 
+          "c"_arg),
+      // and any other functor without templated call operator
+      func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
+      func(MyFunctor2{}, "f"_arg),
+      // member functions
+      func("free2"_sc, s, &S::free2, "x"_arg),
+    // @}
+    // global objects
+      param("enable"_sc,"enables stuff"_sc, enable),
+      // virtual hierarchies
+      param("virtual"_sc,
+            "virtual group"_sc, 
+            virtual_,
+            param("enable"_sc,
+                  "virtual enable"_sc, 
+                  enable_virtual,
+            param("opts"_sc, 
+                  "enable options"_sc, 
+                  enable_opts))),
+      param("settings"_sc,
+            "core settings"_sc, 
+            settings,
+            param("b"_sc, &Settings::b),
+            param<&Settings::a>(),
+            param("c"_sc, &Settings::c),
+            mem_fun<&Settings::apply>())
+  );
+  // clang-format on
 
-    my_cli.print();
+  if (not cli::sim::init())
+    return -1;
 
-    while (1) {
-      // 1. gather input and call on_char().
-      Term::Event event = Term::read_event();
-      switch (event.type()) {
-        case Term::Event::Type::Key: {
-          Term::Key key(event);
-          if (key == Term::Key::Ctrl_C)
-            exit(0);
-          else if (key == Term::Key::Enter)
-            my_cli.on_char('\n');
-          else if (key == Term::Key::ArrowDown)
-            for (auto c : "\x1b[B")
-              my_cli.on_char(c);
-          else if (key == Term::Key::ArrowUp)
-            for (auto c : "\x1b[A")
-              my_cli.on_char(c);
-          else
-            my_cli.on_char(key.value);
-          break;
-        }
-        default:
-          break;
-      }
+  my_cli.print();
 
-      // call process()
-      cli::Error err = my_cli.process();
-
-      // handle errors
-      switch (err) {
-        default:
-          (void)err; // ignore error
-      }
-    }
-  } catch (const Term::Exception &re) {
-    Term::cerr << "cpp-terminal error: " << re.what() << std::endl;
-    return 2;
-  } catch (...) {
-    Term::cerr << "Unknown error." << std::endl;
-    return 1;
+  while (cli::sim::get_input_and_process(my_cli)) {
   }
+
   return 0;
 }
