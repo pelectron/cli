@@ -4,13 +4,11 @@ inc = include_directories('include')
 
 native_deps = [
   dependency('gcem', native: true),
-  dependency('tl-expected', native: true),
 ]
 
 deps = [
   dependency('gcem'),
   dependency('cpp-terminal'),
-  dependency('tl-expected', native: false),
 ]
 
 catch_dep = dependency(
