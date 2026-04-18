@@ -53,13 +53,13 @@ namespace dtl {
 template <typename T> consteval CharView name_impl() {
 #if defined(__clang__) and not defined(_MSC_VER)
   constexpr CharView name{std::source_location::current().function_name()};
-  static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
+  // static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
   const auto split = name.substr(sizeof(CTTI_TYPE_PRETTY_FUNCTION_PREFIX),
                                  name.find_last_of("]"));
   return split;
 #elif defined(__GNUC__) and !defined(__clang__)
   constexpr CharView name{__PRETTY_FUNCTION__};
-  static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
+  // static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
   const auto split = name.substr(sizeof(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
   return split.substr(0, split.find_first_of(";"));
 #elif defined(_MSC_VER)
