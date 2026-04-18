@@ -13,15 +13,15 @@
 #if defined(__clang__) && !defined(_MSC_VER)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
-  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "; cli::CharView = cli::View<const char>]"
 #elif defined(__GNUC__) && !defined(__clang__)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
-  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "; cli::CharView = cli::View<const char>]"
 #elif defined(_MSC_VER)
   #if defined(__clang__)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
-    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "cli::CharView __cdecl cli::ctti::dtl::name_impl(void) [T = "
+    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
   #else
   #define CLI_FUNCTION_NAME __FUNCSIG__
@@ -56,19 +56,20 @@ template <SC Name, class T> struct Field {
 namespace dtl {
 template <typename T> consteval CharView name_impl() {
   constexpr CharView name{CLI_FUNCTION_NAME};
+  constexpr auto size = name.size() - CTTI_TYPE_PRETTY_FUNCTION_LEFT -
+                        CTTI_TYPE_PRETTY_FUNCTION_RIGHT;
   // static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
 #if defined(__clang__) and not defined(_MSC_VER)
-  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, name.find_last_of("]"));
+  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
 #elif defined(__GNUC__) and !defined(__clang__)
-  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, name.find_first_of(";"));
+  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
 #elif defined(_MSC_VER)
 #if defined(__clang__)
+  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
   const auto split = name.substr(0, name.find_last_of("]"));
   return split.substr(split.find_last_of(" ") + 1);
 #else
-  const auto split = name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT,
-                                 name.size() - CTTI_TYPE_PRETTY_FUNCTION_LEFT -
-                                     CTTI_TYPE_PRETTY_FUNCTION_RIGHT);
+  const auto split = name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
   const auto idx = split.find(' ');
   if (idx == CharView::npos)
     return split;
