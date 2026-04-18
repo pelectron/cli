@@ -11,22 +11,21 @@
 
 // clang-format off
 #if defined(__clang__) && !defined(_MSC_VER)
-#define CTTI_TYPE_PRETTY_FUNCTION_PREFIX                                       \
-  "CharView cli::ctti::dtl::name() [T = "
-#define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name() [T = "
+  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(__GNUC__) && !defined(__clang__)
-#define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name() [T = "
-#define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name() [T = "
+  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(_MSC_VER)
-#if defined(__clang__)
-#define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView __cdecl cli::ctti::dtl::name(void) [T = "
-#define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+  #if defined(__clang__)
+    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView __cdecl cli::ctti::dtl::name(void) [T = "
+    #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+  #else
+    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class std::basic_string_view<char,struct std::char_traits<char> > __cdecl cli::ctti::dtl::name<"
+    #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
+  #endif
 #else
-#define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class std::basic_string_view<char,struct std::char_traits<char> > __cdecl cli::ctti::dtl::name<"
-#define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
-#endif
-#else
-#error "No support for this compiler."
+  #error "No support for this compiler."
 #endif
 // clang-format on
 

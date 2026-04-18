@@ -84,7 +84,7 @@ struct default_config {
   static constexpr std::size_t tx_size = 128;
   static constexpr std::size_t rx_size = 32;
   static constexpr bool use_autocomplete = true;
-  static constexpr bool use_volatile_input_buffer = true;
+  static constexpr bool use_volatile_input_buffer = false;
   static constexpr bool use_history = true;
   static constexpr std::size_t history_depth = 16;
   static constexpr std::size_t max_line_length = 80;
