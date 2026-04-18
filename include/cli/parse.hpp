@@ -905,7 +905,7 @@ struct Field {
   static constexpr bool has_default = true;
   static constexpr auto default_value = DefaultValue;
   type value = type(DefaultValue);
-  Parser parse;
+  Parser parse{};
 };
 
 template <typename CharT, class Name, class Type,
@@ -1030,7 +1030,6 @@ public:
 
   constexpr ParseResult<std::tuple<Fields...>, CharT>
   operator()(View<const CharT> sv) {
-    State s{};
     if (sv.size() == 0) {
       if constexpr ((Fields::has_default && ...))
         return s.fields;

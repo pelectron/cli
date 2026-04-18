@@ -1234,6 +1234,12 @@ template <class T, typename CharT = char>
     return /*std::tuple()*/;
   }
 }
+
+template <typename T, typename Tuple, std::size_t... Is>
+[[nodiscard]] constexpr T from_tuple_impl(const Tuple &tuple,
+                                          std::index_sequence<Is...>) {
+  return T{std::get<Is>(tuple).value...};
+}
 } // namespace dtl
 
 /**
@@ -1360,6 +1366,7 @@ template <class T, typename CharT = char>
   return ::cli::ctti::dtl::to_tuple<decltype(std::forward<T>(t)), CharT>(
       std::forward<T>(t));
 }
+
 /**
  * converts a tuple of Fields into a T
  *
@@ -1370,9 +1377,9 @@ template <class T, typename CharT = char>
 template <class T, typename CharT = char>
   requires std::is_aggregate_v<std::remove_cvref_t<T>>
 [[nodiscard]] constexpr T from_tuple(const auto /* field_tuple_t<T> */ &tuple) {
-  return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    return T{std::get<Is>(tuple).value...};
-  }(std::make_index_sequence<std::tuple_size_v<field_tuple_t<T, CharT>>>());
+  return dtl::from_tuple_impl<T>(
+      tuple, std::make_index_sequence<
+                 std::tuple_size_v<std::remove_cvref_t<decltype(tuple)>>>());
 }
 } // namespace cli::ctti
 #endif
