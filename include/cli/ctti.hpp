@@ -60,7 +60,7 @@ template <typename T> consteval CharView name_impl() {
 #if defined(__clang__) and not defined(_MSC_VER)
   return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, name.find_last_of("]"));
 #elif defined(__GNUC__) and !defined(__clang__)
-  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, split.find_first_of(";"));
+  return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, name.find_first_of(";"));
 #elif defined(_MSC_VER)
 #if defined(__clang__)
   const auto split = name.substr(0, name.find_last_of("]"));
