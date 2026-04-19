@@ -1,18 +1,7 @@
 /**
  * @file "cli/param.hpp"
  *
- * This file contains the utilities to create parameters, namely the
- * functions:
- * - param(..): creates a parameter
- * - obj(...): creates a parameter, and further also accepts member functions
- * and member data as subcommands. member functions are created with
- * cli::funcs::mem_fun().
- * - mem_data(...): Creates a member data command, inteded to be used with
- * obj(...).
- *
- * and the concepts:
- * - Getter/GetterOf: parameter getters/accessors
- * - Setter/SetterOf: parameter setters
+ * This file contains the utilities to create parameters.
  */
 
 #ifndef CLI_PARAM_HPP
@@ -26,6 +15,7 @@
 #include "cli/function.hpp"
 #include "cli/parse.hpp"
 #include "cli/string.hpp"
+#include "cli/traits.hpp"
 #include "cli/type_list.hpp"
 #include "cli/util.hpp"
 #include "cli/validator.hpp"
@@ -121,21 +111,6 @@ namespace cli::params {
   using get_char_t = typename Str::char_type;
 
   namespace dtl {
-
-    /**
-     * the thing returned by calls to cli::params::param
-     *
-     * TODO: forward subcommands of struct to struct parser
-     *
-     * @tparam Name the name of the parameter
-     * @tparam Description the description
-     * @tparam Type a string that represents the type of the parameter
-     * @tparam Get the callable thats retrieves a T's value
-     * @tparam Set the callable thats sets a T's value
-     * @tparam Parse the callable that parses a T from a ByteView
-     * @tparam Format the callable that formats a T into a ByteView
-     * @tparam SubCommands further Param or Function sub commands
-     */
     template<SC Name,
              SC Description,
              SC Type,
