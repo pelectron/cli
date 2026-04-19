@@ -80,3 +80,8 @@ if(not build_tests.disabled())
 
   test('unit test', ut)
 endif
+
+if(get_option('docs'))
+  doxygen = find_program('doxygen', required: true)
+  run_command(doxygen, 'Doxyfile')
+endif
