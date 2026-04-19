@@ -344,72 +344,127 @@ namespace cli::funcs {
   } // namespace dtl
 
   // clang-format off
-/**
- * @addtogroup Arguments
- * @ingroup Functions
- * @{
- *
- * Arguments are the elements that describe c++ function arguments.
- * These argument specifications are then used by Functions to parse the
- * input into the specified values and validate them.
- *
- * There are two kinds of function arguments:
- *
- * - required: these parameters must be specified, else it is an error.
- * - optional: these parameters can be left out because they have a default
- * value.
- *
- * Arguments are fully specified by their:
- *
- * - name: the human readable name
- * - description: a string that is used by the help functionality
- * - type: the value type of the argument
- * - parser: used to parse a value of the arguments type
- * - validator: used to validate the parsed value
- * - optionally, a default value
- *
- * cli::funcs::arg is the templated overload set (sounds horrible, but bear with
- * it) to use for creating arguments. There are two main templates forms, one
- * for required and one for optional arguments.
- *
- * The base form for an optional arguments is written below:
- *
- * ```
- *  template <class T, // the arguments type, must be explicitly specified
- *            auto DefaultValue, // the default value, must be explicitly specified
- *            SC Name, // must be specified 
- *            SC Description, // either specified or left out 
- *            parse::Parser Parse, // either specified or deduced
- *            validate::Validator Validate // either specified or deduced
- *            >
- *  constexpr auto arg( Name name, // the name
- *                      Description description, // the description
- *                      Parse &&parse, // the parser
- *                      Validate &&validate // the validator
- *                      );
- * ```
- * 
- * The base form for a required arguments is:
- *
- * ```
- *  template <class T, // the arguments type, must be explicitly specified
- *            SC Name, //must be specified 
- *            SC Description, // either specified or left out 
- *            parse::Parser Parse, // either specified or deduced
- *            validate::Validator Validate // either specified or deduced
- *            >
- *  constexpr auto arg( Name name, // the name
- *                      Description description, // the description
- *                      Parse &&parse, // the parser
- *                      Validate &&validate // the validator
- *                      );
- * ```
- *
- */
+  /**
+  * @defgroup Arguments
+  * @ingroup Functions
+  *
+  * Arguments are the elements that describe c++ function arguments.
+  * These argument specifications are then used by Functions to parse the
+  * input into the specified values and validate them.
+  *
+  * There are two kinds of function arguments:
+  *
+  * - required: these parameters must be specified, else it is an error.
+  * - optional: these parameters can be left out because they have a default
+  * value.
+  *
+  * Arguments are fully specified by their:
+  *
+  * - name: the human readable name
+  * - description: a string that is used by the help functionality
+  * - type: the value type of the argument
+  * - parser: used to parse a value of the arguments type
+  * - validator: used to validate the parsed value
+  * - optionally, a default value
+  *
+  * cli::funcs::arg is the templated overload set to use for creating arguments. 
+  * There are two main templates forms, one for required and one for optional arguments.
+  *
+  * The base form for an optional arguments is written below:
+  *
+  * ```
+  *  template <class T, // the arguments type, must be explicitly specified
+  *            auto DefaultValue, // the default value, must be explicitly specified
+  *            SC Name, // must be specified 
+  *            SC Description, // either specified or left out 
+  *            parse::Parser Parse, // either specified or deduced
+  *            validate::Validator Validate // either specified or deduced
+  *            >
+  *  constexpr auto arg( Name name, // the name
+  *                      Description description, // the description
+  *                      Parse &&parse, // the parser
+  *                      Validate &&validate // the validator
+  *                      );
+  * ```
+  * 
+  * The base form for a required arguments is:
+  *
+  * ```
+  *  template <class T, // the arguments type, must be explicitly specified
+  *            SC Name, //must be specified 
+  *            SC Description, // either specified or left out 
+  *            parse::Parser Parse, // either specified or deduced
+  *            validate::Validator Validate // either specified or deduced
+  *            >
+  *  constexpr auto arg( Name name, // the name
+  *                      Description description, // the description
+  *                      Parse &&parse, // the parser
+  *                      Validate &&validate // the validator
+  *                      );
+  * ```
+  *
+  */
 
 /**
- * @addtogroup optional-args Optional Arguments
- * @ingroup Functions
+ * @defgroup optional-args Optional Arguments
+ * @ingroup Arguments
+ *
+ * Optional arguments do not have to be specified when calling function commands 
+ * because they have a default value.
+ *
+ * For the following section:
+ * - name and description are cli::string_constants.
+ * - parse is a parser for T. See also cli::parse::Parser.
+ * - validate is a validator for T. See also cli::validate::Validator.
+ *
+ * These overloads are available for Ts that can't be passed as template 
+ * arguments, for example float, but can be constructed from another type.
+ *
+ * ```
+ * arg<T, DefaultValue>(name, description, parse, validate);
+ *
+ * // default validator for T is used
+ * arg<T, DefaultValue>(name, description, parse);
+ *
+ * // default parser for T is used
+ * arg<T, DefaultValue>(name, description, validate);
+ *
+ * // default parser and validator are used.
+ * arg<T, DefaultValue>(name, description);
+ *
+ * // default parser and validator are used. No descriptio/help will be available for that argument.
+ * arg<T, DefaultValue>(name);
+ * ```
+ *
+ * A concrete example:
+ * ```
+ * int DefaultValue = 1;
+ * cli::arg<double, DefaultValue>("x"_sc, 
+ *                               "the target x position"_sc, 
+ *                               cli::parse::DefaultParse<double, char>{}, 
+ *                               cli::validate::DefaultValidate<double, char>{});
+ * ```
+ * 
+ * For Ts that can be passed as template arguments, an additional set of overloads is available.
+ *
+ * ```
+ * // the value type is deduced from parse.
+ * arg<DefaultValue>(name, description, parse, validate);
+ *
+ * // the value type is deduced from parse. The deefault validator for T is used.
+ * arg<DefaultValue>(name, description, parse);
+ *
+ * // the value type is deduced from DefaultValue. The default parser for T is used.
+ * arg<DefaultValue>(name, description, validate);
+ *
+ * // the value type is deduced from DefaultValue. The default parser and validator are used.
+ * arg<DefaultValue>(name, description);
+ *
+ * // the value type is deduced from DefaultValue. The default parser and validator are used. 
+ * // No descriptio/help will be available for that argument.
+ * arg<DefaultValue>(name);
+ * ```
+ *
  * @{
  */
 
@@ -773,7 +828,26 @@ namespace cli::funcs {
    */
 
   /**
-   * @addtogroup required-args Required Arguments
+   * @defgroup required-args Required Arguments
+   * @ingroup Arguments
+   *
+   * Required arguments have to be specified when calling function commands
+   * because they don't have a default value.
+   *
+   * For the following section:
+   * - name and description are cli::string_constants.
+   * - parse is a parser for T. See also cli::parse::Parser.
+   * - validate is a validator for T. See also cli::validate::Validator.
+   *
+   * These overload are available:
+   *
+   * ```
+   * arg<T>(name, description, parse, validate);
+   * arg<T>(name, description, parse);
+   * arg<T>(name, description, validate);
+   * arg<T>(name, description);
+   * ```
+   *
    * @{
    */
 
@@ -896,13 +970,29 @@ namespace cli::funcs {
       validate::DefaultValidate<T>{}};
   }
 
+  /// @}
+
   /**
    * @defgroup deduced-args Deduced Arguments
+   * @ingroup required-args
    * Deduced arguments are arguments that have their type deduced. The default
    * parser and validator are always used for these type of arguments. The
    * benefit of deduced arguments is the shorter notation.
+   *
+   * For the following section, name and description are cli::string_constants.
+   *
+   * These overloads are available:
+   *
+   * ```
+   * arg(name, description);
+   * arg(name);
+   * ```
+   *
+   * There is also the literal operator _arg, which is equivalent to arg(name).
+   *
    * @{
    */
+
   /**
    * creates a required argument. Its type will be deduced. the default parser
    * and validator are used.
@@ -965,11 +1055,7 @@ namespace cli::funcs {
     }(std::make_index_sequence<Name.size()>()));
   }
 
-  /**
-   * @}
-   * @}
-   * @}
-   */
+  /// @}
 
   template<SC Name, SC Description, SC Type, Callable F, FuncArg... Args>
   class Function
@@ -1136,48 +1222,84 @@ namespace cli::funcs {
   Function(Name, Description, Type, F &&, std::tuple<Args...> &&)
     -> Function<Name, Description, Type, std::remove_cvref_t<F>, Args...>;
   /**
-   * @addtogroup Functions
+   * @defgroup Functions
+   *
+   * Functions are commands that can be called with arguments.
+   *
+   * A function is fully defined by:
+   * - name: the function's name. Must be a cli::string_constant.
+   * - description: the function's description. Must be a cli::string_constant.
+   * - a callable f: the C++ callable that actually performs the action. This
+   * may be a free function, a functor/lambda, or a member function.
+   * - arguments: Elements that describe the callable's arguments. See @ref
+   * Arguments.
+   *
+   * The following overloads are available for free functions and functors:
+   *
+   * ```
+   * // the base form
+   * func(name, description, f, arguments...);
+   *
+   * // a function wihtout description
+   * func(name, f, arguments...);
+   *
+   * // the functions name will be the type of f. I.e. if f's type is called
+   * // "Functor", the function's name will be "Functor".
+   * func(f, description, arguments...);
+   *
+   * // same as the previous overload without a description.
+   * func(f, arguments...);
+   * ```
+   *
+   * For member functions, the following overloads are available, where ``t``
+   * has the member function pointed to by ``mem_fun_ptr``.
+   *
+   * ```
+   * func(name, description, t, mem_fun_ptr, arguments...);
+   * func(name, t, mem_fun_ptr, arguments...);
+   * ```
+   *
+   * There are additional overloads for member functions, see @ref
+   * member-functions.
    * @{
    */
 
-  // clang-format off
-/**
- * @brief create a function command
- *
- * Usage:
- * ```
- * using cli::operator""_sc;
- * using cli::funcs::operator""_arg;
- *
- * void f1(int i);
- * auto lambda = [](char c){...};
- * struct F{
- * int operator()()}{...}
- * };
- *
- * constexpr auto f1_func = 
- *                cli::funcs::func("f1"_sc, 
- *                                 "a description"_sc, 
- *                                 f1,
- *                                 "i"_arg);
- * constexpr auto lambda_func = 
- *                cli::funcs::func("lambda"_sc, 
- *                                 "a description"_sc, 
- *                                 lambda,
- *                                 "c"_arg);
- * constexpr auto F_func = 
- *                cli::funcs::func("f"_sc, 
- *                                 "a description"_sc, 
- *                                 F{});
- * ```
- * @param name the function's name. Must be a cli::string_constant.
- * @param description the function's description. Must be a
- * cli::string_constant.
- * @param f the actual function to call
- * @param args the functions arguments. See cli::funcs::arg
- * @return
- */
-  // clang-format on
+  /**
+   * @brief create a function command
+   *
+   * Usage:
+   * ```
+   * using cli::operator""_sc;
+   * using cli::funcs::operator""_arg;
+   *
+   * void f1(int i);
+   * auto lambda = [](char c){...};
+   * struct F{
+   * int operator()()}{...}
+   * };
+   *
+   * constexpr auto f1_func =
+   *                cli::funcs::func("f1"_sc,
+   *                                 "a description"_sc,
+   *                                 f1,
+   *                                 "i"_arg);
+   * constexpr auto lambda_func =
+   *                cli::funcs::func("lambda"_sc,
+   *                                 "a description"_sc,
+   *                                 lambda,
+   *                                 "c"_arg);
+   * constexpr auto F_func =
+   *                cli::funcs::func("f"_sc,
+   *                                 "a description"_sc,
+   *                                 F{});
+   * ```
+   * @param name the function's name. Must be a cli::string_constant.
+   * @param description the function's description. Must be a
+   * cli::string_constant.
+   * @param f the actual function to call
+   * @param args the functions arguments. See cli::arg and @ref Arguments.
+   * @return
+   */
   template<SC Name, SC Description, Callable F, class... Args>
   constexpr auto
   func(Name name, Description description, F &&f, Args &&...args) {
@@ -1202,39 +1324,37 @@ namespace cli::funcs {
     }
   }
 
-  // clang-format off
-/**
- * @brief create a function command
- *
- * Usage:
- * ```
- * using cli::operator""_sc;
- * using cli::funcs::operator""_arg;
- *
- * void f1(int i);
- * auto lambda = [](char c){...};
- * struct F{
- * int operator()()}{...}
- * };
- *
- * constexpr auto f1_func = 
- *                cli::funcs::func("f1"_sc, 
- *                                 f1,
- *                                 "i"_arg);
- * constexpr auto lambda_func = 
- *                cli::funcs::func("lambda"_sc, 
- *                                 lambda,
- *                                 "c"_arg);
- * constexpr auto F_func = 
- *                cli::funcs::func("f"_sc, 
- *                                 F{});
- * ```
- * @param name the function's name. Must be a cli::string_constant.
- * @param f the actual function to call
- * @param args the functions arguments. See cli::funcs::arg
- * @return
- */
-  // clang-format on
+  /**
+   * @brief create a function command
+   *
+   * Usage:
+   * ```
+   * using cli::operator""_sc;
+   * using cli::funcs::operator""_arg;
+   *
+   * void f1(int i);
+   * auto lambda = [](char c){...};
+   * struct F{
+   * int operator()()}{...}
+   * };
+   *
+   * constexpr auto f1_func =
+   *                cli::funcs::func("f1"_sc,
+   *                                 f1,
+   *                                 "i"_arg);
+   * constexpr auto lambda_func =
+   *                cli::funcs::func("lambda"_sc,
+   *                                 lambda,
+   *                                 "c"_arg);
+   * constexpr auto F_func =
+   *                cli::funcs::func("f"_sc,
+   *                                 F{});
+   * ```
+   * @param name the function's name. Must be a cli::string_constant.
+   * @param f the actual function to call
+   * @param args the functions arguments. See cli::arg and @ref Arguments
+   * @return
+   */
   template<SC Name, Callable F, class... Args>
   constexpr auto func(Name name, F &&f, Args &&...args) {
     (void)name;
@@ -1269,12 +1389,14 @@ namespace cli::funcs {
    * int operator()(int i)}{...}
    * };
    *
-   * constexpr auto F_func = cli::funcs::func(F{}, "a description"_sc, "i"_arg);
+   * // equvilanet to cli::func("F"_sc, "a description"_sc, F{}, "i"_arg)
+   * constexpr auto F_func = cli::func(F{}, "a description"_sc, "i"_arg);
+   *
    * ```
    * @param f the callable. Can't be a free function or function pointer.
    * @param description the callable's description. Must be a
    * cli::string_constant.
-   * @param args the callable's arguments. See cli::funcs::arg.
+   * @param args the callable's arguments. See cli::arg and @ref Arguments.
    */
   template<Callable F, SC Description, class... Args>
     requires(not std::is_pointer_v<std::decay_t<F>>)
@@ -1313,7 +1435,7 @@ namespace cli::funcs {
    * constexpr auto F_func = cli::funcs::func(F{}, "i"_arg);
    * ```
    * @param f the callable. Can't be a free function or function pointer.
-   * @param args the callable's arguments. See cli::funcs::arg.
+   * @param args the callable's arguments. See cli::arg and @ref Arguments.
    */
   template<Callable F, class... Args>
     requires(not std::is_pointer_v<std::decay_t<F>>)
@@ -1339,12 +1461,38 @@ namespace cli::funcs {
     }
   }
 
+  /**
+   * @brief creates a Function from a T and its member function.
+   *
+   * Example:
+   * ```
+   *  struct S{
+   *    void apply(int i);
+   *  };
+   *
+   *  S s;
+   *
+   *  auto f = cli::func("apply"_sc,
+   *                     "apply description"_sc,
+   *                     s,
+   *                     &S::mem_fun,
+   *                     "i"_arg);
+   * ```
+   * @param name the function name. Must be a cli::string_constant.
+   * @param description the function description. Must be a
+   * cli::string_constant.
+   * @param t the object
+   * @param mem_fun pointer to the member function
+   * @param args the member function's arguments. See cli::arg and @ref
+   * Arguments.
+   */
   template<SC Name,
            SC Description,
            class T,
            class MemberFunctionPointer,
            class... Args>
-    requires std::is_member_function_pointer_v<MemberFunctionPointer>
+    requires std::is_member_function_pointer_v<MemberFunctionPointer> and
+             (not function_traits<MemberFunctionPointer>::is_const)
   constexpr auto func(Name name,
                       Description description,
                       T &t,
@@ -1379,12 +1527,38 @@ namespace cli::funcs {
     }
   }
 
+  /**
+   * @brief creates a Function from a T and its const member function.
+   *
+   * Example:
+   * ```
+   *  struct S{
+   *    void foo(int i) const;
+   *  };
+   *
+   *  S s;
+   *
+   *  auto f = cli::func("foo"_sc,
+   *                     "foo description"_sc,
+   *                     s,
+   *                     &S::mem_fun,
+   *                     "i"_arg);
+   * ```
+   * @param name the function name. Must be a cli::string_constant.
+   * @param description the function description. Must be a
+   * cli::string_constant.
+   * @param t the object
+   * @param mem_fun pointer to the member function
+   * @param args the member function's arguments. See cli::arg and @ref
+   * Arguments.
+   */
   template<SC Name,
            SC Description,
            class T,
            class MemberFunctionPointer,
            class... Args>
-    requires std::is_member_function_pointer_v<MemberFunctionPointer>
+    requires std::is_member_function_pointer_v<MemberFunctionPointer> and
+             function_traits<MemberFunctionPointer>::is_const
   constexpr auto func(Name name,
                       Description description,
                       const T &t,
@@ -1419,8 +1593,31 @@ namespace cli::funcs {
     }
   }
 
+  /**
+   * @brief creates a Function from a T and its member function.
+   *
+   * Example:
+   * ```
+   *  struct S{
+   *    void apply(int i);
+   *  };
+   *
+   *  S s;
+   *
+   *  auto f = cli::func("apply"_sc,
+   *                     s,
+   *                     &S::mem_fun,
+   *                     "i"_arg);
+   * ```
+   * @param name the function name. Must be a cli::string_constant.
+   * @param t the object
+   * @param mem_fun pointer to the member function
+   * @param args the member function's arguments. See cli::arg and @ref
+   * Arguments.
+   */
   template<SC Name, class T, class MemberFunctionPointer, class... Args>
-    requires std::is_member_function_pointer_v<MemberFunctionPointer>
+    requires std::is_member_function_pointer_v<MemberFunctionPointer> and
+             (not function_traits<MemberFunctionPointer>::is_const)
   constexpr auto
   func(Name name, T &t, MemberFunctionPointer mem_fun, Args &&...args) {
     return func(name,
@@ -1430,8 +1627,31 @@ namespace cli::funcs {
                 std::forward<Args>(args)...);
   }
 
+  /**
+   * @brief creates a Function from a T and its const member function.
+   *
+   * Example:
+   * ```
+   *  struct S{
+   *    void foo(int i) const;
+   *  };
+   *
+   *  S s;
+   *
+   *  auto f = cli::func("foo"_sc,
+   *                     s,
+   *                     &S::mem_fun,
+   *                     "i"_arg);
+   * ```
+   * @param name the function name. Must be a cli::string_constant.
+   * @param t the object
+   * @param mem_fun pointer to the member function
+   * @param args the member function's arguments. See cli::arg and @ref
+   * Arguments.
+   */
   template<SC Name, class T, class MemberFunctionPointer, class... Args>
-    requires std::is_member_function_pointer_v<MemberFunctionPointer>
+    requires std::is_member_function_pointer_v<MemberFunctionPointer> and
+             function_traits<MemberFunctionPointer>::is_const
   constexpr auto
   func(Name name, const T &t, MemberFunctionPointer mem_fun, Args &&...args) {
     return func(name,
@@ -1517,57 +1737,81 @@ namespace cli::funcs {
            class... Args>
   inline constexpr bool is_member_function_v<
     MemberFunction<Name, Description, Help, Function, Args...>> = true;
+
   /**
    * @defgroup member-functions Member Functions
    * @ingroup Functions
+   *
+   * Member function commands are partial commands for member functions. They
+   * are called partial because they can't be used standalone, e.g. their parent
+   * command must be an object that the member function can be called on.
+   * There are four overloads:
+   *
+   * ```
+   * func(name, description, mem_fun_ptr, args...);
+   * func(name, mem_fun_ptr, args...);
+   * func<mem_fun_ptr>(description, args...);
+   * func<mem_fun_ptr>(args...);
+   * ```
+   *
+   * where
+   * - name is a cli::string_constant that defines the member function command
+   * name
+   * - description is a cli::string_constant that describes the member function.
+   * - mem_fun_ptr is a pointer to a member function
+   * - args are the arguments of the member functions. See also @ref Arguments.
    * @{
    */
 
-  // clang-format off
-/**
- * creates a member function command. This command cannot be used
- * standalone. Its parent command must be an object that this member function
- * can be called on.
- *
- *
- * Intended usage:
- *
- * ```
- *  struct Foo{
- *    void bar(int param);
- *    int baz();
- *  };
- *
- *  static Foo foo;
- *
- * using cli::operator""_sc;
- * using cli::funcs::operator""_arg;
- *
- *  cli::Cli my_cli(...,
- *                  cli::param("foo"_sc, foo, // <- foo must be direct parent
- *                                            // of bar and baz
- *                             cli::mem_fun("bar"_sc, "bars the foo"_sc, &Foo::bar, "param"_arg),
- *                             cli::mem_fun("baz"_sc, "bazzes"_sc, &Foo::baz),
- *                             ... ),
- *                  ...);
- * ```
- *
- * This is used to avoid repeating the object, i.e. ``foo``, for every
- * member function added, as would be the case when using cli::func().
- *
- * @param name the name of the member function
- * @param description the description of the member function
- * @param mem_fun pointer to the member function
- * @param args the arguments. See cli::funcs::arg.
- * @return a partial Command
- */
-  // clang-format on
+  /**
+   * creates a member function command. This command cannot be used
+   * standalone. Its parent command must be an object that this member function
+   * can be called on.
+   *
+   *
+   * Intended usage:
+   *
+   * ```
+   *  struct Foo{
+   *    void bar(int param);
+   *    int baz();
+   *  };
+   *
+   *  static Foo foo;
+   *
+   * using cli::operator""_sc;
+   * using cli::funcs::operator""_arg;
+   *
+   *  cli::Cli my_cli(...,
+   *                  cli::param("foo"_sc,
+   *                             foo, // <- foo must be direct parent of bar and
+   *                                  // baz
+   *                             cli::func("bar"_sc,
+   *                                          "bars the foo"_sc,
+   *                                          &Foo::bar,
+   *                                          "param"_arg),
+   *                             cli::func("baz"_sc,
+   *                                          "bazzes"_sc,
+   *                                          &Foo::baz),
+   *                             ... ),
+   *                  ...);
+   * ```
+   *
+   * This is used to avoid repeating the object, i.e. ``foo``, for every
+   * member function added, as would be the case when using cli::func().
+   *
+   * @param name the name of the member function
+   * @param description the description of the member function
+   * @param mem_fun pointer to the member function
+   * @param args the arguments. See cli::arg and @ref Arguments.
+   * @return a partial Command
+   */
   template<SC Name, SC Description, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer>
-  constexpr auto mem_fun(Name name,
-                         Description description,
-                         MemberFunctionPointer mem_fun,
-                         Args &&...args) {
+  constexpr auto func(Name name,
+                      Description description,
+                      MemberFunctionPointer mem_fun,
+                      Args &&...args) {
     (void)name;
     (void)description;
     if constexpr (sizeof...(Args) > 0) {
@@ -1607,8 +1851,8 @@ namespace cli::funcs {
    *  cli::Cli my_cli(...,
    *                  cli::param("foo"_sc, foo, // <- foo must be direct parent
    *                                            // of bar and baz
-   *                             cli::mem_fun("bar"_sc, &Foo::bar, "param"_arg),
-   *                             cli::mem_fun("baz"_sc, &Foo::baz),
+   *                             cli::func("bar"_sc, &Foo::bar, "param"_arg),
+   *                             cli::func("baz"_sc, &Foo::baz),
    *                             ... ),
    *                  ...);
    * ```
@@ -1618,13 +1862,13 @@ namespace cli::funcs {
    *
    * @param name the name of the member function
    * @param mem_fun pointer to the member function
-   * @param args the arguments. See cli::funcs::arg.
+   * @param args the arguments. See cli::arg and @ref Arguments.
    * @return a partial Command
    */
   template<SC Name, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer>
   constexpr auto
-  mem_fun(Name name, MemberFunctionPointer mem_fun, Args &&...args) {
+  func(Name name, MemberFunctionPointer mem_fun, Args &&...args) {
     (void)name;
     if constexpr (sizeof...(Args) > 0) {
       constexpr auto deduced_args =
@@ -1643,49 +1887,50 @@ namespace cli::funcs {
     }
   }
 
-  // clang-format off
-/**
- * creates a member function command. This command cannot be used
- * standalone. Its parent command must be an object that this member function
- * can be called on.
- *
- *
- * Intended usage:
- *
- * ```
- *  struct Foo{
- *    void bar(int param);
- *    int baz();
- *  };
- *
- *  static Foo foo;
- *
- *  using cli::operator""_sc;
- *  using cli::funcs::operator""_arg;
- *
- *  cli::Cli my_cli(...,
- *    cli::param("foo"_sc, foo, // <- foo must be direct parent
- *                              // of bar and baz
- *               cli::mem_fun<&Foo::bar>("bars the foo"_sc, param"_arg), // name is deduced to "bar"
- *               cli::mem_fun<&Foo::baz>("bazzes"_sc), // name is deduced to "baz"
- *               ... ),
- *    ...);
- * ```
- *
- * This is used to avoid repeating the object, i.e. ``foo``, for every
- * member function added, as would be the case when using cli::func().
- *
- * Additionally, the name of the function is automatically deduced.
- *
- * @tparam MemberFunctionPointer the pointer to the member function
- * @param description the description of the member function
- * @param args the arguments. See cli::funcs::arg.
- * @return a partial Command
- */
-  // clang-format on
+  /**
+   * creates a member function command. This command cannot be used
+   * standalone. Its parent command must be an object that this member function
+   * can be called on.
+   *
+   *
+   * Intended usage:
+   *
+   * ```
+   *  struct Foo{
+   *    void bar(int param);
+   *    int baz();
+   *  };
+   *
+   *  static Foo foo;
+   *
+   *  using cli::operator""_sc;
+   *  using cli::funcs::operator""_arg;
+   *
+   *  cli::Cli my_cli(...,
+   *    cli::param("foo"_sc, foo, // <- foo must be direct parent
+   *                              // of bar and baz
+   *               cli::mem_fun<&Foo::bar>("bars the foo"_sc,
+   *                                       param"_arg), // name is deduced to
+   *                                                    // "bar"
+   *               cli::mem_fun<&Foo::baz>("bazzes"_sc), // name is deduced to
+   *                                                     // "baz"
+   *               ... ),
+   *    ...);
+   * ```
+   *
+   * This is used to avoid repeating the object, i.e. ``foo``, for every
+   * member function added, as would be the case when using cli::func().
+   *
+   * Additionally, the name of the function is automatically deduced.
+   *
+   * @tparam MemberFunctionPointer the pointer to the member function
+   * @param description the description of the member function
+   * @param args the arguments. See cli::arg and @ref Arguments.
+   * @return a partial Command
+   */
   template<auto MemberFunctionPointer, SC Description, class... Args>
     requires std::is_member_function_pointer_v<decltype(MemberFunctionPointer)>
-  constexpr auto mem_fun(Description description, Args &&...args) {
+  constexpr auto func(Description description, Args &&...args) {
     if constexpr (sizeof...(Args) > 0) {
       constexpr auto deduced_args =
         dtl::deduce_args<decltype(MemberFunctionPointer)>(
@@ -1705,47 +1950,47 @@ namespace cli::funcs {
         MemberFunctionPointer};
     }
   }
-  // clang-format off
-/**
- * creates a member function command. This command cannot be used
- * standalone. Its parent command must be an object that this member function
- * can be called on.
- *
- *
- * Intended usage:
- *
- * ```
- *  struct Foo{
- *    void bar(int param);
- *    int baz();
- *  };
- *
- *  static Foo foo;
- *
- *  using cli::operator""_sc;
- *  using cli::funcs::operator""_arg;
- *
- *  cli::Cli my_cli(...,
- *    cli::param("foo"_sc, foo, // <- foo must be direct parent
- *                              // of bar and baz
- *               cli::mem_fun<&Foo::bar>("param"_arg), // name is deduced to "bar"
- *               cli::mem_fun<&Foo::baz>(), // name is deduced to "baz"
- *               ... ),
- *    ...);
- * ```
- *
- * This is used to avoid repeating the object, i.e. ``foo``, for every
- * member function added, as would be the case when using cli::func().
- *
- * Additionally, the name of the function is automatically deduced.
- *
- * @tparam MemberFunctionPointer the pointer to the member function
- * @param args the arguments. See cli::funcs::arg.
- */
-  // clang-format on
+
+  /**
+   * creates a member function command. This command cannot be used
+   * standalone. Its parent command must be an object that this member function
+   * can be called on.
+   *
+   *
+   * Intended usage:
+   *
+   * ```
+   *  struct Foo{
+   *    void bar(int param);
+   *    int baz();
+   *  };
+   *
+   *  static Foo foo;
+   *
+   *  using cli::operator""_sc;
+   *  using cli::funcs::operator""_arg;
+   *
+   *  cli::Cli my_cli(...,
+   *    cli::param("foo"_sc,
+   *               foo, // <- foo must be direct parent of bar and baz
+   *               cli::mem_fun<&Foo::bar>("param"_arg), // name is deduced to
+   *                                                     // "bar"
+   *               cli::mem_fun<&Foo::baz>(), // name is deduced to "baz"
+   *               ... ),
+   *    ...);
+   * ```
+   *
+   * This is used to avoid repeating the object, i.e. ``foo``, for every
+   * member function added, as would be the case when using cli::func().
+   *
+   * Additionally, the name of the function is automatically deduced.
+   *
+   * @tparam MemberFunctionPointer the pointer to the member function
+   * @param args the arguments. See cli::arg and @ref Arguments.
+   */
   template<auto MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<decltype(MemberFunctionPointer)>
-  constexpr auto mem_fun(Args &&...args) {
+  constexpr auto func(Args &&...args) {
     if constexpr (sizeof...(Args) > 0) {
       constexpr auto deduced_args =
         dtl::deduce_args<decltype(MemberFunctionPointer)>(

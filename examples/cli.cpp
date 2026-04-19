@@ -61,7 +61,6 @@ using cli::operator""_arg;
 // using declarations to not repeat cli:: unnecessarily
 using cli::arg;
 using cli::func;
-using cli::mem_fun;
 using cli::param;
 
 int main() {
@@ -107,7 +106,7 @@ int main() {
             param("b"_sc, &Settings::b),
             param<&Settings::a>(),
             param("c"_sc, &Settings::c),
-            mem_fun<&Settings::apply>())
+            func<&Settings::apply>())
   );
   // clang-format on
 

@@ -36,7 +36,6 @@ namespace cli {
   using funcs::arg;
   using funcs::operator""_arg;
   using funcs::func;
-  using funcs::mem_fun;
   using params::param;
 
   /**

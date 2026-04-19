@@ -3,18 +3,24 @@
 
 - [About](#about)
 - [How to build](#how-to-build)
+  - [Meson](#meson)
+  - [Other Build Systems](#other-build-systems)
   - [Examples](#examples)
 - [Simulation](#simulation)
 - [Components](#components)
   - [Config](#config)
   - [Output](#output)
-  - [Parameters](#parameters)
+  - [Parameter Commands](#parameter-commands)
     - [Parameters Without Object Declarations](#parameters-without-object-declarations)
     - [Parameters With Object/Variable Declarations](#parameters-with-objectvariable-declarations)
     - [Parameters With const Object/Variable Declarations](#parameters-with-const-objectvariable-declarations)
     - [Member Data Parameters](#member-data-parameters)
-  - [Functions](#functions)
+  - [Function Commands](#function-commands)
     - [Arguments](#arguments)
+      - [Optional Arguments](#optional-arguments)
+      - [Required Arguments](#required-arguments)
+      - [Deduced Arguments](#deduced-arguments)
+- [TODOs](#todos)
 - [How to use](#how-to-use)
 - [Simple Example](#simple-example)
 
@@ -31,7 +37,7 @@ A short example to visualize what CLI is trying to do:
 Imagine your embedded application has some parameters and some functionality
 that you want to trigger remotely.
 
-```{cpp}
+```cpp
 // the settings
 struct Settings{
   int foo;
@@ -79,7 +85,7 @@ processes the input.
 
 To output data, a function called `send_char()` will be assumed to exist.
 
-```{cpp}
+```cpp
 char get_char();
 cli::Error send_char(char c);
 
@@ -116,8 +122,9 @@ That's all there is to it.
 
 ## How to build
 
-CLI is a header only library, so there is nothing to build. Just add the
-`include` folder to your build systems include directories and you are set.
+CLI is a header only library, so there is nothing to build.
+
+### Meson
 
 If you use meson, add CLI as a subproject and use it like so:
 
@@ -131,6 +138,12 @@ cli_dep = dependency(
   ]
 )
 ```
+
+### Other Build Systems
+
+If you use another build system, you will also need
+[gcem](https://github.com/kthohr/gcem). Just add CLI's and gcem's
+`include` folder to your build system's include directories and you are set.
 
 ### Examples
 
@@ -151,17 +164,17 @@ option to auto or enabled.
 
 Then you can include `cli/sim.hpp` and use your cli on the PC in a terminal:
 
-```{cpp}
+```cpp
 // my_cli.cpp
 #include "cli/sim.hpp"
 
 struct Config{...};
 
 int main(){
-  cli::Cli my_cli = cli::sim::create_cli(Config{}, commands...);
-
   if (not cli::sim::init())
     return -1;
+
+  cli::Cli my_cli = cli::sim::create_cli(Config{}, commands...);
 
   my_cli.print();
 
@@ -183,6 +196,9 @@ executable(
 )
 ```
 
+If you dont use meson but want the simulation capability, you will need
+[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal).
+
 ## Components
 
 CLI has the following components.
@@ -195,7 +211,7 @@ be, and which features to use.
 
 An example is given here:
 
-```{cpp}
+```cpp
 struct my_cli_config {
   // the character type to be used
   using char_type = char;
@@ -221,7 +237,7 @@ struct my_cli_config {
 
 CLI defines the `cli::Output` concept to use as a terminal/display device.
 
-```{cpp}
+```cpp
 
 template<class S, typename Char>
 concept Output = requires(S &stream,
@@ -247,14 +263,14 @@ and returns a `cli::Error`.
 
 Example:
 
-```{cpp}
+```cpp
 cli::Error write_char(char c);
 cli::Error write_string(cli::View<const char> string);
 ```
 
 Now the `AnsiOutput` can be created:
 
-```{cpp}
+```cpp
 struct config{...};
 
 static_assert(cli::Config<config>);
@@ -285,7 +301,7 @@ with the following functions.
 
 The basic form is:
 
-```{cpp}
+```cpp
 param<T>(name, description, get, set, parse, format, validate, subcommands...);
 ```
 
@@ -318,7 +334,7 @@ Note that:
 
 The available overloads are:
 
-```{cpp}
+```cpp
 // the basic/full form
 param<T>(name, description, get, set, parse, format, validate);
 
@@ -357,7 +373,7 @@ object/variable declarations.
 
 The basic form is:
 
-```{cpp}
+```cpp
 param(name, description, t, get, set, parse, format, validate, subcommands...);
 ```
 
@@ -396,7 +412,7 @@ following functions.
 
 The base form is:
 
-```{cpp}
+```cpp
 param(name, description, t, get, format)
 ```
 
@@ -411,7 +427,7 @@ with subobjects.
 This is easiest explainable by example.
 Take this struct and its variabe definition:
 
-```{cpp}
+```cpp
  struct Settings{
    int foo;
    char baz;
@@ -423,7 +439,7 @@ Take this struct and its variabe definition:
 To make the settings and its members foo and baz available to cli, you can
 use the following param calls to easily setup this structure.
 
-```{cpp}
+```cpp
  param("settings"_sc, "core settings", settings,
          param("foo"_sc, "foo mode"_sc, &Settings::foo),
          param("baz"_sc, "baz setting"_sc, &Settings::baz));
@@ -454,7 +470,7 @@ settings.baz
 
 The full list of member data parameter functions is:
 
-```{cpp}
+```cpp
  param(name, description, ptr_to_member, parse, format, validate);
  param(name, description, ptr_to_member, parse, format);
  param(name, description, ptr_to_member, validate);
@@ -466,7 +482,7 @@ for the type pointed to by ptr_to_member.
 
 There are also overloads available for const member data.
 
-```{cpp}
+```cpp
  param(name, description, ptr_to_member, format);
  param(name, description, ptr_to_member);
 ```
@@ -503,7 +519,7 @@ are two main templates forms, one for required and one for optional arguments.
 
 The base form for an optional arguments is:
 
-```{cpp}
+```cpp
 template <class T, // the arguments type, must be explicitly specified
           auto DefaultValue, // the default value, must be explicitly specified
           SC Name, // must be specified
@@ -524,7 +540,7 @@ The parser and validator can be left out.
 
 The base form for a required arguments is:
 
-```{cpp}
+```cpp
 template <class T, // the arguments type, must be explicitly specified
           SC Name, //must be specified
           SC Description, // either specified or left out
@@ -548,16 +564,26 @@ benefit of deduced arguments is the shorter notation.
 
 There are two functions for creating deduced arguments:
 
-```{cpp}
+```cpp
 arg(name, description)
 arg(name)
 ```
 
 and the literal operator `_arg`
 
-```{cpp}
+```cpp
 "name"_arg
 ```
+
+## TODOs
+
+- full doxygen documentation
+- fixed size sequence parsing and formatting
+- output config
+- more testing
+- make help command more detailed
+  - print also subcommands
+  - print function arguments and their description
 
 ## How to use
 

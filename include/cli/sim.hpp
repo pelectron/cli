@@ -1,3 +1,39 @@
+/**
+ * @file cli/sim.hpp
+ * @brief This header contains the functions to simulate a cli on a PC terminal.
+ * See also @ref Simulation.
+ *
+ * @defgroup Simulation
+ * clis can also be simulated on a PC.
+ *
+ * Basic usage example:
+ *
+ * ```
+ * #include "cli/sim.hpp"
+ *
+ * struct Config{...};
+ *
+ * int main(){
+ *   if (not cli::sim::init())
+ *     return -1;
+ *
+ *   cli::Cli my_cli = cli::sim::create_cli(Config{}, commands...);
+ *
+ *   my_cli.print();
+ *
+ *   while (cli::sim::get_input_and_process(my_cli)) {
+ *   }
+ *
+ *   return 0;
+ * }
+ * ```
+ *
+ * The executable can then be run on a PC. Ctrl-C exits the cli.
+ *
+ * @note [cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) is
+ * required for the simulation to work.
+ */
+
 #ifndef CLI_SIM_HPP
 #define CLI_SIM_HPP
 
@@ -15,11 +51,18 @@
 
 namespace cli::sim {
 
-  cli::Error write(cli::View<const char> s) {
-    Term::cout << std::string_view(s.data(), s.size()) << std::flush;
-    return cli::Error::none;
-  }
+  namespace dtl {
+    inline cli::Error write(cli::View<const char> s) {
+      Term::cout << std::string_view(s.data(), s.size()) << std::flush;
+      return cli::Error::none;
+    }
+  } // namespace dtl
 
+  /**
+   * @brief The init function for the sim.
+   *
+   * @return true if init succeded, else false.
+   */
   inline bool init() {
     // check if the terminal is capable of handling input
     Term::terminal.setOptions(Term::Option::NoClearScreen,
@@ -35,6 +78,12 @@ namespace cli::sim {
     return true;
   }
 
+  /**
+   * @brief gets an input and processes it on the cli. Returns false when ctrl-c
+   * is pressed.
+   *
+   * @param cli the cli object
+   */
   template<typename Cli>
   bool get_input_and_process(Cli &cli) {
     try {
@@ -76,6 +125,12 @@ namespace cli::sim {
     }
   }
 
+  /**
+   * @brief creates the cli object from the config and commands
+   *
+   * @param config the cli::Config
+   * @param commands the commands
+   */
   template<cli::Config Config, cli::Command... Commands>
   constexpr auto create_cli(Config config,
                             Commands &&...commands) /* -> cli::Cli */ {
@@ -83,7 +138,7 @@ namespace cli::sim {
                   "char_type must be char. Others are unsupported for now.");
     return cli::Cli{
       Config{},
-      cli::AnsiOutput{Config{}, &cli::sim::write},
+      cli::AnsiOutput{Config{}, &::cli::sim::dtl::write},
       std::forward<Commands>(commands)...
     };
   }
