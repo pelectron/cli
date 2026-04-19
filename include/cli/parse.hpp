@@ -1,3 +1,32 @@
+/**
+ * @file
+ * @brief This file contains the utilities for parsing values from strings
+ *
+ * @defgroup Parsing
+ *
+ * Parsing in CLI is based on two things:
+ * - the class cli::parse::ParseResult: the result of a parsing operation.
+ * - cli::parse::Parser: the parser concept.
+ *
+ * A parser of T is a callable that parses a T from a string and returns a
+ * ParseResult. It takes a cli::View<const CharT> as its first and only
+ * argument and returns a cli::parse::ParseResult<T, CharT>.
+ *
+ * Example:
+ * ```
+ *  cli::parse::ParseResult<bool, char>
+ *  parse_bool(vli::View<const char> buf){
+ *    if(buf.starts_with("true")){
+ *      return {true, buf.substr(4)};
+ *    }else if(buf.starts_with("false")){
+ *      return {false, buf.substr(5)};
+ *    }else{
+ *      return cli::Error::invalid_character;
+ *    }
+ *  }
+ * ```
+ */
+
 #ifndef CLI_PARSE_HPP
 #define CLI_PARSE_HPP
 
@@ -69,6 +98,8 @@ namespace cli::parse {
   } from_value;
 
   /**
+   * @ingroup Parsing
+   *
    * This struct is the result of a parse operation. It contains an error, a
    * value, and a rest.
    *
@@ -146,6 +177,7 @@ namespace cli::parse {
    * ParseResult. It takes a cli::View<const CharT> as its first and only
    * argument and returns a cli::parse::ParseResult<T, CharT>.
    *
+   * @ingroup Parsing
    * @tparam P the parser
    * @tparam T the type of value to parse
    * @tparam CharT the character type
@@ -161,6 +193,7 @@ namespace cli::parse {
    * cli::View<const CharT> as its first and only argument and returns a
    * cli::parse::ParseResult<T, CharT>.
    *
+   * @ingroup Parsing
    * @tparam P the parser
    */
   template<class P>

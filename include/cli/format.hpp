@@ -1,3 +1,68 @@
+/**
+ * @file
+ * @brief This file contains the utilities to format values into strings.
+ *
+ * @defgroup Formatting
+ *
+ * A Formatter takes a cli::View<CharT> as its first argument and a ``T`` as its
+ * second argument, and returns a cli::format::FormatResult. The first argument
+ * specifies the buffer into which the second argument should be formatted into.
+ *
+ * An example of formatters:
+ * ```
+ * auto format_char(cli::View<char> output, char c)
+ *   -> cli::format::FormatResult{
+ *   if(output.size() == 0)
+ *     return cli::Error::buffer_overflow;
+ *   output[0] = c;
+ *   return 1;
+ * }
+ *
+ * auto format_quoted_char(cli::View<char> output, char c)
+ *   -> cli::format::FormatResult {
+ *   if(output.size() < 3) return cli::Error::buffer_overflow;
+ *   output[0] = '\'';
+ *   output[1] = c;
+ *   output[2] = '\'';
+ *   return 3;
+ * }
+ *
+ * auto format_bool(cli::View<char> output, bool b)
+ *   -> cli::format::FormatResult {
+ *   if(b){
+ *     if(output.size() < 4)
+ *       return cli::Error::buffer_overflow;
+ *     output[0] = 't';
+ *     output[1] = 'r';
+ *     output[2] = 'u';
+ *     output[3] = 'e';
+ *     return 4;
+ *   }else{
+ *     if(output.size() < 5)
+ *       return cli::Error::buffer_overflow;
+ *     output[0] = 'f';
+ *     output[1] = 'a';
+ *     output[2] = 'l';
+ *     output[3] = 's';
+ *     output[4] = 'e';
+ *     return 5;
+ *   }
+ * }
+ * ```
+ *
+ * Default implementations of formatters can be found in the cli::format
+ * namespace. There are default formatters for:
+ * - bool
+ * - characters
+ * - enumerations
+ * - integers
+ * - fixpoint numbers
+ * - sequences, i.e. arrays/lists/vectors
+ * - strings
+ * - aggregates, i.e. simple structs
+ * - TODO: floating point numbers
+ */
+
 #ifndef CLI_FORMAT_HPP
 #define CLI_FORMAT_HPP
 
@@ -24,6 +89,7 @@ namespace cli::format {
    * for formatting. If the error is not Error::none, then size_written is
    * always 0.
    *
+   * @ingroup Formatting
    */
   struct FormatResult {
 
@@ -62,21 +128,9 @@ namespace cli::format {
    * second argument, and returns a FormatResult. The first argument specifies
    * the buffer into which the second argument should be formatted into.
    *
-   * Example:
+   * See @ref Formatting for more info.
    *
-   * ```
-   * // a simple function
-   * FormatResult format_int(cli::View<char> buffer,int i);
-   *
-   * static_assert(FormatterOf<decltype(format), int, char>);
-   *
-   * char buffer[20]{};
-   * int i = 5;
-   * FormatResult res = format_int(buffer, i);
-   *
-   * assert(res);
-   * assert(res.size_written == 1);
-   * ```
+   * @ingroup Formatting
    * @tparam F the formatter
    * @tparam T the type to format
    * @tparam CharT the character type of the buffer
@@ -86,46 +140,15 @@ namespace cli::format {
     { f(buf, t) } -> std::same_as<FormatResult>;
   } and not std::is_const_v<CharT>;
 
-  // clang-format off
-/**
- * A Formatter takes a cli::View<CharT> as its first argument and a ``T`` as its
- * second argument, and returns a cli::format::FormatResult. The first argument
- * specifies the buffer into which the second argument should be formatted into.
- *
- * An example for a char formatter:
- * ```
- * auto format_char(cli::View<char> output, char c) -> cli::format::FormatResult{
- *   if(output.size() == 0)
- *     return cli::Error::buffer_overflow;
- *   output[0] = c;
- *   return 1;
- * }
- *
- * auto format_quoted_char(cli::View<char> output, char c) -> cli::format::FormatResult{
- *   if(output.size() < 3)
- *     return cli::Error::buffer_overflow;
- *   output[0] = '\'';
- *   output[1] = c;
- *   output[2] = '\'';
- *   return 3;
- * }
- * ```
- *
- * Default implementations of formatters can be found in the cli::format namespace.
- * There are default formatters for:
- * - bool
- * - characters
- * - enumerations
- * - integers
- * - fixpoint numbers
- * - sequences, i.e. arrays/lists/vectors
- * - strings
- * - aggregates, i.e. simple structs
- * - TODO: floating point numbers
- *
- * @tparam F the formatter
- */
-  // clang-format on
+  /**
+   * A Formatter takes a cli::View<CharT> as its first argument and a ``T`` as
+   * its second argument, and returns a cli::format::FormatResult. The first
+   * argument specifies the buffer into which the second argument should be
+   * formatted into. See @ref Formatting for more info.
+   *
+   * @ingroup Formatting
+   * @tparam F the formatter
+   */
   template<class F>
   concept Formatter =
     is_non_const_view_v<typename formatter_buffer_type<F>::type> and
@@ -134,7 +157,9 @@ namespace cli::format {
   template<class T, typename CharT>
   struct DefaultFormat {
     constexpr FormatResult operator()(View<CharT> buf, const T &t) const {
-      return Error::unimplemented;
+      static_assert(always_false<T>,
+                    "There is no DefaultFormat defined for T!");
+      return 0;
     }
   };
 
@@ -144,6 +169,7 @@ namespace cli::format {
       return 0;
     }
   };
+
   template<typename T, typename CharT>
   struct NoFormat {
     constexpr FormatResult operator()(View<CharT> buf, const T &) const {

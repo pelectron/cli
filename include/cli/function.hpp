@@ -1223,6 +1223,7 @@ namespace cli::funcs {
     -> Function<Name, Description, Type, std::remove_cvref_t<F>, Args...>;
   /**
    * @defgroup Functions
+   * @ingroup Commands
    *
    * Functions are commands that can be called with arguments.
    *
@@ -1475,7 +1476,7 @@ namespace cli::funcs {
    *  auto f = cli::func("apply"_sc,
    *                     "apply description"_sc,
    *                     s,
-   *                     &S::mem_fun,
+   *                     &S::apply,
    *                     "i"_arg);
    * ```
    * @param name the function name. Must be a cli::string_constant.
@@ -1541,7 +1542,7 @@ namespace cli::funcs {
    *  auto f = cli::func("foo"_sc,
    *                     "foo description"_sc,
    *                     s,
-   *                     &S::mem_fun,
+   *                     &S::foo,
    *                     "i"_arg);
    * ```
    * @param name the function name. Must be a cli::string_constant.
@@ -1606,7 +1607,7 @@ namespace cli::funcs {
    *
    *  auto f = cli::func("apply"_sc,
    *                     s,
-   *                     &S::mem_fun,
+   *                     &S::apply,
    *                     "i"_arg);
    * ```
    * @param name the function name. Must be a cli::string_constant.
@@ -1640,7 +1641,7 @@ namespace cli::funcs {
    *
    *  auto f = cli::func("foo"_sc,
    *                     s,
-   *                     &S::mem_fun,
+   *                     &S::foo,
    *                     "i"_arg);
    * ```
    * @param name the function name. Must be a cli::string_constant.
@@ -1760,6 +1761,8 @@ namespace cli::funcs {
    * - description is a cli::string_constant that describes the member function.
    * - mem_fun_ptr is a pointer to a member function
    * - args are the arguments of the member functions. See also @ref Arguments.
+   *
+   *
    * @{
    */
 
@@ -1909,11 +1912,11 @@ namespace cli::funcs {
    *  cli::Cli my_cli(...,
    *    cli::param("foo"_sc, foo, // <- foo must be direct parent
    *                              // of bar and baz
-   *               cli::mem_fun<&Foo::bar>("bars the foo"_sc,
-   *                                       param"_arg), // name is deduced to
-   *                                                    // "bar"
-   *               cli::mem_fun<&Foo::baz>("bazzes"_sc), // name is deduced to
-   *                                                     // "baz"
+   *               cli::func<&Foo::bar>("bars the foo"_sc,
+   *                                    param"_arg), // name is deduced to
+   *                                                 // "bar"
+   *               cli::func<&Foo::baz>("bazzes"_sc), // name is deduced to
+   *                                                  // "baz"
    *               ... ),
    *    ...);
    * ```
@@ -1973,9 +1976,9 @@ namespace cli::funcs {
    *  cli::Cli my_cli(...,
    *    cli::param("foo"_sc,
    *               foo, // <- foo must be direct parent of bar and baz
-   *               cli::mem_fun<&Foo::bar>("param"_arg), // name is deduced to
-   *                                                     // "bar"
-   *               cli::mem_fun<&Foo::baz>(), // name is deduced to "baz"
+   *               cli::func<&Foo::bar>("param"_arg), // name is deduced to
+   *                                                  // "bar"
+   *               cli::func<&Foo::baz>(), // name is deduced to "baz"
    *               ... ),
    *    ...);
    * ```

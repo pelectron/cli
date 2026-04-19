@@ -1,3 +1,60 @@
+/**
+ * @file
+ * @brief This file contains the CommandNode and CommandBase.
+ *
+ * @defgroup Commands
+ *
+ * A command is functionality to execute on the CLI.
+ *
+ * There are two types of commands:
+ * 1. @ref Functions
+ * 2. @ref Parameters
+ *
+ * They are exactly what they sound like. Functions are functions you want to
+ * call remotely and parameters are values that you want to read and write
+ * remotely.
+ *
+ * A short example to visualize the concept:
+ *
+ * Imagine your embedded application has some parameters and some functionality
+ * that you want to trigger remotely.
+ *
+ * ```cpp
+ * struct Settings{
+ *  int foo;
+ *  char bar;
+ * };
+ *
+ * // the parameters
+ * static Settings settings;
+ *
+ * enum class Mode{
+ *   normal,
+ *   moderate,
+ *   extreme
+ * };
+ *
+ * // the function
+ * int gooify(Mode mode, int n);
+ * ```
+ *
+ * You want to modify the settings, and trigger `gooify`.
+ * With CLI, the setup is easy, and you will be able to to this, in for example
+ * a serial terminal, like so:
+ *
+ * ```{bash}
+ * settings = {foo = 5, bar = k} # sets settings.foo to 5 and settings.bar to
+ *                               # 'k'
+ * settings.foo = 42 # set settings.foo to 42
+ * settings.bar = 'x' # set settings.bar to 'x'
+ * settings # returns {foo = 42, bar = 'x'}
+ * settings.foo # returns 42
+ * settings.bar # returns 'k'
+ * gooify(normal, 15) # calls gooify(Mode::normal, 15)
+ * gooify(n = 10, mode = extreme) # calls gooify(Mode::extreme, 10)
+ * ```
+ */
+
 #ifndef CLI_COMMAND_HPP
 #define CLI_COMMAND_HPP
 

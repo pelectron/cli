@@ -1,8 +1,23 @@
 /**
  * @file cli/validator.hpp
  *
- * This file contains the Validator concept and the default
+ * @brief This file contains the Validator concept and the default
  * implementation.
+ *
+ * @defgroup Validation
+ *
+ * A validator is a callable that takes a value as its sole argument and
+ * returns a bool.
+ *
+ * If the value is valid, true must be returned, else false.
+ *
+ * Example:
+ * ```
+ * // a foo must be in the range [0,100]
+ * cli::Error validate_foo(int foo){
+ *   return foo >= 0 and foo <= 100;
+ * }
+ * ```
  */
 
 #ifndef CLI_VALIDATE_HPP
@@ -44,6 +59,7 @@ namespace cli::validate {
    * }
    * ```
    *
+   * @ingroup Validation
    * @tparam V the type to check
    */
   template<class V>
@@ -52,6 +68,24 @@ namespace cli::validate {
       { v(value) } -> std::convertible_to<bool>;
     };
 
+  /**
+   * A validator is a callable that takes a value of type T as its sole argument
+   * and returns a bool.
+   *
+   * If the value is valid, true must be returned, else false.
+   *
+   * Example:
+   * ```
+   * // a foo must be in the range [0,100]
+   * cli::Error validate_foo(int foo){
+   *   return foo >= 0 and foo <= 100;
+   * }
+   * ```
+   *
+   * @ingroup Validation
+   * @tparam V the validator
+   * @tparam T the value type
+   */
   template<class V, class T>
   concept ValidatorOf = requires(std::remove_cvref_t<V> v, const T &value) {
     { v(value) } -> std::convertible_to<bool>;

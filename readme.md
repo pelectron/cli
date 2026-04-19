@@ -578,7 +578,6 @@ and the literal operator `_arg`
 ## TODOs
 
 - full doxygen documentation
-- fixed size sequence parsing and formatting
 - output config
 - more testing
 - make help command more detailed

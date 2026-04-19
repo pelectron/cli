@@ -66,9 +66,11 @@ namespace cli::params {
   template<typename T>
   inline constexpr bool is_const_lvalue_ref_or_unqualified =
     not is_non_const_lvalue_ref<T>;
+
   /**
-   * concept for a Getter with value type V
+   * concept for a Getter with value type V.
    *
+   * @ingroup Parameters
    * @tparam G the getter type
    * @tparam V the value type
    */
@@ -78,8 +80,9 @@ namespace cli::params {
   } and is_non_const_lvalue_ref<first_arg_t<G>>;
 
   /**
-   * concept for a Setter with value type V
+   * concept for a Setter with value type V.
    *
+   * @ingroup Parameters
    * @tparam S the setter type
    * @tparam V the value type
    */
@@ -90,12 +93,11 @@ namespace cli::params {
 
   /**
    * A Getter G retrieves the value of a parameter. An instance of G must
-   * be callable with an l value reference and return a cli::Error. The
-   * reference denotes the place where the getter should store it value. If G
+   * be callable with an non-const lvalue reference and return a cli::Error. The
+   * reference denotes the place where the getter should store its value. If G
    * cannot produce a value, it should return the error that occurred.
    *
-   * TODO: maybe a pointer return type would be better
-   *
+   * @ingroup Parameters
    * @tparam G the type to test
    */
   template<class G>
@@ -107,6 +109,7 @@ namespace cli::params {
    * A Setter S sets the value of a parameter. An instance of S must be
    * callable with a const l value reference and return a cli::Error.
    *
+   * @ingroup Parameters
    * @tparam S the type to test
    */
   template<class S>
@@ -806,9 +809,56 @@ namespace cli::params {
   }
 
   /**
-   * @addtogroup parameters
+   * @defgroup Parameters
+   * @ingroup Commands
    *
+   * Parameters are commands that represent a value.
    *
+   * They can be set with:
+   *
+   * ```bash
+   * parameter = value
+   * ```
+   *
+   * and read with:
+   *
+   * ```bash
+   * parameter
+   * ```
+   *
+   * A Parameter is fully defined by a:
+   * - name: the parameter name. Must be a cli::string_constant.
+   * - description: the parameter description. Must be a cli::string_constant.
+   * - set: a Setter, i.e. a callback the sets the parameter value.
+   * - get: a Getter, i.e. callback that gets the parameter value.
+   * - parse: a callable that parses the value from a string. See @ref Parsing.
+   * - format: a callable that formats the value into a string. See @ref
+   *   Formatting.
+   * - validate: a callable that checks wether the parsed value is considered
+   *   valid. See @ref Validation.
+   * - subcommands: optional subcommands, which may be parameters or functions.
+   *
+   * There are four kinds of parameter categories:
+   * 1. Parameters without object/variable declarations. These kinds of
+   * parameters don't store their value in a variable, as far as CLI is
+   * concerned. They give complete control regarding read and write access
+   * of the values and is the most flexible. The drawback is that using these
+   * requires more boilerplate. See @ref params-without-object.
+   * 2. Parameters with object/variable declarations. These parameters store
+   * their value in a variable. See @ref params-with-object and @ref
+   * params-with-const-object.
+   * 3. Member data parameters. These are subcommands of a parent parameter. See
+   * @ref memdata and @ref const-memdata.
+   * 4. Virtual parameters. These can't be read or written to, but act as a
+   * grouping for sub commands. See @ref virtual-params.
+   *
+   * The second and third category reduce the boilerplate required of the first
+   * category and provide sensible defaults.
+   */
+
+  /**
+   * @defgroup virtual-params Virtual Parameters
+   * @ingroup Parameters
    * @{
    */
 
@@ -870,70 +920,72 @@ namespace cli::params {
                  validate::NullValidate{},
                  std::forward<SubCommands>(cmds)...};
   }
+  /// @}
 
   // clang-format off
-/**
- * @defgroup params-without-object Paramters Without Object/Variable Declarations 
- *
- * Parameter commands without an object/variable declaration can be setup
- * with the following functions.
- *
- * The basic form is:
- *
- * ```
- * param<T>(name, description, get, set, parse, format, validate, subcommands...);
- * ```
- *
- * The parts have the following functions:
- * - T: the parameter's type
- * - name: a string_constant that makes up the command name
- * - description: a string_constant that describes the command
- * - get: a Getter for a T. It retrieves the value associated with the parameter.
- * - set: a Setter for a T. It sets the value associated with the parameter.
- * - parse: a Parser for a T. It parses a T from a string.
- * - format: a Formatter for a T. It formats a T to a string. See also
- *   cli::format::Formatter and cli::format::FormatterOf.
- * - validate: a Validator for a T. It validates parsed values before they are set. 
- *   See also cli::validate::Validator.
- *
- * There are a multitide of overloads so that certain parts can be left out,
- * if you wish to use the defaults provided by cli.
- *
- * The available overloads are:
- *
- * ```
- * // the basic form
- * param<T>(name, description, get, set, parse, format, validate);
- *
- * // a parameter with default validator
- * param<T>(name, description, get, set, parse, format);
- *
- * // a parameter with default parser and formatter
- * param<T>(name, description, get, set, validate);
- *
- * // a write-only parameter with custom parser and validator
- * param<T>(name, description, set, parse, validate);
- *
- * // default parser, formatter and validator are used
- * param<T>(name, description, get, set);
- *
- * // a write-only parameter with custom parser
- * param<T>(name, description, set, parse);
- *
- * // a read-only parameter with custom formatter
- * param<T>(name, description, get, format);
- *
- * // a write-only parameter with custom validator
- * param<T>(name, description, set, validate);
- *
- * // a read-only parameter
- * param<T>(name, description, get);
- *
- * // a write-only parameter
- * param<T>(name, description, set);
- * ```
- * @{
- */
+  /**
+   * @defgroup params-without-object Paramters Without Object/Variable Declarations 
+   * @ingroup Parameters
+   *
+   * Parameter commands without an object/variable declaration can be setup
+   * with the following functions.
+   *
+   * The basic form is:
+   *
+   * ```
+   * param<T>(name, description, get, set, parse, format, validate, subcommands...);
+   * ```
+   *
+   * The parts have the following functions:
+   * - T: the parameter's type
+   * - name: a string_constant that makes up the command name
+   * - description: a string_constant that describes the command
+   * - get: a Getter for a T. It retrieves the value associated with the parameter.
+   * - set: a Setter for a T. It sets the value associated with the parameter.
+   * - parse: a Parser for a T. It parses a T from a string. 
+   *   See also @ref Parsing, cli::parse::Parser and cli::parse::ParserOf.
+   * - format: a Formatter for a T. It formats a T to a string. 
+   *   See also @ref Formatting, cli::format::Formatter and cli::format::FormatterOf.
+   * - validate: a Validator of T. See @ref Validation.
+   *
+   * There are a multitide of overloads so that certain parts can be left out,
+   * if you wish to use the defaults provided by cli.
+   *
+   * The available overloads are:
+   *
+   * ```
+   * // the basic form
+   * param<T>(name, description, get, set, parse, format, validate);
+   *
+   * // a parameter with default validator
+   * param<T>(name, description, get, set, parse, format);
+   *
+   * // a parameter with default parser and formatter
+   * param<T>(name, description, get, set, validate);
+   *
+   * // a write-only parameter with custom parser and validator
+   * param<T>(name, description, set, parse, validate);
+   *
+   * // default parser, formatter and validator are used
+   * param<T>(name, description, get, set);
+   *
+   * // a write-only parameter with custom parser
+   * param<T>(name, description, set, parse);
+   *
+   * // a read-only parameter with custom formatter
+   * param<T>(name, description, get, format);
+   *
+   * // a write-only parameter with custom validator
+   * param<T>(name, description, set, validate);
+   *
+   * // a read-only parameter
+   * param<T>(name, description, get);
+   *
+   * // a write-only parameter
+   * param<T>(name, description, set);
+   * ```
+   * @{
+   */
   // clang-format on
 
   /**
@@ -966,7 +1018,7 @@ namespace cli::params {
    * @param parse the parser used to parse a T
    * @param format the Formatter. Used to format a T. See also
    * cli::format::Formatter.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -1087,7 +1139,7 @@ namespace cli::params {
    * additional info.
    * @param set the setter of the parameter. See cli::params::Setter for
    * additional info.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -1142,7 +1194,7 @@ namespace cli::params {
    * @param set the setter of the parameter. See cli::params::Setter for
    * additional info.
    * @param parse the parser used to parse a T
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -1197,7 +1249,7 @@ namespace cli::params {
    * additional info.
    * @param format the Formatter. Used to format a T. See also
    * cli::format::Formatter.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -1401,7 +1453,7 @@ namespace cli::params {
    * functionality. Must be a cli::string_constant.
    * @param set the setter of the parameter. See cli::params::Setter for
    * additional info.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -1519,6 +1571,7 @@ namespace cli::params {
   //clang-format off
   /**
    * @defgroup params-with-object Parameters With Object/Variable Declarations
+   * @ingroup Parameters
    *
    * The following functions can be used to setup parameters with
    * object/variable declarations.
@@ -1538,8 +1591,11 @@ namespace cli::params {
    * parameter.
    * - set: a Setter for a T. It sets the value associated with the parameter.
    * - parse: a Parser for a T. It parses a T from a string.
-   * - format: a Formatter for a T. It formats a T to a string. See also
-   *   cli::format::Formatter and cli::format::FormatterOf.
+   *   See also @ref Parsing, cli::parse::Parser and cli::parse::ParserOf.
+   * - format: a Formatter for a T. It formats a T to a string.
+   *   See also @ref Formatting, cli::format::Formatter and
+   * cli::format::FormatterOf. cli::format::Formatter and
+   * cli::format::FormatterOf.
    * - validate: a Validator for a T. It validates parsed values before they are
    * set. See also cli::validate::Validator.
    *
@@ -1589,7 +1645,7 @@ namespace cli::params {
    * @param parse the parser used to parse a T
    * @param format the Formatter. Used to format a T. See also
    * cli::format::Formatter.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -1719,7 +1775,7 @@ namespace cli::params {
    * additional info.
    * @param set the setter of the parameter. See cli::params::Setter for
    * additional info.
-   * @param validate the validator used to validate a T
+   * @param validate the validator used to validate a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -1781,7 +1837,7 @@ namespace cli::params {
    * @param parse the parser used to parse a T
    * @param format the Formatter. Used to format a T. See also
    * cli::format::Formatter.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -1844,7 +1900,7 @@ namespace cli::params {
    * @param parse the parser used to parse a T
    * @param format the Formatter. Used to format a T. See also
    * cli::format::Formatter.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -2071,7 +2127,7 @@ namespace cli::params {
    * @param t the parameter value
    * @param set the setter of the parameter. See cli::params::Setter for
    * additional info.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -2125,7 +2181,7 @@ namespace cli::params {
    * @param t the parameter value
    * @param get the getter of the parameter. See cli::params::Getter for
    * additional info.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -2182,7 +2238,7 @@ namespace cli::params {
    * @param parse the parser used to parse a T
    * @param format the Formatter. Used to format a T. See also
    * cli::format::Formatter.
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -2385,7 +2441,7 @@ namespace cli::params {
    * @param description the description of the parameter. Must be a
    * cli::string_constant.
    * @param t the parameter value
-   * @param validate the validator used when parsing a T
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds additional optional subcommands
    * @return a Command
    */
@@ -2458,20 +2514,21 @@ namespace cli::params {
   /// @}
 
   // clang-format off
-/**
- * @defgroup params-with-const-object Parameters With const Object/Variable Declarations 
- * Read-only parameters for const objects can be defined with the
- * following functions.
- *
- * The base form is:
- * ```
- * param(name, description, t, get, format)
- * ```
- *
- * In total there are four overloads, where get, or format, or both, can be left
- * out. In that case, a default getter or default formatter are used.
- * @{
- */
+  /**
+   * @defgroup params-with-const-object Parameters With const Object/Variable Declarations 
+   * @ingroup Parameters
+   * Read-only parameters for const objects can be defined with the
+   * following functions.
+   *
+   * The base form is:
+   * ```
+   * param(name, description, t, get, format)
+   * ```
+   *
+   * In total there are four overloads, where get, or format, or both, can be left
+   * out. In that case, a default getter or default formatter are used.
+   * @{
+  */
   // clang-format on
 
   /**
@@ -3249,6 +3306,7 @@ namespace cli::params {
 
   /**
    * @defgroup memdata Member Data
+   * @ingroup Parameters
    *
    * Member data commands are used to easily setup subcommands for parameters
    * with subobjects.
@@ -3296,7 +3354,7 @@ namespace cli::params {
    * @param f
    * @param parse
    * @param format
-   * @param validate
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds
    * @return
    */
@@ -3377,7 +3435,7 @@ namespace cli::params {
    * @param name
    * @param description
    * @param f
-   * @param validate
+   * @param validate the validator used when parsing a T. See @ref Validation.
    * @param cmds
    * @return
    */
@@ -3548,6 +3606,7 @@ namespace cli::params {
 
   /**
    * @defgroup const-memdata Const Member Data
+   * @ingroup Parameters
    * Const member data commands are used to easily setup read-only subcommands
    * for parameters with objects.
    *
@@ -3621,7 +3680,6 @@ namespace cli::params {
   }
 
   /**
-   * @}
    * @}
    */
 
