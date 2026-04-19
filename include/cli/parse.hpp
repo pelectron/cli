@@ -815,9 +815,9 @@ namespace cli::parse {
    */
   template<traits::Sequence T,
            typename CharT,
-           ParserOf<typename T::value_type, CharT> ElementParser,
+           ParserOf<traits::sequence_value_type_t<T>, CharT> ElementParser,
            CharT Delimiter = ','>
-  class Sequence : private ElementParser {
+  class Sequence {
   public:
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
       if (str.size() == 0)
@@ -838,7 +838,7 @@ namespace cli::parse {
 
       while (str.size() > 0) {
 
-        ParseResult res = parse_value(str);
+        ParseResult res = ElementParser{}(str);
 
         if (not res)
           return res.error;
@@ -863,18 +863,84 @@ namespace cli::parse {
       }
       return Error::too_few_characters;
     }
+  };
 
-  private:
-    constexpr ParseResult<typename T::value_type, CharT>
-    parse_value(View<const CharT> sv) const {
-      return static_cast<const ElementParser *>(this)->operator()(sv);
+  /**
+   * @brief
+   * @tparam T
+   * @tparam CharT
+   * @tparam ElementParser
+   * @tparam Delimiter
+   */
+  template<traits::FixedSizeSequence T,
+           typename CharT,
+           ParserOf<traits::sequence_value_type_t<T>, CharT> ElementParser,
+           CharT Delimiter = ','>
+  class FixedSizeSequence {
+  public:
+    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+      if (str.size() == 0)
+        return Error::too_few_characters;
+
+      if (str[0] != '[')
+        return Error::invalid_character;
+
+      str = skip_ws(str.substr(1));
+
+      if (str.size() == 0)
+        return Error::too_few_characters;
+
+      T sequence;
+      std::size_t size = 0;
+
+      if (str[0] == ']') {
+        if (size < sequence.size())
+          return Error::too_few_sequence_values;
+        return {T{}, str.substr(1)};
+      }
+
+      while (str.size() > 0) {
+
+        ParseResult res = ElementParser{}(str);
+
+        if (not res)
+          return res.error;
+
+        if (size >= sequence.size())
+          return Error::too_many_sequence_values;
+
+        sequence[size] = std::move(res.value);
+        ++size;
+
+        if (res.rest.size() == 0)
+          return Error::too_few_characters;
+
+        str = skip_ws(res.rest);
+
+        if (str.size() == 0)
+          return Error::too_few_characters;
+
+        if (str[0] == ']') {
+          if (size != sequence.size())
+            return Error::too_few_sequence_values;
+          return {sequence, str.substr(1)};
+        }
+
+        if (str[0] != Delimiter)
+          return Error::invalid_character;
+        else
+          str = skip_ws(str.substr(1));
+      }
+      return Error::too_few_characters;
     }
   };
 
   template<class T, typename CharT>
   class DefaultParse {
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> sv) const;
+    constexpr ParseResult<T, CharT> operator()(View<const CharT> sv) const {
+      static_assert(always_false<T>, "No default parser for T available!");
+    }
   };
 
   template<traits::Character T, typename CharT>
@@ -919,6 +985,13 @@ namespace cli::parse {
   template<traits::Sequence T, typename CharT>
   class DefaultParse<T, CharT>
     : public Sequence<T, CharT, DefaultParse<typename T::value_type, CharT>> {};
+
+  template<traits::FixedSizeSequence T, typename CharT>
+  class DefaultParse<T, CharT>
+    : public FixedSizeSequence<
+        T,
+        CharT,
+        DefaultParse<traits::sequence_value_type_t<T>, CharT>> {};
 
   template<typename CharT,
            class Name,

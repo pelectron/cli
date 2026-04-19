@@ -63,6 +63,7 @@ if(not build_tests.disabled())
     'tests/format/string.cpp',
     'tests/format/struct.cpp',
     'tests/parse/bool.cpp',
+    'tests/parse/fixed_size_sequence.cpp',
     'tests/parse/enum.cpp',
     # 'tests/parse/fixpoint.cpp',
     'tests/parse/int.cpp',

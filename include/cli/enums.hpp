@@ -44,6 +44,9 @@ namespace cli {
     invalid_character,     //< encountered invalid character
     unescaped_string, //< a string started with a quote doesn't hae a closing
                       // quote
+    too_many_sequence_values,
+    too_few_sequence_values,
+
     // validation errors
     invalid_value, //< encountered an invalid value
     out_of_range,

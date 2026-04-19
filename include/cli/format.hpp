@@ -970,11 +970,89 @@ namespace cli::format {
    * @tparam ElementFormatter the formatter of the sequence's value_type
    * @tparam Delimiter the character used to seperate elements of the sequence
    */
-  template<traits::Sequence T,
-           typename CharT,
-           FormatterOf<typename T::value_type, CharT> ElementFormatter,
-           CharT Delimiter = ','>
+  template<
+    traits::Sequence T,
+    typename CharT,
+    FormatterOf<traits::sequence_value_type_t<T>, CharT> ElementFormatter,
+    CharT Delimiter = ','>
   struct Sequence {
+    constexpr FormatResult operator()(View<CharT> buf, const T &seq) const {
+      if (buf.size() < 2)
+        return Error::buffer_overflow;
+      bool first = true;
+      std::size_t size = 0;
+      buf[0] = '[';
+      ++size;
+      buf = buf.substr(1);
+      for (const auto &v : seq) {
+        if (first)
+          first = false;
+        else {
+          if (buf.size() < 2)
+            return Error::buffer_overflow;
+          buf[0] = Delimiter;
+          buf[1] = ' ';
+          buf = buf.substr(2);
+          size += 2;
+        }
+
+        auto res = ElementFormatter{}(buf, v);
+        if (not res) {
+          return res.error;
+        }
+        buf = buf.substr(res.size_written);
+        size += res.size_written;
+      }
+
+      if (buf.size() == 0)
+        return Error::buffer_overflow;
+
+      buf[0] = ']';
+      ++size;
+
+      return size;
+    }
+  };
+
+  /**
+   * @brief This is a formatter for sequences. To use this with your custom
+   * type, cli::traits::is_fixed_size_sequence must be overridden.
+   *
+   * Example:
+   * ```
+   *  // my_vec.hpp
+   *  #include "cli/traits.hpp"
+   *  namespace abc{
+   *    class Array{
+   *      public:
+   *      using value_type = T;
+   *      using iterator = T*;
+   *
+   *      Array();
+   *      iterator begin();
+   *      iterator end();
+   *      T& operator[](std::size_t i);
+   *      std::size_t size()const;
+   *    };
+   *  }
+   *
+   *  namespace cli::traits{
+   *    template<>
+   *    struct is_fixed_size_sequence<abc::Array> : std::true_type {};
+   *  }
+   * ```
+   *
+   * @tparam T the fixed size sequence
+   * @tparam CharT the buffer's character type
+   * @tparam ElementFormatter the formatter of the sequence's value_type
+   * @tparam Delimiter the character used to seperate elements of the sequence
+   */
+  template<
+    traits::FixedSizeSequence T,
+    typename CharT,
+    FormatterOf<traits::sequence_value_type_t<T>, CharT> ElementFormatter,
+    CharT Delimiter = ','>
+  struct FixedSizeSequence {
     constexpr FormatResult operator()(View<CharT> buf, const T &seq) const {
       if (buf.size() < 2)
         return Error::buffer_overflow;
@@ -1024,6 +1102,12 @@ namespace cli::format {
   struct DefaultFormat<T, CharT>
     : Sequence<T, CharT, DefaultFormat<typename T::value_type, CharT>> {};
 
+  template<traits::FixedSizeSequence T, typename CharT>
+  struct DefaultFormat<T, CharT>
+    : FixedSizeSequence<
+        T,
+        CharT,
+        DefaultFormat<traits::sequence_value_type_t<T>, CharT>> {};
   /**
    * @brief The default formatter for enumerations.
    * If your enum is signed and has values outside the range of [-128, 127], or

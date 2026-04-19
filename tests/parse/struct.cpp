@@ -1,5 +1,6 @@
 #include "catch2/catch_test_macros.hpp"
 #include "cli/parse.hpp"
+
 using IntList = cli::FixedCapacityVector<int, 10>;
 
 struct S {

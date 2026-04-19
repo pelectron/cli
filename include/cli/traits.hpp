@@ -1,6 +1,7 @@
 #ifndef CLI_TRAITS_HPP
 #define CLI_TRAITS_HPP
 #include "cli/string.hpp"
+#include "cli/util.hpp"
 #include "cli/vector.hpp"
 
 #include <concepts>
@@ -8,6 +9,25 @@
 #include <type_traits>
 
 namespace cli::traits {
+
+  namespace dtl {
+    template<typename T, typename = void>
+    struct sequence_value_type {
+      static_assert(
+        always_false<T>,
+        "T is not a sequence. T must have an inner typedef called value_type.");
+    };
+
+    template<typename T>
+    struct sequence_value_type<T, std::void_t<typename T::value_type>> {
+      using type = typename T::value_type;
+    };
+  } // namespace dtl
+
+  template<typename T>
+  using sequence_value_type_t =
+    typename dtl::sequence_value_type<std::remove_cvref_t<T>>::type;
+
   enum class Kind {
     Integer,
     FixPoint,
@@ -58,6 +78,9 @@ namespace cli::traits {
   /// type category predicate for sequences
   template<class T>
   struct is_sequence : std::false_type {};
+  /// type category predicate for fixed size sequences, for example arrays
+  template<class T>
+  struct is_fixed_size_sequence : std::false_type {};
   /// type category predicate for structs/aggregates
   template<class T>
   struct is_struct : std::is_aggregate<T> {};
@@ -76,6 +99,9 @@ namespace cli::traits {
 
   template<class T, std::size_t Cap>
   struct is_sequence<FixedCapacityVector<T, Cap>> : std::true_type {};
+
+  template<class T, std::size_t Size>
+  struct is_fixed_size_sequence<std::array<T, Size>> : std::true_type {};
 
   template<typename T>
   concept Character =
@@ -118,16 +144,31 @@ namespace cli::traits {
     };
 
   template<class T>
-  concept Sequence =
-    is_sequence<T>::value and requires(T a, typename T::value_type value) {
-      { T() };
-      { a.begin() };
-      { a.end() };
-      { a.push_back(value) };
+  concept Sequence = is_sequence<T>::value and std::copy_constructible<T> and
+                     requires(T a, sequence_value_type_t<T> value) {
+                       { T{} };
+                       { a.begin() };
+                       { a.end() };
+                       { a.push_back(value) };
+                     };
+
+  template<class T>
+  concept FixedSizeSequence =
+    is_fixed_size_sequence<T>::value and std::copy_constructible<T> and
+    requires(T a, std::size_t i, sequence_value_type_t<T> value) {
+      { T{} };
+      { T{std::move(a)} };
+      { std::begin(a) };
+      { std::end(a) };
+      { *std::begin(a) };
+      { ++std::begin(a) };
+      { a.size() } -> std::convertible_to<std::size_t>;
+      { a[i] = value };
     };
 
   template<class T>
-  concept Struct = is_struct<T>::value;
+  concept Struct =
+    is_struct<T>::value and not(Sequence<T> or FixedSizeSequence<T>);
 
   template<class T>
   concept Enum = is_enum<T>::value;
