@@ -49,9 +49,9 @@ void LedSetColor(RGB color) { (void)color; }
 void LedSetFlashingInterval(Milliseconds interval) { (void)interval; }
 /// @}
 
-cli::Error write(char c);
+cli::Error write_char(char c);
 
-static_assert(cli::CharStream<decltype(write), char>);
+static_assert(cli::CharStream<decltype(write_char), char>);
 
 static RGB color{};
 static Milliseconds interval;
@@ -102,7 +102,7 @@ using cli::operator""_sc;
 // clang-format off
 static cli::Cli control{
   config{}, 
-  cli::AnsiOutput(config{}, &write),
+  cli::AnsiOutput(config{}, &write_char),
   cli::param("color"_sc, 
              "the led color"_sc, 
              color, 
@@ -133,7 +133,7 @@ char UartGetChar() { return 0; }
 
 void UartTransmit(char c) { (void)c; }
 
-cli::Error write(char c) {
+cli::Error write_char(char c) {
   // transmit c over uart
   UartTransmit(c);
   return cli::Error::none;
