@@ -234,83 +234,83 @@ namespace cli::ctti {
 
     // clang-format off
 
-template <class E, typename CharT, std::size_t... Is>
-consteval std::size_t generate_enum_names_size(std::index_sequence<Is...>) {
-  using Pair = std::pair<E, View<const CharT>>;
-  using RawArray = std::array<Pair, sizeof...(Is)>;
+    template <class E, typename CharT, std::size_t... Is>
+    consteval std::size_t generate_enum_names_size(std::index_sequence<Is...>) {
+      using Pair = std::pair<E, View<const CharT>>;
+      using RawArray = std::array<Pair, sizeof...(Is)>;
 
-  const RawArray strings{
-    Pair{static_cast<E>(traits::enum_traits<E>::min + Is),
-         value_name<static_cast<E>(traits::enum_traits<E>::min + Is), CharT>()} ...};
+      const RawArray strings{
+        Pair{static_cast<E>(traits::enum_traits<E>::min + Is),
+            value_name<static_cast<E>(traits::enum_traits<E>::min + Is), CharT>()} ...};
 
-  std::size_t size = 0;
-  for (const auto &[e, s] : strings) {
-    if (is_identifier(s)) {
-      ++size;
+      std::size_t size = 0;
+      for (const auto &[e, s] : strings) {
+        if (is_identifier(s)) {
+          ++size;
+        }
+      }
+      return size;
     }
-  }
-  return size;
-}
 
-template <class E, typename CharT, std::size_t... Is>
-consteval auto generate_enum_names(std::index_sequence<Is...>) {
-  using Pair = std::pair<E, View<const CharT>>;
-  using RawArray = std::array<Pair, sizeof...(Is)>;
-  constexpr std::size_t num_names = generate_enum_names_size<E, CharT>(std::index_sequence<Is...>());
-  using FilteredArray = std::array<Pair, num_names>;
+    template <class E, typename CharT, std::size_t... Is>
+    consteval auto generate_enum_names(std::index_sequence<Is...>) {
+      using Pair = std::pair<E, View<const CharT>>;
+      using RawArray = std::array<Pair, sizeof...(Is)>;
+      constexpr std::size_t num_names = generate_enum_names_size<E, CharT>(std::index_sequence<Is...>());
+      using FilteredArray = std::array<Pair, num_names>;
 
-  const RawArray strings{
-    Pair{ static_cast<E>(traits::enum_traits<E>::min + Is),
-          value_name<static_cast<E>(traits::enum_traits<E>::min + Is), CharT>()}...};
+      const RawArray strings{
+        Pair{ static_cast<E>(traits::enum_traits<E>::min + Is),
+              value_name<static_cast<E>(traits::enum_traits<E>::min + Is), CharT>()}...};
 
-  FilteredArray ret{};
-  std::size_t size = 0;
-  for (const auto &[e, s] : strings) {
-    if (is_identifier(s)) {
-      ret[size++] = {e, s};
+      FilteredArray ret{};
+      std::size_t size = 0;
+      for (const auto &[e, s] : strings) {
+        if (is_identifier(s)) {
+          ret[size++] = {e, s};
+        }
+      }
+      return ret;
     }
-  }
-  return ret;
-}
 
-template <class E, typename CharT, std::size_t... Is>
-  requires traits::FlagEnum<E>
-consteval std::size_t generate_enum_names_size(std::index_sequence<Is...>) {
-  using Pair = std::pair<E, View<const CharT>>;
-  using RawArray = std::array<Pair, sizeof...(Is)>;
+    template <class E, typename CharT, std::size_t... Is>
+      requires traits::FlagEnum<E>
+    consteval std::size_t generate_enum_names_size(std::index_sequence<Is...>) {
+      using Pair = std::pair<E, View<const CharT>>;
+      using RawArray = std::array<Pair, sizeof...(Is)>;
 
-  RawArray strings{ Pair{ static_cast<E>(1u << Is),
-                          value_name<static_cast<E>(1u << Is), CharT>()}...};
-  std::size_t size = 0;
-  for (const auto &[e, s] : strings) {
-    if (is_identifier(s)) {
-      ++size;
+      RawArray strings{ Pair{ static_cast<E>(1u << Is),
+                              value_name<static_cast<E>(1u << Is), CharT>()}...};
+      std::size_t size = 0;
+      for (const auto &[e, s] : strings) {
+        if (is_identifier(s)) {
+          ++size;
+        }
+      }
+      return size;
     }
-  }
-  return size;
-}
 
-template <class E, typename CharT, std::size_t... Is>
-  requires traits::FlagEnum<E>
-consteval auto generate_enum_names(std::index_sequence<Is...>) {
-  using Pair = std::pair<E, View<const CharT>>;
-  using RawArray = std::array<Pair, sizeof...(Is)>;
-  constexpr std::size_t num_names = generate_enum_names_size<E, CharT>(std::index_sequence<Is...>());
-  using FilteredArray = std::array<Pair, num_names>;
+    template <class E, typename CharT, std::size_t... Is>
+      requires traits::FlagEnum<E>
+    consteval auto generate_enum_names(std::index_sequence<Is...>) {
+      using Pair = std::pair<E, View<const CharT>>;
+      using RawArray = std::array<Pair, sizeof...(Is)>;
+      constexpr std::size_t num_names = generate_enum_names_size<E, CharT>(std::index_sequence<Is...>());
+      using FilteredArray = std::array<Pair, num_names>;
 
-  RawArray strings{
-      Pair{ static_cast<E>(1u << Is),
-            value_name<static_cast<E>(1u << Is), CharT>()}...};
+      RawArray strings{
+          Pair{ static_cast<E>(1u << Is),
+                value_name<static_cast<E>(1u << Is), CharT>()}...};
 
-  FilteredArray ret{};
-  std::size_t size = 0;
-  for (const auto &[e, s] : strings) {
-    if (is_identifier(s)) {
-      ret[size++] = {e, s};
+      FilteredArray ret{};
+      std::size_t size = 0;
+      for (const auto &[e, s] : strings) {
+        if (is_identifier(s)) {
+          ret[size++] = {e, s};
+        }
+      }
+      return ret;
     }
-  }
-  return ret;
-}
     // clang-format on
 
     template<class E, typename CharT = char>
@@ -321,7 +321,9 @@ consteval auto generate_enum_names(std::index_sequence<Is...>) {
     template<class E, typename CharT>
       requires traits::FlagEnum<E>
     inline constexpr auto enum_name_map<E, CharT> =
-      generate_enum_names<E, CharT>(std::make_index_sequence<sizeof(E) * 8>{});
+      generate_enum_names<E, CharT>(
+        std::make_index_sequence<traits::enum_traits<E>::max -
+                                 traits::enum_traits<E>::min + 1>{});
 
     template<auto N>
     [[nodiscard]] consteval auto nth(auto... args) {
@@ -1652,9 +1654,9 @@ consteval auto generate_enum_names(std::index_sequence<Is...>) {
    */
   template<traits::Enum E, typename CharT = char>
     requires traits::FlagEnum<E>
-  constexpr std::size_t enum_name(E value) {
+  constexpr View<const CharT> enum_name(E value) {
     for (const auto &[e, s] : ::cli::ctti::dtl::enum_name_map<E, CharT>) {
-      if ((e & value) == e)
+      if (value == e)
         return s;
     }
     return string_constant<CharT, '<'>{} + name<E>() +

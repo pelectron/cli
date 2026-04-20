@@ -1,6 +1,7 @@
-#include "catch2/catch_test_macros.hpp"
 #include "cli/enums.hpp"
 #include "cli/parse.hpp"
+#include "common.hpp"
+
 #include <catch2/catch_all.hpp>
 
 using enum cli::Error;
@@ -51,5 +52,28 @@ TEST_CASE("parse::Enum") {
       REQUIRE(res.value == tv.output.value);
       REQUIRE(str(res.rest) == str(tv.output.rest));
     }
+  }
+}
+TEST_CASE("parse::FlagEnum") {
+  using enum F;
+  // clang-format off
+  EnumTestVector<F> vectors[]{
+    PASS_TV(A),
+    PASS_TV(B),
+    PASS_TV(C),
+    PASS_TV(D),
+    PASS_TV(A|B),
+    PASS_TV(A|B|C),
+    PASS_TV(B|C|A),
+  };
+  // clang-format on
+
+  constexpr cli::parse::Enum<F, char, false> parse;
+  for (const auto &tv : vectors) {
+    auto res = parse(tv.input);
+    REQUIRE(res);
+    REQUIRE(res.error == tv.output.error);
+    REQUIRE(res.value == tv.output.value);
+    REQUIRE(str(res.rest) == str(tv.output.rest));
   }
 }

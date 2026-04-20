@@ -73,6 +73,7 @@
 #include "cli/u64.hpp"
 #include "cli/util.hpp"
 
+#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <gcem.hpp>
@@ -437,24 +438,33 @@ namespace cli::format {
           return size;
         }
       } else if constexpr (Format == Fmt::hex) {
+        if (value == 0) {
+          if (buf.size() < 3)
+            return Error::buffer_overflow;
+          buf[0] = '0';
+          buf[1] = 'x';
+          buf[2] = '0';
+          return 3;
+        }
         UnsignedT u_value = static_cast<UnsignedT>(value);
         constexpr std::size_t max_size = 2 + sizeof(UnsignedT) * 2;
         char buffer[max_size]{'0', 'x', 0};
         std::size_t size = 2;
-        auto nibble = (sizeof(UnsignedT) * 2) - 1u;
+        const auto max_nibble = (sizeof(UnsignedT) * 2) - 1u;
+        unsigned nibble = (sizeof(UnsignedT) * 2) - 1u;
         for (; nibble != 0; --nibble) {
           if (u_value < (1u << (nibble * 4u)))
             continue;
           else
             break;
         }
-        for (; nibble != 0; --nibble) {
+        for (; nibble >= 0 and nibble <= max_nibble; --nibble) {
           const auto digit =
             static_cast<char>(0x0Fu & (u_value >> (nibble * 4u)));
           if (digit >= 0 and digit <= 9)
-            buffer[size++] = static_cast<char>(digit + '0');
+            buffer[size++] = static_cast<CharT>(digit + '0');
           else if (digit >= 10 and digit <= 15)
-            buffer[size++] = static_cast<char>(digit + 'A');
+            buffer[size++] = static_cast<CharT>(digit - 10u + 'A');
           else
             assert(false);
           u_value &= (1u << (nibble * 4u)) - 1u;
@@ -468,21 +478,23 @@ namespace cli::format {
 
         return size;
       } else if constexpr (Format == Fmt::binary) {
+        if (value == 0) {
+          if (buf.size() < 3)
+            return Error::buffer_overflow;
+          buf[0] = '0';
+          buf[1] = 'b';
+          buf[2] = '0';
+          return 3;
+        }
         const UnsignedT u_value = static_cast<UnsignedT>(value);
         constexpr std::size_t max_size = 2 + sizeof(UnsignedT) * 8;
         char buffer[max_size]{'0', 'b', 0};
         std::size_t size = 2;
-        auto bit = (sizeof(UnsignedT) * 2) - 1u;
-        for (; bit != 0; --bit) {
-          if (u_value < (1u << (bit * 8u)))
-            continue;
-          else
-            break;
-        }
-        for (; bit != 0; --bit) {
-          const auto digit = u_value >> (bit * 8u);
-          buffer[size++] = static_cast<char>(digit + '0');
-          u_value >>= 1u;
+        const auto max_bit = sizeof(UnsignedT) * 8 - 1;
+        unsigned bit = max_bit - std::countl_zero(u_value);
+        for (; bit >= 0 and bit <= max_bit; --bit) {
+          const auto digit = (u_value >> bit) & 1u;
+          buffer[size++] = static_cast<CharT>(digit + '0');
         }
 
         if (buf.size() < size)
@@ -1145,7 +1157,7 @@ namespace cli::format {
   template<traits::Enum Enum, typename CharT>
   struct DefaultFormat<Enum, CharT> {
     constexpr FormatResult operator()(View<CharT> buf, Enum value) const {
-      if constexpr (traits::FlagEnum<Enum>) {
+      if constexpr (traits::enum_traits<Enum>::is_flag) {
         View<const CharT> name{};
         std::size_t written = 0;
         bool first = true;
@@ -1154,28 +1166,47 @@ namespace cli::format {
                static_cast<std::underlying_type_t<Enum>>(value)) == 0)
             continue;
 
-          name = cli::ctti::enum_name<Enum, CharT>(value);
+          name = cli::ctti::enum_name<Enum, CharT>(static_cast<Enum>(1u << i));
           if ((first and buf.size() < name.size()) or
               (buf.size() < (name.size() + 1))) {
             return Error::buffer_overflow;
           }
-          std::size_t offset = 0;
           if (not first) {
             buf[0] = '|';
-            offset = 1;
             ++written;
+            buf = buf.substr(1);
           } else {
             first = true;
           }
           for (std::size_t i = 0; i < name.size(); ++i, ++written) {
-            buf[i + offset] = name[i];
+            buf[i] = name[i];
           }
-          buf = buf.substr(name.size() + offset);
+          buf = buf.substr(name.size());
+          first = false;
         }
 
         if (written == 0) {
-          for (const auto &ch : "none")
-            buf[written++] = ch;
+          auto name_ = string_constant<CharT, '<'>{} +
+                       ctti::name<Enum, CharT>() +
+                       string_constant<CharT,
+                                       ':',
+                                       ':',
+                                       'u',
+                                       'n',
+                                       'k',
+                                       'n',
+                                       'o',
+                                       'w',
+                                       'n',
+                                       '>'>{};
+          name = name_;
+          if (name.size() > buf.size())
+            return Error::buffer_overflow;
+
+          for (std::size_t i = 0; i < name.size(); ++i) {
+            buf[i] = name[i];
+          }
+          return name.size();
         }
 
         return written;
@@ -1193,50 +1224,194 @@ namespace cli::format {
   };
 
   /**
-   * @brief This is a formatter for strings.
+   * @brief This is a formatter for stringviews.
+   *
+   * '' -> '""'
+   * '"' ->'\"'
+   * '""' -> '""'
+   * ' ' -> '" "'
+   * 'hello' -> 'hello'
+   * 'hello world' -> '"hello world"'
+   * 'hello"world' -> 'hello"world'
    *
    * @tparam CharT
    * @param buf
    * @param str
    * @return
    */
-  template<traits::String T, typename CharT, bool UseQuotes = false>
-  struct String {
+  template<traits::StringView T, typename CharT>
+  struct StringView {
     constexpr FormatResult operator()(View<CharT> buf, const T &str) const {
-      using elem = typename T::value_type;
-      constexpr std::size_t size = sizeof(elem);
       static_assert(
-        size == 1, "character types with sizeof > 1 are not supported for now");
+        std::is_same_v<CharT, typename T::value_type>,
+        "The value_type of the stringview T must be the same as CharT");
+
+      if (str.size() == 0) {
+        if (buf.size() < 2)
+          return Error::buffer_overflow;
+        buf[0] = '"';
+        buf[1] = '"';
+        return 2;
+      }
+
+      if (str.size() == 1) {
+        if (str[0] == '"') {
+          if (buf.size() < 2)
+            return Error::buffer_overflow;
+          buf[0] = '\\';
+          buf[1] = '"';
+          return 2;
+        } else if (str[0] == ' ') {
+          if (buf.size() < 3)
+            return Error::buffer_overflow;
+          buf[0] = '"';
+          buf[1] = ' ';
+          buf[2] = '"';
+          return 3;
+        } else {
+          if (buf.size() < 1)
+            return Error::buffer_overflow;
+          buf[0] = str[0];
+          return 1;
+        }
+      }
+
       std::size_t pos = 0;
+      std::size_t quote_count = 0;
+      bool has_space = false;
+      CharT last_char = 0;
 
-      if constexpr (UseQuotes) {
-        if (buf.size() < (str.size() * size + 2))
-          return Error::buffer_overflow;
-
-        buf[pos++] = '"';
-      } else {
-        if (buf.size() < (str.size() * size))
-          return Error::buffer_overflow;
+      for (const auto &v : str) {
+        if (v == '"' and last_char != '\\') {
+          ++quote_count;
+        } else if (v == ' ') {
+          has_space = true;
+        }
+        last_char = v;
       }
 
+      const std::size_t format_size =
+        str.size() + (has_space ? quote_count + 2 : 0);
+
+      if (buf.size() < format_size)
+        return Error::buffer_overflow;
+
+      const bool needs_quote = has_space;
+
+      if (needs_quote)
+        buf[pos++] = '"';
+
+      last_char = 0;
       for (const auto &ch : str) {
-        buf[pos++] = ch;
+        if (ch == '"' and last_char != '\\' and needs_quote) {
+          buf[pos++] = '\\';
+          buf[pos++] = '"';
+        } else {
+          buf[pos++] = ch;
+        }
+        last_char = ch;
       }
 
-      if constexpr (UseQuotes) {
+      if (needs_quote)
         buf[pos++] = '"';
-      }
 
-      return pos;
+      return format_size;
     }
   };
 
   /**
-   * @brief The default formatter for strings.
+   * @brief The default formatter for stringviews.
    *
    * @tparam T the string type
    * @tparam CharT
    */
+  template<traits::StringView T, typename CharT>
+  struct DefaultFormat<T, CharT> : public StringView<T, CharT> {};
+
+  /**
+   * @brief Formatter for strings.
+   *
+   * @tparam CharT
+   */
+  template<traits::String T, typename CharT>
+  struct String {
+    constexpr FormatResult operator()(View<CharT> buf, const T &str) const {
+      static_assert(
+        std::is_same_v<CharT, typename T::value_type>,
+        "The value_type of the stringview T must be the same as CharT");
+      if (str.size() == 0) {
+        if (buf.size() < 2)
+          return Error::buffer_overflow;
+        buf[0] = '"';
+        buf[1] = '"';
+        return 2;
+      }
+
+      if (str.size() == 1) {
+        if (str[0] == '"') {
+          if (buf.size() < 2)
+            return Error::buffer_overflow;
+          buf[0] = '\\';
+          buf[1] = '"';
+          return 2;
+        } else if (str[0] == ' ') {
+          if (buf.size() < 3)
+            return Error::buffer_overflow;
+          buf[0] = '"';
+          buf[1] = ' ';
+          buf[2] = '"';
+          return 3;
+        } else {
+          if (buf.size() < 1)
+            return Error::buffer_overflow;
+          buf[0] = str[0];
+          return 1;
+        }
+      }
+
+      std::size_t pos = 0;
+      std::size_t quote_count = 0;
+      bool has_space = false;
+      CharT last_char = 0;
+
+      for (const auto &v : str) {
+        if (v == '"' and last_char != '\\') {
+          ++quote_count;
+        } else if (v == ' ') {
+          has_space = true;
+        }
+        last_char = v;
+      }
+
+      const std::size_t format_size =
+        str.size() + (has_space ? quote_count + 2 : 0);
+
+      if (buf.size() < format_size)
+        return Error::buffer_overflow;
+
+      const bool needs_quote = has_space;
+
+      if (needs_quote)
+        buf[pos++] = '"';
+
+      last_char = 0;
+      for (const auto &ch : str) {
+        if (ch == '"' and last_char != '\\' and needs_quote) {
+          buf[pos++] = '\\';
+          buf[pos++] = '"';
+        } else {
+          buf[pos++] = ch;
+        }
+        last_char = ch;
+      }
+
+      if (needs_quote)
+        buf[pos++] = '"';
+
+      return format_size;
+    }
+  };
+
   template<traits::String T, typename CharT>
   struct DefaultFormat<T, CharT> : public String<T, CharT> {};
 

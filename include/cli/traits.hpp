@@ -75,6 +75,9 @@ namespace cli::traits {
   /// type category predicate for strings
   template<class T>
   struct is_string : std::false_type {};
+  /// type category predicate for strings
+  template<class T>
+  struct is_string_view : std::false_type {};
   /// type category predicate for sequences
   template<class T>
   struct is_sequence : std::false_type {};
@@ -92,10 +95,7 @@ namespace cli::traits {
    */
 
   template<typename CharType>
-  struct is_string<View<CharType>> : std::true_type {};
-
-  template<typename CharType>
-  struct is_string<View<const CharType>> : std::true_type {};
+  struct is_string_view<View<CharType>> : std::true_type {};
 
   template<class T, std::size_t Cap>
   struct is_sequence<FixedCapacityVector<T, Cap>> : std::true_type {};
@@ -134,13 +134,28 @@ namespace cli::traits {
   concept Float = std::floating_point<T> or is_float<T>::value;
 
   template<class T>
-  concept String =
-    is_string<T>::value and std::integral<typename T::value_type> and
+  concept StringView =
+    is_string_view<T>::value and std::integral<typename T::value_type> and
     std::constructible_from<T, const typename T::value_type *, std::size_t> and
-    requires(T &&t) {
+    requires(T &&t, std::size_t i) {
+      { T{} };
       { t.size() } -> std::convertible_to<std::size_t>;
       { t.begin() } -> std::forward_iterator;
       { t.end() } -> std::forward_iterator;
+      { t[i] } -> std::convertible_to<const typename T::value_type &>;
+    };
+
+  template<class T>
+  concept String =
+    is_string<T>::value and std::integral<typename T::value_type> and
+    std::constructible_from<T, const typename T::value_type *, std::size_t> and
+    requires(T &&t, typename T::value_type c, std::size_t i) {
+      { T{} };
+      { t.size() } -> std::convertible_to<std::size_t>;
+      { t.begin() } -> std::forward_iterator;
+      { t.end() } -> std::forward_iterator;
+      { t[i] } -> std::convertible_to<const typename T::value_type &>;
+      { t.push_back(c) };
     };
 
   template<class T>
@@ -149,6 +164,7 @@ namespace cli::traits {
                        { T{} };
                        { a.begin() };
                        { a.end() };
+                       { a.max_size() } -> std::convertible_to<std::size_t>;
                        { a.push_back(value) };
                      };
 
@@ -157,11 +173,8 @@ namespace cli::traits {
     is_fixed_size_sequence<T>::value and std::copy_constructible<T> and
     requires(T a, std::size_t i, sequence_value_type_t<T> value) {
       { T{} };
-      { T{std::move(a)} };
-      { std::begin(a) };
-      { std::end(a) };
-      { *std::begin(a) };
-      { ++std::begin(a) };
+      { a.begin() };
+      { a.end() };
       { a.size() } -> std::convertible_to<std::size_t>;
       { a[i] = value };
     };
@@ -216,19 +229,27 @@ namespace cli::traits {
   struct enum_traits;
 
   template<Enum T>
-    requires std::is_signed_v<std::underlying_type_t<T>>
+    requires std::is_signed_v<std::underlying_type_t<T>> and (not FlagEnum<T>)
   struct enum_traits<T> {
     static constexpr std::underlying_type_t<T> min = -128;
     static constexpr std::underlying_type_t<T> max = 127;
-    static constexpr bool is_flag = FlagEnum<T>;
+    static constexpr bool is_flag = false;
   };
 
   template<Enum T>
-    requires std::is_unsigned_v<std::underlying_type_t<T>>
+    requires std::is_unsigned_v<std::underlying_type_t<T>> and (not FlagEnum<T>)
   struct enum_traits<T> {
     static constexpr std::underlying_type_t<T> min = 0;
     static constexpr std::underlying_type_t<T> max = 255;
-    static constexpr bool is_flag = FlagEnum<T>;
+    static constexpr bool is_flag = false;
   };
+
+  template<FlagEnum T>
+  struct enum_traits<T> {
+    static constexpr std::underlying_type_t<T> min = 0u;
+    static constexpr std::underlying_type_t<T> max = sizeof(T) * 8u - 1u;
+    static constexpr bool is_flag = true;
+  };
+
 } // namespace cli::traits
 #endif

@@ -25,6 +25,160 @@
  *    }
  *  }
  * ```
+ *
+ * CLI provides defaults for parsing for the following types:
+ * - bool
+ * - characters
+ * - enumerations
+ * - integers
+ * - fixpoint numbers
+ * - sequences, i.e. arrays/lists/vectors
+ * - strings
+ * - aggregates, i.e. simple structs
+ *
+ * @section enum-parsing Enum Parsing
+ *
+ * enum parsing is available for enum classes. These must be enum class and not
+ * weak C style enumerations. If your enum is signed and only has values in the
+ * range [-128, 127] or your enum is unsigned and has values in the range of [0,
+ * 255], then you don't have to write anything to get enum parsing suport.
+ * If that is not the case, you will have to write your own enum traits. Do this
+ * by defining cli::traits::enum_traits and adjusting the parameters.
+ *
+ * ```
+ *  #include "cli/traits.hpp"
+ *
+ *  namespace your_namespace{
+ *    enum class YourEnum : std::unit32_t{
+ *        A = 5,
+ *        ...
+ *        ABCD = 300
+ *    };
+ *  }
+ *
+ *  namespace cli::traits{
+ *    template<>
+ *    struct enum_traits<your_namespace::YourEnum>{
+ *      // the minimum value
+ *      static constexpr unit32_t min = 5;
+ *      // the maximum value
+ *      static constexpr uint32_t max = 300;
+ *      // set to false if your enum is not a flag enum, else true
+ *      static constexpr bool is_flag = false;
+ *    };
+ *  }
+ * ```
+ * Enumerations don't include the enum class name when formatted and parsed by
+ * CLI. In the exampe above, the string "A" would be parsed as ``YourEnum::A``
+ * and "ABCD" would be parsed as ``YourEnum::ABCD``.
+ *
+ * @section sequence-parsing Sequence Parsing
+ *
+ * To tell CLI that your type is a sequence, you must specialize
+ * cli::traits::is_sequence or cli::traits::is_fixed_size_sequence.
+ * If your type then also conforms to the (fixed size) sequence interface, your
+ * type will be parsable by CLI.
+ *
+ * A fixed sequence is a list of fixed size, for example arrrays.
+ * A non-fixed sequence is a list of variable size, for example
+ * cli::FixedCapacityVector.
+ *
+ * Sequences have the following format:
+ *
+ * ``[e1, e2, e3, ..., en]``
+ *
+ * where ``ex`` are the elements of the sequence, delimited by commas.
+ *
+ * See the concepts cli::traits::Sequence and cl::traits::FixedSizeSequence for
+ * the requirements on the interface.
+ *
+ * Example for specializing the traits structure:
+ *
+ * ```
+ * #include "cli/traits.hpp"
+ * namespace A{
+ *  class Vec{
+ *  public:
+ *    using value_type = T;
+ *    Vec();
+ *    Vec(const Vec&);
+ *    iterator begin();
+ *    iterator end();
+ *    std::size_t size() const;
+ *    std::size_t max_size() const;
+ *  };
+ *
+ *  class Array{
+ *  public:
+ *    using value_type = T;
+ *    Array();
+ *    Array(const Array&);
+ *    iterator begin();
+ *    iterator end();
+ *    std::size_t size() const;
+ *    T& operator[](std::size_t i);
+ *  };
+ * }
+ *
+ * namespace cli::traits{
+ *  template<>
+ *  struct is_sequence<A::Vec> : std::true_type{};
+ *
+ *  template<>
+ *  struct is_fixed_size_sequence<A::Array> : std::true_type{};
+ * }
+ *
+ * static_assert(cli::traits::Sequence<A::Vec>);
+ * static_assert(cli::traits::FixedSizeSequence<A::Array>);
+ * ```
+ * @section string-parsing String Parsing
+ *
+ * To enable parsing for your custom string type, specialize
+ * cli::traits::is_string and conform to the interface detailed by the concept
+ * cli::traits::String.
+ *
+ * Strings can either be unescaped, in which case they can't contain spaces, or
+ * escaped with the " character. Inner " characters can be escaped by backslash.
+ *
+ * Examples of valid strings:
+ *
+ * ``hello``, ``"hello world"`` ``"hello \"world\""``
+ *
+ * Example:
+ *
+ * ```
+ *  #include "cli/traits.hpp"
+ *  class MyString{
+ *    using value_type = char;
+ *    MyString(const value_type* s, std::size_t n);
+ *  };
+ *
+ *  namespace cli::traits{
+ *    template<>
+ *    struct is_string<MyString> : std::true_type{};
+ *  }
+ * ```
+ * @todo fix traits::String and parse::String
+ *
+ * @section fixpoint-parsing Fixpoint Parsing
+ *
+ * TODO
+ *
+ * @section struct-parsing Struct Parsing
+ *
+ * Simple aggregates can be decomposed and parsed by CLI as long as each member
+ * is parseable.
+ *
+ * The format for aggregates is
+ *
+ * ``{name1 = v1, name2 = v2, v3, name4 = v4}``
+ *
+ * namex are he member names, vx are the member values. Keyword elements
+ * (namex = vx) and value elements (vx) can be mixed in any way.
+ *
+ * @section custom-parsing Custom Parsing
+ *
+ *
  */
 
 #ifndef CLI_PARSE_HPP
@@ -457,39 +611,33 @@ namespace cli::parse {
   };
 
   /**
-   * A parser for strings. Strings in this context are a continous sequence
-   * of visible/printable characters, that is characters in the range 0x21 to
-   * 0x7E inclusive.
+   * A parser for stringviews.
    *
-   * Strings may be enclosed in " quotes.  In that case, 0x20 (space) can also
-   * be in the string content. The character " can be escaped with backslash.
-   *
-   * Example of valid strings and the resulting 'contents':
-   * - ``hello`` -> ``hello``, no rest
-   * - ``"hello"`` -> ``hello``, no rest
-   * - ``hello world`` -> ``hello``, rest = ``world``
-   * - ``"a complete sentence"`` -> ``a complete sentence``, no rest
-   * - ``"a complete \"sentence\"`` -> ``a complete "sentence"``, no rest
-   * - ``word\"xxx`` -> ``word\"xxx``, no rest
-   * - ``word"xxx`` -> ``word``, rest = ``"xxx``
-   *
-   * @tparam T
+   * '' -> invalid
+   * ' ' -> invalid
+   * '""' -> ''
+   * '\"' -> '\"'
+   * '\"\"' -> '\"\"'
+   * 'hello' -> 'hello'
+   * 'hello world' -> 'hello', rest = ' world'
+   * '"hello world"' -> 'hello world'
+   * 'hello"world' -> 'hello"world'
+   * 'hello\"world' -> 'hello\"world'
+   * '"hello \"world\""' -> 'hello \"world\"'
    */
-  template<traits::String T, typename CharT>
-  class String {
+  template<traits::StringView T, typename CharT>
+  class StringView {
   public:
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+      static_assert(
+        std::is_same_v<CharT, typename T::value_type>,
+        "The value_type of the stringview T must be the same as CharT");
       if (str.size() == 0)
         return Error::too_few_characters;
 
       if (str[0] == '"') {
         for (std::size_t i = 1; i < str.size(); ++i) {
-          const auto ch = str[i];
-
-          if (ch < 0x20u or ch > 0x7E) // ch is a non printable character
-            return Error::unescaped_string;
-
-          if (ch == '"' and str[i - 1] != '\\') {
+          if (str[i] == '"' and str[i - 1] != '\\') {
             // reached end quote
             const auto value = str.substr(1, i - 1); // -1 to exclude quote
             return {T(value.data(), value.size()),
@@ -499,9 +647,9 @@ namespace cli::parse {
         return Error::unescaped_string;
       } else {
         for (std::size_t i = 0; i < str.size(); ++i) {
-          const auto ch = str[i];
-          if (ch < 0x21u or ch > 0x7E or (ch == '"' and str[i - 1] != '\\')) {
-            // ch is an invisible character
+          if (str[i] == ' ') {
+            if (i == 0)
+              return Error::invalid_character;
             const auto value = str.substr(0, i);
             return {T(value.data(), value.size()), str.substr(i)};
           }
@@ -511,6 +659,67 @@ namespace cli::parse {
     }
   };
 
+  /**
+   * @brief
+   *
+   * '' -> invalid
+   * ' ' -> invalid
+   * '""' -> ''
+   * '\"' -> '"'
+   * '\"\"' -> '""'
+   * 'hello' -> 'hello'
+   * 'hello world' -> 'hello', rest = ' world'
+   * '"hello world"' -> 'hello world'
+   * 'hello"world' -> 'hello"world'
+   * 'hello\"world' -> 'hello"world'
+   * '"hello \"world\""' -> 'hello "world"'
+   * @tparam CharT
+   * @param str
+   * @return
+   */
+  template<traits::String T, typename CharT>
+  class String {
+  public:
+    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+      static_assert(
+        std::is_same_v<CharT, typename T::value_type>,
+        "The value_type of the stringview T must be the same as CharT");
+      if (str.size() == 0)
+        return Error::too_few_characters;
+
+      T ret{};
+      if (str[0] == '"') {
+        for (std::size_t i = 1; i < str.size(); ++i) {
+          if (i < (str.size() - 1) and str[i] == '\\' and str[i + 1] == '"') {
+            ret.push_back('"');
+            ++i;
+          } else if (str[i] == '"' and str[i - 1] != '\\') {
+            // reached end quote
+            return {ret, str.substr(i + 1)}; // +1 to exlude endquote
+          } else {
+            ret.push_back(str[i]);
+          }
+        }
+        return Error::unescaped_string;
+      } else {
+        for (std::size_t i = 0; i < str.size(); ++i) {
+          if (str[i] == ' ') {
+            if (i == 0) {
+              return cli::Error::invalid_character;
+            }
+            return {ret, str.substr(i)};
+          } else if (i < (str.size() - 1) and str[i] == '\\' and
+                     str[i + 1] == '"') {
+            ret.push_back('"');
+            ++i;
+          } else {
+            ret.push_back(str[i]);
+          }
+        }
+        return {ret};
+      }
+    }
+  };
   template<class T>
   class Float {
     static_assert(always_false<T>,
@@ -988,8 +1197,14 @@ namespace cli::parse {
   template<traits::FixPoint T, typename CharT>
   class DefaultParse<T, CharT> : public FixPoint<T, CharT> {};
 
+  template<traits::StringView T, typename CharT>
+  class DefaultParse<T, CharT> : public StringView<T, CharT> {};
+
   template<traits::String T, typename CharT>
   class DefaultParse<T, CharT> : public String<T, CharT> {};
+
+  template<traits::Enum T, typename CharT>
+  struct DefaultParse<T, CharT> : Enum<T, CharT, false> {};
 
   template<typename CharT>
   class DefaultParse<bool, CharT> {
@@ -1215,14 +1430,10 @@ namespace cli::parse {
           if (sv.starts_with(name)) {
             // stripping name
             auto str = skip_ws(sv.substr(name.size()));
-            if (str.size() == 0) {
-              // wasn't really the name -> try value
-              break;
-            }
-
             // now the assignment character is expected. If it is not present,
             // then this has to be a value
-            if (str[0] != Assignment) {
+            if (str.size() == 0 or str[0] != Assignment) {
+              // wasn't really the name -> try value
               break;
             }
 

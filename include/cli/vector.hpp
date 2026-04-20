@@ -104,6 +104,11 @@ namespace cli {
     constexpr std::size_t capacity() const { return capacity_; }
 
     /**
+     * returns the maximum size of the vector
+     */
+    constexpr std::size_t max_size() const { return capacity_; }
+
+    /**
      * returns the pointer to the first element of the vector
      */
     constexpr T *data() { return values_; }

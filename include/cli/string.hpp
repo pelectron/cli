@@ -18,7 +18,7 @@ namespace cli {
   template<typename CharType>
   class View {
   public:
-    using value_type = CharType;
+    using value_type = std::remove_const_t<CharType>;
     static constexpr std::size_t npos = std::numeric_limits<std::size_t>::max();
 
     constexpr View() noexcept {}
@@ -34,16 +34,28 @@ namespace cli {
       : str_(other.str_), size_(other.size_) {}
 
     constexpr View(value_type *str, std::size_t size) noexcept
+      requires(not std::is_const_v<CharType>)
+      : str_(str), size_(size) {}
+
+    constexpr View(const value_type *str, std::size_t size) noexcept
+      requires(std::is_const_v<CharType>)
       : str_(str), size_(size) {}
 
     constexpr View(value_type *str) noexcept
+      requires(not std::is_const_v<CharType>)
+      : str_(str), size_(0) {
+      while (str_[size_] != 0)
+        ++size_;
+    }
+    constexpr View(const value_type *str) noexcept
+      requires(std::is_const_v<CharType>)
       : str_(str), size_(0) {
       while (str_[size_] != 0)
         ++size_;
     }
 
     template<typename Char, std::size_t Size>
-      requires std::assignable_from<value_type *, Char *>
+      requires std::assignable_from<CharType *, Char *>
     constexpr View(Char (&array)[Size]) noexcept
       : str_(array), size_(Size) {}
 
@@ -59,17 +71,17 @@ namespace cli {
       return *this;
     }
 
-    constexpr value_type *data() noexcept { return str_; }
-    constexpr const value_type *data() const noexcept { return str_; }
+    constexpr CharType *data() noexcept { return str_; }
+    constexpr const CharType *data() const noexcept { return str_; }
     constexpr std::size_t size() const noexcept { return size_; }
 
-    constexpr value_type *begin() noexcept { return str_; }
-    constexpr const value_type *begin() const noexcept { return str_; }
-    constexpr value_type *end() noexcept { return str_ + size_; }
-    constexpr const value_type *end() const noexcept { return str_ + size_; }
+    constexpr CharType *begin() noexcept { return str_; }
+    constexpr const CharType *begin() const noexcept { return str_; }
+    constexpr CharType *end() noexcept { return str_ + size_; }
+    constexpr const CharType *end() const noexcept { return str_ + size_; }
 
-    constexpr value_type &operator[](std::size_t i) noexcept { return str_[i]; }
-    constexpr const value_type &operator[](std::size_t i) const noexcept {
+    constexpr CharType &operator[](std::size_t i) noexcept { return str_[i]; }
+    constexpr const CharType &operator[](std::size_t i) const noexcept {
       return str_[i];
     }
 
@@ -286,7 +298,7 @@ namespace cli {
   private:
     template<typename>
     friend class View;
-    value_type *str_ = nullptr;
+    CharType *str_ = nullptr;
     std::size_t size_ = 0;
   };
 

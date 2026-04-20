@@ -1,4 +1,5 @@
 #include "cli/format.hpp"
+#include "common.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <string>
@@ -85,5 +86,24 @@ TEST_CASE("format::Enum") {
     for (auto &tv : vectors) {
       test(tv);
     }
+  }
+}
+
+TEST_CASE("format::FlagEnum") {
+  using enum F;
+  // clang-format off
+  EnumTestVector<F> vectors[]{
+    TV1(A),
+    TV1(B),
+    TV1(C),
+    TV1(D),
+    TV1(A|B),
+    TV1(A|C),
+    TV1(A|B|C),
+    TV1(A|B|C|D),
+  };
+  // clang-format on
+  for (auto &tv : vectors) {
+    test(tv);
   }
 }
