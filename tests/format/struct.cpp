@@ -19,8 +19,8 @@ struct FmtStructTestVector {
 #define TV(index, special, character, enable)                                  \
   FmtStructTestVector {                                                        \
     S1{index, special, character, enable},                                     \
-      std::string("{index = " #index ", special = " #special                   \
-                  ", character = " #character ", enable = " #enable "}")       \
+      std::string("{ index = " #index ", special = " #special                  \
+                  ", character = " #character ", enable = " #enable " }")      \
   }
 
 TEST_CASE("fmt::Struct", "[format][Struct]") {
@@ -32,8 +32,8 @@ TEST_CASE("fmt::Struct", "[format][Struct]") {
     std::string buffer(256, 0);
     auto res = cli::format::DefaultFormat<S1, char>{}(
       {buffer.data(), buffer.size()}, tv.s);
-    // REQUIRE(res);
+    REQUIRE(res);
     buffer.resize(res.size_written);
-    // REQUIRE(buffer == tv.input);
+    REQUIRE(buffer == tv.input);
   }
 }

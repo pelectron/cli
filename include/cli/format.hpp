@@ -1490,11 +1490,12 @@ namespace cli::format {
         return error;
 
       if constexpr (Postfix != ' ') {
-        if (buf.size() == 0)
+        if (buf.size() < 2)
           return Error::buffer_overflow;
 
-        buf[0] = Postfix;
-        ++written;
+        buf[0] = ' ';
+        buf[1] = Postfix;
+        written += 2;
       }
 
       return written;

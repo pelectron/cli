@@ -40,10 +40,10 @@ TEST_CASE("parse-format Struct") {
   REQUIRE(fmt_res);
   REQUIRE(std::string(buffer, fmt_res.size_written) ==
           "{ ints = [1, 2, 3, 4], index = 12, special = -20, character = 'a', "
-          "enable = true}");
+          "enable = true }");
   auto parse_res =
     parse("{ ints = [1,2,3,4], index = 12, special = -20, character = 'a', "
-          "enable = true}");
+          "enable = true }");
   REQUIRE(parse_res);
   REQUIRE(parse_res.value == s);
 }
