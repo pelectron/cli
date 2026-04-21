@@ -67,7 +67,7 @@ struct SeqTestVector {
 
 TEMPLATE_TEST_CASE("parse::Sequence", "", Seq1, Seq2) {
   using Seq = TestType;
-  using Parser = cli::parse::DefaultParse<Seq, char>;
+  using Parser = cli::parse::Parse<Seq, char>;
 
   Parser parse;
   SECTION("valid sequences") {

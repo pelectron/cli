@@ -30,8 +30,8 @@ TEST_CASE("fmt::Struct", "[format][Struct]") {
                                       TV(42, 42, 'x', true)};
   for (const auto &tv : vectors) {
     std::string buffer(256, 0);
-    auto res = cli::format::DefaultFormat<S1, char>{}(
-      {buffer.data(), buffer.size()}, tv.s);
+    auto res =
+      cli::format::Format<S1, char>{}({buffer.data(), buffer.size()}, tv.s);
     REQUIRE(res);
     buffer.resize(res.size_written);
     REQUIRE(buffer == tv.input);

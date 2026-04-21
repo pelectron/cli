@@ -67,7 +67,7 @@
  * same way as described in @ref Parsing.
  *
  * To enable your type to be formattable when it is a member of a struct, then
- * you must specialize cli::format::DefaultFormat and implement its call
+ * you must specialize cli::format::Format and implement its call
  * operator.
  */
 
@@ -174,7 +174,7 @@ namespace cli::format {
    * @tparam CharT the buffer's character type
    */
   template<class T, typename CharT>
-  struct DefaultFormat {
+  struct Format {
 
     /**
      * @brief The call operator that is implemented in every specialization.
@@ -186,8 +186,7 @@ namespace cli::format {
      * @return FormatResult
      */
     constexpr FormatResult operator()(View<CharT> buf, const T &t) const {
-      static_assert(always_false<T>,
-                    "There is no DefaultFormat defined for T!");
+      static_assert(always_false<T>, "There is no Format defined for T!");
       return 0;
     }
   };
@@ -212,7 +211,7 @@ namespace cli::format {
    * @tparam CharT the character type
    */
   template<typename CharT>
-  struct DefaultFormat<void, CharT> {
+  struct Format<void, CharT> {
     constexpr FormatResult operator()(View<CharT> buf) const { return 0; }
   };
 
@@ -222,7 +221,7 @@ namespace cli::format {
    * @tparam CharT the character type
    */
   template<typename CharT>
-  struct DefaultFormat<bool, CharT> {
+  struct Format<bool, CharT> {
     constexpr FormatResult operator()(View<CharT> buf, bool b) const {
       if (b) {
         if (buf.size() < 4)
@@ -301,7 +300,7 @@ namespace cli::format {
         else if constexpr (traits::max >= uint64_t{1u})
           return 2;
         else
-          static_assert(always_false<T>, "Cannot use DefaultFormat for T");
+          static_assert(always_false<T>, "Cannot use Format for T");
       } else {
 
         if constexpr (traits::max >= int64_t{1'000'000'000'000'000'000} or
@@ -362,7 +361,7 @@ namespace cli::format {
                            traits::min <= int64_t{-1})
           return 2;
         else
-          static_assert(always_false<T>, "Cannot use DefaultFormat for T");
+          static_assert(always_false<T>, "Cannot use Format for T");
       }
     }
 
@@ -548,7 +547,7 @@ namespace cli::format {
    * @tparam CharT the character type
    */
   template<traits::Integer T, typename CharT>
-  struct DefaultFormat<T, CharT> : public Int<T, CharT> {};
+  struct Format<T, CharT> : public Int<T, CharT> {};
 
   /**
    * @brief A character formatter. This will format the characters quoted if
@@ -583,7 +582,7 @@ namespace cli::format {
    * @tparam CharT the buffer character type
    */
   template<traits::Character T, typename CharT>
-  struct DefaultFormat<T, CharT> : public Char<T, CharT> {};
+  struct Format<T, CharT> : public Char<T, CharT> {};
 
   /**
    * @brief a formatter for fixpoint numbers.
@@ -994,7 +993,7 @@ namespace cli::format {
   };
 
   template<traits::FixPoint T, typename CharT>
-  struct DefaultFormat<T, CharT> : public FixPoint<T, CharT> {};
+  struct Format<T, CharT> : public FixPoint<T, CharT> {};
 
   template<traits::Float T,
            typename CharT,
@@ -1158,22 +1157,21 @@ namespace cli::format {
   };
 
   /**
-   * @brief The default formatter for sequences. This uses DefaultFormat for the
+   * @brief The default formatter for sequences. This uses Format for the
    * sequence's value_type.
    *
    * @tparam T the sequence
    * @tparam CharT the buffer's character type
    */
   template<traits::Sequence T, typename CharT>
-  struct DefaultFormat<T, CharT>
-    : Sequence<T, CharT, DefaultFormat<typename T::value_type, CharT>> {};
+  struct Format<T, CharT>
+    : Sequence<T, CharT, Format<typename T::value_type, CharT>> {};
 
   template<traits::FixedSizeSequence T, typename CharT>
-  struct DefaultFormat<T, CharT>
-    : FixedSizeSequence<
-        T,
-        CharT,
-        DefaultFormat<traits::sequence_value_type_t<T>, CharT>> {};
+  struct Format<T, CharT>
+    : FixedSizeSequence<T,
+                        CharT,
+                        Format<traits::sequence_value_type_t<T>, CharT>> {};
   /**
    * @brief The default formatter for enumerations.
    * If your enum is signed and has values outside the range of [-128, 127], or
@@ -1183,7 +1181,7 @@ namespace cli::format {
    * @tparam CharT the buffer's character type
    */
   template<traits::Enum Enum, typename CharT>
-  struct DefaultFormat<Enum, CharT> {
+  struct Format<Enum, CharT> {
     constexpr FormatResult operator()(View<CharT> buf, Enum value) const {
       if constexpr (traits::enum_traits<Enum>::is_flag) {
         View<const CharT> name{};
@@ -1354,7 +1352,7 @@ namespace cli::format {
    * @tparam CharT
    */
   template<traits::StringView T, typename CharT>
-  struct DefaultFormat<T, CharT> : public StringView<T, CharT> {};
+  struct Format<T, CharT> : public StringView<T, CharT> {};
 
   /**
    * @brief Formatter for strings.
@@ -1441,7 +1439,7 @@ namespace cli::format {
   };
 
   template<traits::String T, typename CharT>
-  struct DefaultFormat<T, CharT> : public String<T, CharT> {};
+  struct Format<T, CharT> : public String<T, CharT> {};
 
   template<typename CharT,
            CharT Assignment = '=',
@@ -1487,7 +1485,7 @@ namespace cli::format {
 
           using Field = std::remove_cvref_t<decltype(field)>;
           using Formatter =
-            DefaultFormat<std::remove_cvref_t<typename Field::type>, CharT>;
+            Format<std::remove_cvref_t<typename Field::type>, CharT>;
 
           if constexpr (UseNames) {
             constexpr StringLiteral name{typename Field::name{}};
@@ -1615,7 +1613,7 @@ namespace cli::format {
    * @tparam CharT
    */
   template<traits::Struct T, typename CharT>
-  struct DefaultFormat<T, CharT> : public Struct<T, CharT> {};
+  struct Format<T, CharT> : public Struct<T, CharT> {};
 
 } // namespace cli::format
 

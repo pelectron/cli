@@ -24,7 +24,7 @@ struct StructTestVector {
 
 TEST_CASE("Struct", "[parse][Struct]") {
   using cli::parse::ok;
-  using Parser = cli::parse::DefaultParse<S, char>;
+  using Parser = cli::parse::Parse<S, char>;
 
   SECTION("unnamed members") {
 

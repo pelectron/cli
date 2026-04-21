@@ -4,8 +4,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-using Parse = cli::parse::DefaultParse<std::vector<int>, char>;
-using Format = cli::format::DefaultFormat<std::vector<int>, char>;
+using Parse = cli::parse::Parse<std::vector<int>, char>;
+using Format = cli::format::Format<std::vector<int>, char>;
 
 TEST_CASE("parse-format sequence") {
   Format format;

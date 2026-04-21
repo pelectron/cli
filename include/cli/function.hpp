@@ -184,7 +184,7 @@ namespace cli::funcs {
     using name = Name;
     using description = Description;
     using type = Deduced;
-    using parser = parse::DefaultParse<Deduced, char_type>;
+    using parser = parse::Parse<Deduced, char_type>;
     using validator = validate::DefaultValidate<Deduced>;
   };
 
@@ -238,14 +238,14 @@ namespace cli::funcs {
           N{},
           cli::ctti::name<type>(),
           identity<type>{},
-          parse::DefaultParse<type, typename N::char_type>{},
+          parse::Parse<type, typename N::char_type>{},
           validate::DefaultValidate<type>{}};
       else
         return FunctionArgWithoutDefault{
           N{},
           D{},
           identity<type>{},
-          parse::DefaultParse<type, typename N::char_type>{},
+          parse::Parse<type, typename N::char_type>{},
           validate::DefaultValidate<type>{}};
     }
 
@@ -441,7 +441,7 @@ namespace cli::funcs {
  * int DefaultValue = 1;
  * cli::arg<double, DefaultValue>("x"_sc, 
  *                               "the target x position"_sc, 
- *                               cli::parse::DefaultParse<double, char>{}, 
+ *                               cli::parse::Parse<double, char>{}, 
  *                               cli::validate::DefaultValidate<double, char>{});
  * ```
  * 
@@ -479,7 +479,7 @@ namespace cli::funcs {
  *  constexpr auto arg = 
  *    cli::funcs::arg<double, DefaultValue>("x"_sc, 
  *                                  "the target x position"_sc, 
- *                                  cli::parse::DefaultParse<double>{}, 
+ *                                  cli::parse::Parse<double>{}, 
  *                                  cli::validate::DefaultValidate<double>{});
  * ```
 
@@ -521,7 +521,7 @@ namespace cli::funcs {
  *  constexpr auto arg = 
  *    cli::funcs::arg<double, DefaultValue>("x"_sc, 
  *                                  "the target x position"_sc, 
- *                                  cli::parse::DefaultParse<double>{});
+ *                                  cli::parse::Parse<double>{});
  * ```
 
  * @tparam T the arguments type
@@ -582,7 +582,7 @@ namespace cli::funcs {
                        Description{},
                        identity<T>{},
                        constant<DefaultValue>{},
-                       parse::DefaultParse<T, typename Name::char_type>{},
+                       parse::Parse<T, typename Name::char_type>{},
                        std::forward<Validate>(validate)};
   }
 
@@ -614,7 +614,7 @@ namespace cli::funcs {
                        Description{},
                        identity<T>{},
                        constant<DefaultValue>{},
-                       parse::DefaultParse<T, typename Name::char_type>{},
+                       parse::Parse<T, typename Name::char_type>{},
                        validate::DefaultValidate<T>{}};
   }
 
@@ -644,7 +644,7 @@ namespace cli::funcs {
                        NoDescription<typename Name::char_type>{},
                        identity<T>{},
                        constant<DefaultValue>{},
-                       parse::DefaultParse<T, typename Name::char_type>{},
+                       parse::Parse<T, typename Name::char_type>{},
                        validate::DefaultValidate<T>{}};
   }
 
@@ -659,7 +659,7 @@ namespace cli::funcs {
    *  constexpr auto arg =
    *    cli::funcs::arg<DefaultValue>("x"_sc,
    *                                  "the target x position"_sc,
-   *                                  cli::parse::DefaultParse<int>{},
+   *                                  cli::parse::Parse<int>{},
    *                                  cli::validate::DefaultValidate<int>{});
    * ```
 
@@ -698,7 +698,7 @@ namespace cli::funcs {
    *  constexpr auto arg =
    *    cli::funcs::arg<DefaultValue>("x"_sc,
    *                                  "the target x position"_sc,
-   *                                  cli::parse::DefaultParse<double>{});
+   *                                  cli::parse::Parse<double>{});
    * ```
 
    * @tparam DefaultValue the default value of this argument
@@ -758,7 +758,7 @@ namespace cli::funcs {
     return FunctionArg{Name{},
                        Description{},
                        constant<DefaultValue>{},
-                       parse::DefaultParse<T, CharT>{},
+                       parse::Parse<T, CharT>{},
                        std::forward<Validate>(validate)};
   }
 
@@ -791,7 +791,7 @@ namespace cli::funcs {
                        Description{},
                        identity<T>{},
                        constant<DefaultValue>{},
-                       parse::DefaultParse<T, typename Name::char_type>{},
+                       parse::Parse<T, typename Name::char_type>{},
                        validate::DefaultValidate<T>{}};
   }
 
@@ -820,7 +820,7 @@ namespace cli::funcs {
                        NoDescription<typename Name::char_type>{},
                        identity<T>{},
                        constant<DefaultValue>{},
-                       parse::DefaultParse<T, typename Name::char_type>{},
+                       parse::Parse<T, typename Name::char_type>{},
                        validate::DefaultValidate<T>{}};
   }
   /**
@@ -859,7 +859,7 @@ namespace cli::funcs {
    *  using cli::operator""_sc;
    *    cli::funcs::arg<int>("x"_sc,
    *                         "the target x position"_sc,
-   *                         cli::parse::DefaultParse<int, char>{},
+   *                         cli::parse::Parse<int, char>{},
    *                         cli::validate::DefaultValidate<int>{});
    * ```
    * @tparam T the arguments type
@@ -893,7 +893,7 @@ namespace cli::funcs {
    *  using cli::operator""_sc;
    *    cli::funcs::arg<int>("x"_sc,
    *                         "the target x position"_sc,
-   *                         cli::parse::DefaultParse<int, char>{});
+   *                         cli::parse::Parse<int, char>{});
    * ```
    * @tparam T the arguments type
    * @param name the humanreadable name of the argument as a string_constant
@@ -939,7 +939,7 @@ namespace cli::funcs {
       Name{},
       Description{},
       identity<T>{},
-      parse::DefaultParse<T, typename Name::char_type>{},
+      parse::Parse<T, typename Name::char_type>{},
       std::forward<Validate>(validate)};
   }
 
@@ -966,7 +966,7 @@ namespace cli::funcs {
       Name{},
       Description{},
       identity<T>{},
-      parse::DefaultParse<T, typename Name::char_type>{},
+      parse::Parse<T, typename Name::char_type>{},
       validate::DefaultValidate<T>{}};
   }
 
@@ -1125,7 +1125,7 @@ namespace cli::funcs {
           return Error::none;
         } else {
           auto res = func_(std::get<Is>(tuple).value...);
-          format::DefaultFormat<Ret, typename Base::char_type> format;
+          format::Format<Ret, typename Base::char_type> format;
           auto fmt_result = format(out, res);
           out = out.substr(0, fmt_result.size_written);
           return fmt_result.error;

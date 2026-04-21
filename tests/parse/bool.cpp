@@ -4,8 +4,8 @@
 
 std::string to_string(cli::View<const char> s) { return {s.data(), s.size()}; }
 
-TEST_CASE("parse::DefaultParse<bool>", "[parse][Bool]") {
-  constexpr cli::parse::DefaultParse<bool, char> parse;
+TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
+  constexpr cli::parse::Parse<bool, char> parse;
 
   SECTION("true") {
     SECTION("no rest") {

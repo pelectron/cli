@@ -3,8 +3,8 @@
 #include <catch2/catch_all.hpp>
 #include <string>
 
-TEST_CASE("format::DefaultFormat<bool>") {
-  constexpr cli::format::DefaultFormat<bool, char> format;
+TEST_CASE("format::Format<bool>") {
+  constexpr cli::format::Format<bool, char> format;
   char buffer[32]{};
   SECTION("true value") {
     auto res = format(cli::View<char>{buffer, 32}, true);

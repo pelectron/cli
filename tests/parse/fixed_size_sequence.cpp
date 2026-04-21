@@ -58,7 +58,7 @@ struct SeqTestVector {
 #define str(x) (x.data() ? std::string(x.data(), x.size()) : "")
 
 TEST_CASE("parse::FixedSizeSequence") {
-  using Parser = cli::parse::DefaultParse<std::array<int, 10>, char>;
+  using Parser = cli::parse::Parse<std::array<int, 10>, char>;
   Parser parse{};
 
   SECTION("valid input") {

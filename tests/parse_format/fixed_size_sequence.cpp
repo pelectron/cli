@@ -4,8 +4,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-using Parse = cli::parse::DefaultParse<std::array<int, 4>, char>;
-using Format = cli::format::DefaultFormat<std::array<int, 4>, char>;
+using Parse = cli::parse::Parse<std::array<int, 4>, char>;
+using Format = cli::format::Format<std::array<int, 4>, char>;
 
 TEST_CASE("parse-format fixed size sequence") {
   Format format;

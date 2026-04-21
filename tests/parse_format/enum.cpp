@@ -13,11 +13,11 @@ enum class E {
   D
 };
 
-using FormatE = cli::format::DefaultFormat<E, char>;
-using ParseE = cli::parse::DefaultParse<E, char>;
+using FormatE = cli::format::Format<E, char>;
+using ParseE = cli::parse::Parse<E, char>;
 
-using FormatF = cli::format::DefaultFormat<F, char>;
-using ParseF = cli::parse::DefaultParse<F, char>;
+using FormatF = cli::format::Format<F, char>;
+using ParseF = cli::parse::Parse<F, char>;
 
 TEST_CASE("parse-format enum") {
   FormatE format;

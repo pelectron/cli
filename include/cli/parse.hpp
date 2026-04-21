@@ -197,7 +197,7 @@
  *   cli::View<const char> str;
  * };
  *
- * cli::parse::DefaultParse<S,char> parse{};
+ * cli::parse::Parse<S,char> parse{};
  *
  * cli::parse::ParseResult p = parse("{1,k,\"hello world\"}")
  * assert(p);
@@ -217,7 +217,7 @@
  * Custom parser just have to conform to the Parser concept.
  * To enable CLI to select your implementation by default, which is needed
  * if you want your types parsable when they are members of a struct, then
- * explicitly specialize cli::parse::DefaultParse and implement it's
+ * explicitly specialize cli::parse::Parse and implement it's
  * call operator.
  *
  */
@@ -1229,7 +1229,7 @@ namespace cli::parse {
    * @tparam CharT the character type of the buffer which is parsed from
    */
   template<class T, typename CharT>
-  struct DefaultParse {
+  struct Parse {
 
     /**
      * @brief The call operator that is implemented in every specialization.
@@ -1245,28 +1245,28 @@ namespace cli::parse {
   };
 
   template<traits::Character T, typename CharT>
-  struct DefaultParse<T, CharT> : public Char<T, CharT> {};
+  struct Parse<T, CharT> : public Char<T, CharT> {};
 
   template<traits::Integer T, typename CharT>
-  struct DefaultParse<T, CharT> : public Int<T, CharT> {};
+  struct Parse<T, CharT> : public Int<T, CharT> {};
 
   template<traits::Float T, typename CharT>
-  struct DefaultParse<T, CharT> : public Float<T> {};
+  struct Parse<T, CharT> : public Float<T> {};
 
   template<traits::FixPoint T, typename CharT>
-  struct DefaultParse<T, CharT> : public FixPoint<T, CharT> {};
+  struct Parse<T, CharT> : public FixPoint<T, CharT> {};
 
   template<traits::StringView T, typename CharT>
-  struct DefaultParse<T, CharT> : public StringView<T, CharT> {};
+  struct Parse<T, CharT> : public StringView<T, CharT> {};
 
   template<traits::String T, typename CharT>
-  struct DefaultParse<T, CharT> : public String<T, CharT> {};
+  struct Parse<T, CharT> : public String<T, CharT> {};
 
   template<traits::Enum T, typename CharT>
-  struct DefaultParse<T, CharT> : Enum<T, CharT, false> {};
+  struct Parse<T, CharT> : Enum<T, CharT, false> {};
 
   template<typename CharT>
-  struct DefaultParse<bool, CharT> {
+  struct Parse<bool, CharT> {
     static constexpr View<const CharT> truthy[]{
       "true", "TRUE", "1", "yes", "y"};
     static constexpr View<const CharT> falsy[]{
@@ -1290,21 +1290,21 @@ namespace cli::parse {
   };
 
   template<traits::Sequence T, typename CharT>
-  struct DefaultParse<T, CharT>
-    : public Sequence<T, CharT, DefaultParse<typename T::value_type, CharT>> {};
+  struct Parse<T, CharT>
+    : public Sequence<T, CharT, Parse<typename T::value_type, CharT>> {};
 
   template<traits::FixedSizeSequence T, typename CharT>
-  struct DefaultParse<T, CharT>
-    : public FixedSizeSequence<
-        T,
-        CharT,
-        DefaultParse<traits::sequence_value_type_t<T>, CharT>> {};
+  struct Parse<T, CharT>
+    : public FixedSizeSequence<T,
+                               CharT,
+                               Parse<traits::sequence_value_type_t<T>, CharT>> {
+  };
 
   template<typename CharT,
            class Name,
            auto DefaultValue,
            class Parser =
-             DefaultParse<std::remove_cvref_t<decltype(DefaultValue)>, CharT>>
+             Parse<std::remove_cvref_t<decltype(DefaultValue)>, CharT>>
   struct Field {
     using parser = Parser;
     using type = parse::value_type_t<CharT, Parser>;
@@ -1318,7 +1318,7 @@ namespace cli::parse {
   template<typename CharT,
            class Name,
            class Type,
-           class Parser = DefaultParse<Type, CharT>>
+           class Parser = Parse<Type, CharT>>
   struct FieldWithOutDefault {
     using parser = Parser;
     using type = Type;
@@ -1590,7 +1590,7 @@ namespace cli::parse {
   struct to_parse_field {
     using name = typename CttiField::name;
     using type_ = typename CttiField::type;
-    using parser = DefaultParse<type_, CharT>;
+    using parser = Parse<type_, CharT>;
     using type = FieldWithOutDefault<CharT, name, type_, parser>;
   };
 
@@ -1671,7 +1671,7 @@ namespace cli::parse {
   };
 
   template<traits::Struct T, typename CharT>
-  struct DefaultParse<T, CharT> : public Struct<T, CharT> {};
+  struct Parse<T, CharT> : public Struct<T, CharT> {};
 
   template<typename CharT>
   class NullParse {

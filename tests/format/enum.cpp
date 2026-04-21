@@ -13,7 +13,7 @@ struct EnumTestVector {
 
 template<class Enum>
 void test(EnumTestVector<Enum> &tv) {
-  auto res = cli::format::DefaultFormat<Enum, char>{}(
+  auto res = cli::format::Format<Enum, char>{}(
     cli::View<char>(tv.buffer.data(), tv.buffer.size()), tv.input);
   REQUIRE(res);
   REQUIRE(res.size_written == tv.str.size());

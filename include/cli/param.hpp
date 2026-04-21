@@ -1141,8 +1141,8 @@ namespace cli::params {
                  ctti::name<T, Char>(),
                  std::forward<Get>(get),
                  std::forward<Set>(set),
-                 parse::DefaultParse<T, Char>{},
-                 format::DefaultFormat<T, Char>{},
+                 parse::Parse<T, Char>{},
+                 format::Format<T, Char>{},
                  std::forward<Validate>(validate),
                  std::forward<SubCommands>(cmds)...};
   }
@@ -1302,8 +1302,8 @@ namespace cli::params {
                  ctti::name<T, Char>(),
                  std::forward<Get>(get),
                  std::forward<Set>(set),
-                 parse::DefaultParse<T, Char>{},
-                 format::DefaultFormat<T, Char>{},
+                 parse::Parse<T, Char>{},
+                 format::Format<T, Char>{},
                  validate::DefaultValidate<T>{},
                  std::forward<SubCommands>(cmds)...};
   }
@@ -1452,7 +1452,7 @@ namespace cli::params {
                  ctti::name<T, get_char_t<Name>>(),
                  InvalidGet<T>{},
                  std::forward<Set>(set),
-                 parse::DefaultParse<T, get_char_t<Name>>{},
+                 parse::Parse<T, get_char_t<Name>>{},
                  format::NoFormat<T, get_char_t<Name>>{},
                  std::forward<Validate>(validate),
                  std::forward<SubCommands>(cmds)...};
@@ -1495,7 +1495,7 @@ namespace cli::params {
                  std::forward<Get>(get),
                  InvalidSet<T>{},
                  parse::NoParse<T, get_char_t<Name>>{},
-                 format::DefaultFormat<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  validate::DefaultValidate<T>{},
                  std::forward<SubCommands>(cmds)...};
   }
@@ -1536,7 +1536,7 @@ namespace cli::params {
                  ctti::name<T, get_char_t<Name>>(),
                  InvalidGet<T>{},
                  std::forward<Set>(set),
-                 parse::DefaultParse<T, get_char_t<Name>>{},
+                 parse::Parse<T, get_char_t<Name>>{},
                  format::NoFormat<T, get_char_t<Name>>{},
                  validate::DefaultValidate<T>{},
                  std::forward<SubCommands>(cmds)...};
@@ -1581,8 +1581,8 @@ namespace cli::params {
    * - get: in that case, cli::param::DefaultGet is used.
    * - set: in that case, cli::param::DefaultSet is used.
    * - validate: in that case, cli::validate::DefaultValidate is used.
-   * - parse and format: in that case, cli::parse::DefaultParse and
-   *   cli::format::DefaultFormat are used.
+   * - parse and format: in that case, cli::parse::Parse and
+   *   cli::format::Format are used.
    * @{
    */
   // clang-format on
@@ -1779,8 +1779,8 @@ namespace cli::params {
                  ctti::name<T>(),
                  std::forward<Get>(get),
                  std::forward<Set>(set),
-                 parse::DefaultParse<T, Char>{},
-                 format::DefaultFormat<T, Char>{},
+                 parse::Parse<T, Char>{},
+                 format::Format<T, Char>{},
                  std::forward<Validate>(validate),
                  transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -1958,8 +1958,8 @@ namespace cli::params {
                  ctti::name<T>(),
                  std::forward<Get>(get),
                  std::forward<Set>(set),
-                 parse::DefaultParse<T, Char>{},
-                 format::DefaultFormat<T, Char>{},
+                 parse::Parse<T, Char>{},
+                 format::Format<T, Char>{},
                  validate::DefaultValidate<T>{},
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2129,8 +2129,8 @@ namespace cli::params {
                  ctti::name<T>(),
                  DefaultGet<T>{t},
                  std::forward<Set>(set),
-                 parse::DefaultParse<T, CharT>{},
-                 format::DefaultFormat<T, CharT>{},
+                 parse::Parse<T, CharT>{},
+                 format::Format<T, CharT>{},
                  std::forward<Validate>(validate),
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2183,8 +2183,8 @@ namespace cli::params {
                  ctti::name<T>(),
                  std::forward<Get>(get),
                  DefaultSet<T>{t},
-                 parse::DefaultParse<T, CharT>{},
-                 format::DefaultFormat<T, CharT>{},
+                 parse::Parse<T, CharT>{},
+                 format::Format<T, CharT>{},
                  std::forward<Validate>(validate),
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2290,8 +2290,8 @@ namespace cli::params {
                  ctti::name<T>(),
                  std::forward<Get>(get),
                  DefaultSet<T>{t},
-                 parse::DefaultParse<T, CharT>{},
-                 format::DefaultFormat<T, CharT>{},
+                 parse::Parse<T, CharT>{},
+                 format::Format<T, CharT>{},
                  validate::DefaultValidate<T>{},
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2339,8 +2339,8 @@ namespace cli::params {
                  ctti::name<T>(),
                  DefaultGet<T>{t},
                  std::forward<Set>(set),
-                 parse::DefaultParse<T, CharT>{},
-                 format::DefaultFormat<T, CharT>{},
+                 parse::Parse<T, CharT>{},
+                 format::Format<T, CharT>{},
                  validate::DefaultValidate<T>{},
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2441,8 +2441,8 @@ namespace cli::params {
                  ctti::name<T>(),
                  DefaultGet<T>{t},
                  DefaultSet<T>{t},
-                 parse::DefaultParse<T, CharT>{},
-                 format::DefaultFormat<T, CharT>{},
+                 parse::Parse<T, CharT>{},
+                 format::Format<T, CharT>{},
                  std::forward<Validate>(validate),
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2481,8 +2481,8 @@ namespace cli::params {
                  ctti::name<T>(),
                  DefaultGet<T>{t},
                  DefaultSet<T>{t},
-                 parse::DefaultParse<T, CharT>{},
-                 format::DefaultFormat<T, CharT>{},
+                 parse::Parse<T, CharT>{},
+                 format::Format<T, CharT>{},
                  validate::DefaultValidate<T>{},
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2603,7 +2603,7 @@ namespace cli::params {
                  std::forward<Get>(get),
                  InvalidSet<T>{},
                  parse::NoParse<T, CharT>{},
-                 format::DefaultFormat<T, CharT>{},
+                 format::Format<T, CharT>{},
                  validate::DefaultValidate<T>{},
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2690,7 +2690,7 @@ namespace cli::params {
                  DefaultGet<T>{t},
                  InvalidSet<T>{},
                  parse::NoParse<T, CharT>{},
-                 format::DefaultFormat<T, CharT>{},
+                 format::Format<T, CharT>{},
                  validate::DefaultValidate<T>{},
                  dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
@@ -2837,8 +2837,8 @@ namespace cli::params {
   //                ctti::name<T>(),
   //                DefaultGet<T>{},
   //                std::forward<Set>(set),
-  //                parse::DefaultParse<T, Char>{},
-  //                format::DefaultFormat<T, Char>{},
+  //                parse::Parse<T, Char>{},
+  //                format::Format<T, Char>{},
   //                std::forward<Validate>(validate),
   //                std::forward<SubCommands>(cmds)...};
   // }
@@ -2912,8 +2912,8 @@ namespace cli::params {
   //       cli::ctti::name<std::remove_cvref_t<T>, get_char_t<Name>>(),
   //       DefaultGet<std::remove_cvref_t<T>>{t},
   //       DefaultSet<std::remove_cvref_t<T>>{t},
-  //       parse::DefaultParse<std::remove_cvref_t<T>, typename
-  //       Name::char_type>(), format::DefaultFormat<std::remove_cvref_t<T>,
+  //       parse::Parse<std::remove_cvref_t<T>, typename
+  //       Name::char_type>(), format::Format<std::remove_cvref_t<T>,
   //       get_char_t<Name>>(),
   //       validate::DefaultValidate<std::remove_cvref_t<T>>{},
   //       std::forward<SubCommands>(cmds)...};
@@ -2946,8 +2946,8 @@ namespace cli::params {
   //                ctti::name<T>(),
   //                std::forward<Get>(get),
   //                std::forward<Set>(set),
-  //                parse::DefaultParse<T, Char>{},
-  //                format::DefaultFormat<T, Char>{},
+  //                parse::Parse<T, Char>{},
+  //                format::Format<T, Char>{},
   //                validate::DefaultValidate<T>{},
   //                std::forward<SubCommands>(cmds)...};
   // }
@@ -2976,8 +2976,8 @@ namespace cli::params {
   //                ctti::name<T>(),
   //                DefaultGet<T>{t},
   //                std::forward<Set>(set),
-  //                parse::DefaultParse<T, Char>{},
-  //                format::DefaultFormat<T, Char>{},
+  //                parse::Parse<T, Char>{},
+  //                format::Format<T, Char>{},
   //                validate::DefaultValidate<T>{},
   //                std::forward<SubCommands>(cmds)...};
   // }
@@ -3006,8 +3006,8 @@ namespace cli::params {
   //                ctti::name<T>(),
   //                std::forward<Get>(get),
   //                DefaultSet<T>(t),
-  //                parse::DefaultParse<T, Char>{},
-  //                format::DefaultFormat<T, Char>{},
+  //                parse::Parse<T, Char>{},
+  //                format::Format<T, Char>{},
   //                validate::DefaultValidate<T>{},
   //                std::forward<SubCommands>(cmds)...};
   // }
@@ -3043,8 +3043,8 @@ namespace cli::params {
   // //       cli::ctti::name<std::remove_cvref_t<T>, get_char_t<Name>>(),
   // //       DefaultGet<std::remove_cvref_t<T>>{t},
   // //       DefaultSet<std::remove_cvref_t<T>>{t},
-  // //       parse::DefaultParse<std::remove_cvref_t<T>, typename
-  // //       Name::char_type>(), format::DefaultFormat<std::remove_cvref_t<T>,
+  // //       parse::Parse<std::remove_cvref_t<T>, typename
+  // //       Name::char_type>(), format::Format<std::remove_cvref_t<T>,
   // //       get_char_t<Name>>(),
   // //       validate::DefaultValidate<std::remove_cvref_t<T>>{},
   // //       std::forward<SubCommands>(cmds)...};
@@ -3126,8 +3126,8 @@ namespace cli::params {
   //       cli::ctti::name<std::remove_cvref_t<T>, get_char_t<Name>>(),
   //       DefaultGet<T>{obj},
   //       DefaultSet<T>{obj},
-  //       parse::DefaultParse<T, get_char_t<Name>>{},
-  //       format::DefaultFormat<T, get_char_t<Name>>{},
+  //       parse::Parse<T, get_char_t<Name>>{},
+  //       format::Format<T, get_char_t<Name>>{},
   //       validate::DefaultValidate<std::remove_cvref_t<T>>{},
   //       dtl::transform(obj,
   //                      std::forward<CommandOrMemberDataOrMemberFunction>(m))...};
@@ -3164,8 +3164,8 @@ namespace cli::params {
   //       cli::ctti::name<std::remove_cvref_t<T>, get_char_t<Name>>(),
   //       DefaultGet<T>{obj},
   //       DefaultSet<T>{obj},
-  //       parse::DefaultParse<T, get_char_t<Name>>{},
-  //       format::DefaultFormat<T, get_char_t<Name>>{},
+  //       parse::Parse<T, get_char_t<Name>>{},
+  //       format::Format<T, get_char_t<Name>>{},
   //       validate::DefaultValidate<std::remove_cvref_t<T>>{},
   //       dtl::transform(obj,
   //                      std::forward<CommandOrMemberDataOrMemberFunction>(m))...};
@@ -3202,8 +3202,8 @@ namespace cli::params {
   //       cli::ctti::name<T>(),
   //       dtl::DefaultGet<T>{Obj},
   //       dtl::DefaultSet<T>{Obj},
-  //       parse::DefaultParse<T, char>{},
-  //       format::DefaultFormat<T, char>{},
+  //       parse::Parse<T, char>{},
+  //       format::Format<T, char>{},
   //       validate::DefaultValidate<std::remove_cvref_t<T>>{},
   //       dtl::transform(Obj,
   //                      std::forward<CommandOrMemberDataOrMemberFunction>(m))...};
@@ -3245,8 +3245,8 @@ namespace cli::params {
   //       cli::ctti::name<T, typename Description::char_type>(),
   //       DefaultGet<T>{Obj},
   //       DefaultSet<T>{Obj},
-  //       parse::DefaultParse<T, typename Description::char_type>{},
-  //       format::DefaultFormat<T, typename Description::char_type>{},
+  //       parse::Parse<T, typename Description::char_type>{},
+  //       format::Format<T, typename Description::char_type>{},
   //       validate::DefaultValidate<std::remove_cvref_t<T>>{},
   //       dtl::transform(Obj,
   //                      std::forward<CommandOrMemberDataOrMemberFunction>(m))...};
@@ -3272,8 +3272,8 @@ namespace cli::params {
   //       cli::ctti::name<std::remove_cvref_t<T>>(),
   //       DefaultGet<T>{obj},
   //       DefaultSet<T>{obj},
-  //       parse::DefaultParse<T, char>{},
-  //       format::DefaultFormat<T, char>{},
+  //       parse::Parse<T, char>{},
+  //       format::Format<T, char>{},
   //       validate::DefaultValidate<std::remove_cvref_t<T>>{},
   //       dtl::transform(obj,
   //                      std::forward<CommandOrMemberDataOrMemberFunction>(m))...};
@@ -3434,10 +3434,8 @@ namespace cli::params {
       Description{},
       cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
       f,
-      cli::parse::DefaultParse<mem_data_type<MemberPointer>,
-                               get_char_t<Name>>{},
-      cli::format::DefaultFormat<mem_data_type<MemberPointer>,
-                                 get_char_t<Name>>{},
+      cli::parse::Parse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
+      cli::format::Format<mem_data_type<MemberPointer>, get_char_t<Name>>{},
       std::forward<Validate>(validate),
       std::forward<SubCommands>(cmds)...};
   }
@@ -3478,7 +3476,7 @@ namespace cli::params {
         cli::ctti::name<std::remove_const_t<T>, get_char_t<Name>>(),
         f,
         parse::NoParse<T, get_char_t<Name>>{},
-        format::DefaultFormat<T, get_char_t<Name>>{},
+        format::Format<T, get_char_t<Name>>{},
         validate::DefaultValidate<mem_data_type<MemberPointer>>{},
         std::forward<SubCommands>(cmds)...};
     } else
@@ -3487,8 +3485,8 @@ namespace cli::params {
         Description{},
         cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
         f,
-        parse::DefaultParse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
-        format::DefaultFormat<mem_data_type<MemberPointer>, get_char_t<Name>>{},
+        parse::Parse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
+        format::Format<mem_data_type<MemberPointer>, get_char_t<Name>>{},
         validate::DefaultValidate<mem_data_type<MemberPointer>>{},
         std::forward<SubCommands>(cmds)...};
   }

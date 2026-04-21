@@ -30,7 +30,7 @@ TEMPLATE_TEST_CASE("format::Sequence", "[format][sequence]", Seq1, Seq2) {
                                        TV1(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)};
 
   for (auto &tv : vectors) {
-    auto res = cli::format::DefaultFormat<TestType, char>{}(
+    auto res = cli::format::Format<TestType, char>{}(
       {tv.buffer.data(), tv.buffer.size()}, tv.input);
     REQUIRE(res);
     REQUIRE(res.size_written == tv.str.size());

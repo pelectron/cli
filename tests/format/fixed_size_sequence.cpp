@@ -4,7 +4,7 @@
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("format::FixedSizeSequence") {
-  using Format = cli::format::DefaultFormat<std::array<int, 4>, char>;
+  using Format = cli::format::Format<std::array<int, 4>, char>;
   Format format;
   std::string buffer(256, 0);
   auto res = format({buffer.data(), buffer.size()}, {1, 2, 3, 4});

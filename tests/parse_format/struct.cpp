@@ -23,8 +23,8 @@ struct StructTestVector {
   S value;
 };
 
-using Parse = cli::parse::DefaultParse<S, char>;
-using Format = cli::format::DefaultFormat<S, char>;
+using Parse = cli::parse::Parse<S, char>;
+using Format = cli::format::Format<S, char>;
 
 TEST_CASE("parse-format Struct") {
   Parse parse;

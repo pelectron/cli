@@ -3,8 +3,8 @@
 #include "cli/format.hpp"
 #include "cli/parse.hpp"
 
-using FormatE = cli::format::DefaultFormat<bool, char>;
-using ParseE = cli::parse::DefaultParse<bool, char>;
+using FormatE = cli::format::Format<bool, char>;
+using ParseE = cli::parse::Parse<bool, char>;
 
 TEST_CASE("parse-format bool") {
   ParseE parse;
