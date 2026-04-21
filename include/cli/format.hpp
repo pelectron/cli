@@ -61,6 +61,14 @@
  * - strings
  * - aggregates, i.e. simple structs
  * - TODO: floating point numbers
+ *
+ * To see how to enable formatting for your custom type, see @ref Parsing.
+ * Enumerations, sequences, strings, and aggregates/structs need to opt in the
+ * same way as described in @ref Parsing.
+ *
+ * To enable your type to be formattable when it is a member of a struct, then
+ * you must specialize cli::format::DefaultFormat and implement its call
+ * operator.
  */
 
 #ifndef CLI_FORMAT_HPP
@@ -155,8 +163,26 @@ namespace cli::format {
     is_non_const_view_v<typename formatter_buffer_type<F>::type> and
     (not std::same_as<void, typename formatter_value_type<F>::type>);
 
+  /**
+   * @brief This class, and its various specializations, are used to format
+   * values.
+   *
+   * It is a hard error to use the unspecialized version.
+   *
+   * @ingroup Formatting
+   * @tparam T the type to format
+   * @tparam CharT the buffer's character type
+   */
   template<class T, typename CharT>
   struct DefaultFormat {
+
+    /**
+     * @brief The call operator that is implemented in every specialization.
+     *
+     * @param buf the buffer to format into
+     * @param t the value to format
+     * @return FormatResult
+     */
     constexpr FormatResult operator()(View<CharT> buf, const T &t) const {
       static_assert(always_false<T>,
                     "There is no DefaultFormat defined for T!");

@@ -39,11 +39,12 @@
  * @section enum-parsing Enum Parsing
  *
  * enum parsing is available for enum classes. These must be enum class and not
- * weak C style enumerations. If your enum is signed and only has values in the
- * range [-128, 127] or your enum is unsigned and has values in the range of [0,
- * 255], then you don't have to write anything to get enum parsing suport.
- * If that is not the case, you will have to write your own enum traits. Do this
- * by defining cli::traits::enum_traits and adjusting the parameters.
+ * weak C style enumerations, if the enum values have gaps in them. If your enum
+ * is signed and only has values in the range [-128, 127] or your enum is
+ * unsigned and has values in the range of [0, 255], then you don't have to
+ * write anything to get enum class parsing suport. If that is not the case, or
+ * your enum is a weaka enum, you will have to write your own enum traits. Do
+ * this by defining cli::traits::enum_traits and adjusting the parameters.
  *
  * ```
  *  #include "cli/traits.hpp"
@@ -68,6 +69,7 @@
  *    };
  *  }
  * ```
+ *
  * Enumerations don't include the enum class name when formatted and parsed by
  * CLI. In the exampe above, the string "A" would be parsed as ``YourEnum::A``
  * and "ABCD" would be parsed as ``YourEnum::ABCD``.
@@ -89,7 +91,7 @@
  *
  * where ``ex`` are the elements of the sequence, delimited by commas.
  *
- * See the concepts cli::traits::Sequence and cl::traits::FixedSizeSequence for
+ * See the concepts cli::traits::Sequence and cli::traits::FixedSizeSequence for
  * the requirements on the interface.
  *
  * Example for specializing the traits structure:
@@ -106,6 +108,7 @@
  *    iterator end();
  *    std::size_t size() const;
  *    std::size_t max_size() const;
+ *    void push_back(const T&);
  *  };
  *
  *  class Array{
@@ -142,7 +145,12 @@
  *
  * Examples of valid strings:
  *
- * ``hello``, ``"hello world"`` ``"hello \"world\""``
+ * ```
+ * hello
+ * "hello world"
+ * "hello \"world\""
+ * hello"world
+ * ```
  *
  * Example:
  *
@@ -158,7 +166,11 @@
  *    struct is_string<MyString> : std::true_type{};
  *  }
  * ```
- * @todo fix traits::String and parse::String
+ *
+ * There is also parsing for string views, i.e. non owning strings, available.
+ * Keep in mind howver that escaped quotes will remain as they are and not
+ * converted due to views not owning any memory. For string views,
+ * cli::traits::is_string_view must be specialized.
  *
  * @section fixpoint-parsing Fixpoint Parsing
  *
@@ -176,8 +188,37 @@
  * namex are he member names, vx are the member values. Keyword elements
  * (namex = vx) and value elements (vx) can be mixed in any way.
  *
+ * Concrete Example:
+ *
+ * ```
+ * struct S{
+ *   int i;
+ *   char c;
+ *   cli::View<const char> str;
+ * };
+ *
+ * cli::parse::DefaultParse<S,char> parse{};
+ *
+ * cli::parse::ParseResult p = parse("{1,k,\"hello world\"}")
+ * assert(p);
+ * assert(p.value == S{1, 'k', "hello world"});
+ *
+ * p = parse("{c=k, 1, str = \"hello world\"}")
+ * assert(p);
+ * assert(p.value == S{1, 'k', "hello world"});
+ *
+ * p = parse("{str = \"hello world\", 1, k}")
+ * assert(p);
+ * assert(p.value == S{1, 'k', "hello world"});
+ * ```
+ *
  * @section custom-parsing Custom Parsing
  *
+ * Custom parser just have to conform to the Parser concept.
+ * To enable CLI to select your implementation by default, which is needed
+ * if you want your types parsable when they are members of a struct, then
+ * explicitly specialize cli::parse::DefaultParse and implement it's
+ * call operator.
  *
  */
 
@@ -1177,37 +1218,53 @@ namespace cli::parse {
     }
   };
 
+  /**
+   * @brief This class, and its various specializations, are used to parse
+   * values.
+   *
+   * It is a hard error to use the unspecialized version.
+   *
+   * @ingroup Parsing
+   * @tparam T the type to parse
+   * @tparam CharT the character type of the buffer which is parsed from
+   */
   template<class T, typename CharT>
-  class DefaultParse {
+  struct DefaultParse {
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> sv) const {
+    /**
+     * @brief The call operator that is implemented in every specialization.
+     *
+     * @param buf the buffer to parse from
+     * @return ParseResult<T, CharT>
+     */
+    constexpr ParseResult<T, CharT> operator()(View<const CharT> buf) const {
       static_assert(always_false<T>, "No default parser for T available!");
     }
   };
 
   template<traits::Character T, typename CharT>
-  class DefaultParse<T, CharT> : public Char<T, CharT> {};
+  struct DefaultParse<T, CharT> : public Char<T, CharT> {};
 
   template<traits::Integer T, typename CharT>
-  class DefaultParse<T, CharT> : public Int<T, CharT> {};
+  struct DefaultParse<T, CharT> : public Int<T, CharT> {};
 
   template<traits::Float T, typename CharT>
-  class DefaultParse<T, CharT> : public Float<T> {};
+  struct DefaultParse<T, CharT> : public Float<T> {};
 
   template<traits::FixPoint T, typename CharT>
-  class DefaultParse<T, CharT> : public FixPoint<T, CharT> {};
+  struct DefaultParse<T, CharT> : public FixPoint<T, CharT> {};
 
   template<traits::StringView T, typename CharT>
-  class DefaultParse<T, CharT> : public StringView<T, CharT> {};
+  struct DefaultParse<T, CharT> : public StringView<T, CharT> {};
 
   template<traits::String T, typename CharT>
-  class DefaultParse<T, CharT> : public String<T, CharT> {};
+  struct DefaultParse<T, CharT> : public String<T, CharT> {};
 
   template<traits::Enum T, typename CharT>
   struct DefaultParse<T, CharT> : Enum<T, CharT, false> {};
 
   template<typename CharT>
-  class DefaultParse<bool, CharT> {
+  struct DefaultParse<bool, CharT> {
     static constexpr View<const CharT> truthy[]{
       "true", "TRUE", "1", "yes", "y"};
     static constexpr View<const CharT> falsy[]{
@@ -1231,11 +1288,11 @@ namespace cli::parse {
   };
 
   template<traits::Sequence T, typename CharT>
-  class DefaultParse<T, CharT>
+  struct DefaultParse<T, CharT>
     : public Sequence<T, CharT, DefaultParse<typename T::value_type, CharT>> {};
 
   template<traits::FixedSizeSequence T, typename CharT>
-  class DefaultParse<T, CharT>
+  struct DefaultParse<T, CharT>
     : public FixedSizeSequence<
         T,
         CharT,
@@ -1612,7 +1669,7 @@ namespace cli::parse {
   };
 
   template<traits::Struct T, typename CharT>
-  class DefaultParse<T, CharT> : public Struct<T, CharT> {};
+  struct DefaultParse<T, CharT> : public Struct<T, CharT> {};
 
   template<typename CharT>
   class NullParse {

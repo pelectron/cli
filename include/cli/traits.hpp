@@ -133,6 +133,14 @@ namespace cli::traits {
   template<class T>
   concept Float = std::floating_point<T> or is_float<T>::value;
 
+  /**
+   * @brief This concept denotes a string view, i.e. a non owning string.
+   *
+   * To "enable" this concept, you must specialize cli::traits::is_string_view
+   * and inherit that specialization from std::true_type.
+   *
+   * @tparam T
+   */
   template<class T>
   concept StringView =
     is_string_view<T>::value and std::integral<typename T::value_type> and
@@ -145,6 +153,14 @@ namespace cli::traits {
       { t[i] } -> std::convertible_to<const typename T::value_type &>;
     };
 
+  /**
+   * @brief This concept denotes a string.
+   *
+   * To "enable" this concept, you must specialize cli::traits::is_string and
+   * inherit that specialization from std::true_type.
+   *
+   * @tparam T
+   */
   template<class T>
   concept String =
     is_string<T>::value and std::integral<typename T::value_type> and
@@ -158,6 +174,16 @@ namespace cli::traits {
       { t.push_back(c) };
     };
 
+  /**
+   * @brief This concept denotes a list of values.
+   *
+   * T contains a variable amount of elements of type T::value_type, for example
+   * cli::FixedCapacityVector. To "enable"" this concept, you must specialize
+   * cli::traits::is_sequence and inherit that specialization from
+   * std::true_type.
+   *
+   * @tparam T
+   */
   template<class T>
   concept Sequence = is_sequence<T>::value and std::copy_constructible<T> and
                      requires(T a, sequence_value_type_t<T> value) {
@@ -168,6 +194,14 @@ namespace cli::traits {
                        { a.push_back(value) };
                      };
 
+  /**
+   * @brief This concept denotes a list of values. T contains a fixed amount
+   * of elements of type T::value_type, for example std::array. To "enable""
+   * this concept, you must specialize cli::traits::is_fixed_size_sequence and
+   * inherit that specialization from std::true_type.
+   *
+   * @tparam T
+   */
   template<class T>
   concept FixedSizeSequence =
     is_fixed_size_sequence<T>::value and std::copy_constructible<T> and
@@ -179,6 +213,14 @@ namespace cli::traits {
       { a[i] = value };
     };
 
+  /**
+   * @brief This concept denotes a "struct".
+   *
+   * It would be more appropriate to say that this represents an aggregate, i.e.
+   * something that can be decomposed into structuerd bindings.
+   *
+   * @tparam T
+   */
   template<class T>
   concept Struct =
     is_struct<T>::value and not(Sequence<T> or FixedSizeSequence<T>);
