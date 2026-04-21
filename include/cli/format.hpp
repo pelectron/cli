@@ -179,6 +179,8 @@ namespace cli::format {
     /**
      * @brief The call operator that is implemented in every specialization.
      *
+     * @note the call operator doesn't have to be const.
+     *
      * @param buf the buffer to format into
      * @param t the value to format
      * @return FormatResult

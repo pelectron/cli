@@ -1230,9 +1230,11 @@ namespace cli::parse {
    */
   template<class T, typename CharT>
   struct DefaultParse {
-  public:
+
     /**
      * @brief The call operator that is implemented in every specialization.
+     *
+     * @note the call operator doesn't have to be const.
      *
      * @param buf the buffer to parse from
      * @return ParseResult<T, CharT>
