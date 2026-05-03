@@ -521,7 +521,9 @@ functions.
 
 The base form is:
 
-`cpp param(name, description, t, get, format)`
+```cpp
+param(name, description, t, get, format)
+```
 
 In total there are four overloads, where get, or format, or both, can be left
 out. In that case, a default getter and/or default formatter are used.
