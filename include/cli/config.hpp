@@ -1,6 +1,7 @@
 #ifndef CLI_CONFIG_HPP
 #define CLI_CONFIG_HPP
 
+#include "cli/concepts.hpp"
 #include "cli/enums.hpp"
 #include "cli/string.hpp"
 
@@ -8,75 +9,93 @@
 
 namespace cli {
 
-  /**
-   * The Config is used by cli to configure its relevant parts. It is a type
-   * trait like structure.
-   *
-   * @sa cli::default_config
-   *
-   * @tparam T
-   */
-  template<typename T>
-  concept Config = requires(typename std::remove_cvref_t<T>::char_type) {
-    /** the character that separates commands, for example '.' */
-    {
-      std::remove_cvref_t<T>::access_separator
-    } -> std::convertible_to<typename std::remove_cvref_t<T>::char_type>;
+  template<concepts::Config Cfg>
+  class Input;
 
-    /** if true, commands must start with the command separator */
-    {
-      std::remove_cvref_t<T>::commands_start_with_separators
-    } -> std::convertible_to<bool>;
+  namespace config {
+    template<concepts::Config C, typename = void>
+    struct use_volatile_input_buffer : std::false_type {};
 
-    /** if true, the cli uses autocomplete */
-    { std::remove_cvref_t<T>::use_autocomplete } -> std::convertible_to<bool>;
+    template<concepts::Config C>
+    struct use_volatile_input_buffer<
+      C,
+      std::enable_if_t<
+        std::is_convertible_v<decltype(C::use_volatile_input_buffer), bool>>> {
+      static constexpr bool value = C::use_volatile_input_buffer;
+    };
 
-    /** if true, the cli uses a volatile input buffer. This should be true if
-     * Cli::on_char is called in an ISR
-     */
-    {
-      std::remove_cvref_t<T>::use_volatile_input_buffer
-    } -> std::convertible_to<bool>;
+    template<concepts::Config C, typename = void>
+    struct input_delimiter {
+      static constexpr cli::Delimiter value = cli::Delimiter::lf;
+    };
 
-    /** the output buffer size */
-    { std::remove_cvref_t<T>::tx_size } -> std::convertible_to<std::size_t>;
+    template<concepts::Config C>
+    struct input_delimiter<
+      C,
+      std::enable_if_t<
+        std::convertible_to<decltype(C::input_delimiter), cli::Delimiter>>> {
+      static constexpr cli::Delimiter value = C::input_delimiter;
+    };
 
-    /** the event buffer size */
-    { std::remove_cvref_t<T>::rx_size } -> std::convertible_to<std::size_t>;
+    template<concepts::Config C, typename = void>
+    struct input_size {
+      static constexpr std::size_t value = 32;
+    };
 
-    /** the comand input delimiter, i.e. the "enter key" */
-    {
-      std::remove_cvref_t<T>::input_delimiter
-    } -> std::convertible_to<Delimiter>;
+    template<concepts::Config C>
+    struct input_size<
+      C,
+      std::enable_if_t<
+        std::convertible_to<decltype(C::input_size), std::size_t>>> {
+      static constexpr std::size_t value = C::input_size;
+    };
 
-    /** the comand output delimiter, i.e. the newline */
-    {
-      std::remove_cvref_t<T>::output_delimiter
-    } -> std::convertible_to<Delimiter>;
+    template<concepts::Config C, typename = void>
+    struct output_size {
+      static constexpr std::size_t value = C::max_line_length;
+    };
 
-    /** if true, then a history of commands is available through the up and down
-     * cursors */
-    { std::remove_cvref_t<T>::use_history } -> std::convertible_to<bool>;
+    template<concepts::Config C>
+    struct output_size<
+      C,
+      std::enable_if_t<
+        std::convertible_to<decltype(C::output_size), std::size_t>>> {
+      static constexpr std::size_t value = C::output_size;
+    };
 
-    /** if use_history is true, this will specify how many commands can be
-     * recalled in the history */
-    {
-      std::remove_cvref_t<T>::history_depth
-    } -> std::convertible_to<std::size_t>;
+    template<concepts::Config C, typename = void>
+    struct input_type {
+      using type = cli::Input<C>;
+    };
 
-    {
-      std::remove_cvref_t<T>::max_line_length
-    } -> std::convertible_to<std::size_t>;
+    template<concepts::Config C>
+    struct input_type<C, std::void_t<typename C::input_type>> {
+      using type = typename C::input_type;
+    };
 
-    {
-      std::remove_cvref_t<T>::name
-    } -> std::convertible_to<
-      View<const typename std::remove_cvref_t<T>::char_type>>;
-    {
-      std::remove_cvref_t<T>::description
-    } -> std::convertible_to<
-      View<const typename std::remove_cvref_t<T>::char_type>>;
-  };
+    template<concepts::Config C>
+    inline constexpr bool use_volatile_input_buffer_v =
+      use_volatile_input_buffer<C, void>::value;
+
+    template<concepts::Config C>
+    inline constexpr Delimiter input_delimiter_v =
+      input_delimiter<C, void>::value;
+
+    template<concepts::Config C>
+    inline constexpr std::size_t input_size_v = input_size<C, void>::value;
+
+    template<concepts::Config C>
+    inline constexpr std::size_t output_size_v = output_size<C, void>::value;
+
+    template<concepts::Config C>
+    using input_type_t = typename input_type<C, void>::type;
+
+    template<typename C>
+    concept has_history_depth = requires {
+      { C::history_depth } -> std::convertible_to<std::size_t>;
+    } and (C::history_depth > 0);
+
+  } // namespace config
 
   struct default_config {
     using char_type = char;
@@ -88,6 +107,7 @@ namespace cli {
     static constexpr std::size_t tx_size = 128;
     static constexpr std::size_t rx_size = 32;
     static constexpr bool use_autocomplete = true;
+    static constexpr bool use_cursor = true;
     static constexpr bool use_volatile_input_buffer = false;
     static constexpr bool use_history = true;
     static constexpr std::size_t history_depth = 16;

@@ -1,5 +1,6 @@
 #ifndef CLI_TEST_COMMON_HPP
 #define CLI_TEST_COMMON_HPP
+#include "cli/enums.hpp"
 #include "cli/traits.hpp"
 // #include "fixpoint.hpp"
 #include <string>

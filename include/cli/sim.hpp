@@ -37,7 +37,7 @@
 #ifndef CLI_SIM_HPP
 #define CLI_SIM_HPP
 
-#include "cli/cli.hpp"
+#include "cli.hpp"
 
 #include "cpp-terminal/exception.hpp"
 #include "cpp-terminal/input.hpp"
@@ -95,12 +95,18 @@ namespace cli::sim {
           if (key == Term::Key::Ctrl_C)
             exit(0);
           else if (key == Term::Key::Enter)
-            cli.on_char('\n');
+            cli.on_char('\n'); // TODO: respect Cli's delimiter
           else if (key == Term::Key::ArrowDown)
-            for (auto c : "\x1b[B")
+            for (auto c : cli::View{"\x1b[B"})
               cli.on_char(c);
           else if (key == Term::Key::ArrowUp)
-            for (auto c : "\x1b[A")
+            for (auto c : cli::View{"\x1b[A"})
+              cli.on_char(c);
+          else if (key == Term::Key::ArrowRight)
+            for (auto c : cli::View{"\x1b[C"})
+              cli.on_char(c);
+          else if (key == Term::Key::ArrowLeft)
+            for (auto c : cli::View{"\x1b[D"})
               cli.on_char(c);
           else
             cli.on_char(key.value);
@@ -131,16 +137,14 @@ namespace cli::sim {
    * @param config the cli::Config
    * @param commands the commands
    */
-  template<cli::Config Config, cli::Command... Commands>
+  template<cli::concepts::Config Config, cli::concepts::Command... Commands>
   constexpr auto create_cli(Config config,
                             Commands &&...commands) /* -> cli::Cli */ {
     static_assert(std::is_same_v<char, typename Config::char_type>,
                   "char_type must be char. Others are unsupported for now.");
-    return cli::Cli{
-      Config{},
-      cli::AnsiOutput{Config{}, &::cli::sim::dtl::write},
-      std::forward<Commands>(commands)...
-    };
+    return cli::Engine{Config{},
+                       cli::AnsiDisplay{&::cli::sim::dtl::write},
+                       std::forward<Commands>(commands)...};
   }
 
 } // namespace cli::sim

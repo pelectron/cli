@@ -53,7 +53,7 @@ namespace cli {
         for (const auto &sub : *node) {
           if (sub.name == s) {
             node = &sub;
-            cmd = cmd.substr(end);
+            cmd = cmd.substr(end + 1);
             end = cmd.find_last_of(AccessSeparator);
             found = true;
             break;

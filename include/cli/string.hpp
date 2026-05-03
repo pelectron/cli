@@ -25,6 +25,7 @@ namespace cli {
 
     constexpr View(const View &o) noexcept
       : str_(o.str_), size_(o.size_) {}
+
     constexpr View(View &&o) noexcept
       : str_(o.str_), size_(o.size_) {}
 
@@ -33,26 +34,17 @@ namespace cli {
     constexpr View(View<Ch> other)
       : str_(other.str_), size_(other.size_) {}
 
-    constexpr View(value_type *str, std::size_t size) noexcept
-      requires(not std::is_const_v<CharType>)
+    constexpr View(CharType *str, std::size_t size) noexcept
       : str_(str), size_(size) {}
 
-    constexpr View(const value_type *str, std::size_t size) noexcept
-      requires(std::is_const_v<CharType>)
-      : str_(str), size_(size) {}
-
-    constexpr View(value_type *str) noexcept
-      requires(not std::is_const_v<CharType>)
+    constexpr View(CharType *str) noexcept
       : str_(str), size_(0) {
       while (str_[size_] != 0)
         ++size_;
     }
-    constexpr View(const value_type *str) noexcept
-      requires(std::is_const_v<CharType>)
-      : str_(str), size_(0) {
-      while (str_[size_] != 0)
-        ++size_;
-    }
+
+    constexpr View(CharType *begin, CharType *end) noexcept
+      : str_(begin), size_(end - begin) {}
 
     template<typename Char, std::size_t Size>
       requires std::assignable_from<CharType *, Char *>
@@ -237,6 +229,8 @@ namespace cli {
 
     constexpr std::size_t
     find_last_not_of(value_type c, std::size_t pos = npos) const noexcept {
+      if (size_ == 0)
+        return npos;
       for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
         if (c != str_[i])
           return i;
@@ -252,10 +246,11 @@ namespace cli {
     template<typename Ch>
     constexpr std::size_t
     find_last_not_of(View<Ch> s, std::size_t pos = npos) const noexcept {
+      if (size_ == 0)
+        return npos;
       for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
-        for (std::size_t j = 0; j < s.size_; ++j)
-          if (s.str_[j] != str_[i])
-            return i;
+        if (s.find(str_[i]) == npos)
+          return i;
       return npos;
     }
 
@@ -303,9 +298,6 @@ namespace cli {
   };
 
   using CharView = View<const char>;
-
-  static_assert(CharView("hello") == CharView("hello"));
-  static_assert(CharView("hello1") != CharView("hello"));
 
   template<typename CharT, std::size_t N>
   struct StringLiteral;

@@ -61,6 +61,7 @@
 #include "cli/concepts.hpp"
 #include "cli/config.hpp"
 #include "cli/enums.hpp"
+#include "cli/parse.hpp"
 #include "cli/string.hpp"
 #include "cli/type_list.hpp"
 
@@ -85,10 +86,7 @@ namespace cli {
     /// points to the actual command
     void *this_ = nullptr;
     /// executes the command
-    Error (*exec_)(void *,
-                   ExecType,
-                   View<const CharT>,
-                   View<CharT> &) = nullptr;
+    Error (*exec_)(void *, View<const CharT>, View<CharT> &, bool &) = nullptr;
     // the parent command
     CommandNode *parent = nullptr;
     /// the next sibling command
@@ -144,11 +142,11 @@ namespace cli {
      * @param out where to put the results
      * @return the error
      */
-    constexpr Error execute(ExecType exec_type,
-                            View<const CharT> args,
-                            View<CharT> &out) const {
+    constexpr Error execute(View<const CharT> args,
+                            View<CharT> &out,
+                            bool &should_print_newline) const {
       if (this_ and exec_)
-        return (*exec_)(this_, exec_type, args, out);
+        return (*exec_)(this_, args, out, should_print_newline);
       return Error::invalid_cmd;
     }
 
@@ -207,7 +205,7 @@ namespace cli {
            SC Name,
            SC Description,
            SC Type,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
   class CommandBase {
   public:
     using char_type = typename Name::char_type;
@@ -223,7 +221,7 @@ namespace cli {
     constexpr CommandBase &operator=(const CommandBase &) = default;
     constexpr CommandBase &operator=(CommandBase &&) = default;
 
-    template<Command... SubCommands_>
+    template<concepts::Command... SubCommands_>
     constexpr CommandBase(SubCommands_ &&...cmds)
       : subcommands{std::forward<SubCommands_>(cmds)...} {}
 
@@ -241,20 +239,22 @@ namespace cli {
      * @param out where to put the results
      * @return the error
      */
-    constexpr Error
-    execute(ExecType type, View<const char_type> args, View<char_type> &out) {
-      return static_cast<Derived *>(this)->execute(type, args, out);
+    constexpr Error execute(View<const char_type> args,
+                            View<char_type> &out,
+                            bool &should_print_newline) {
+      return static_cast<Derived *>(this)->execute(
+        args, out, should_print_newline);
     }
 
   protected:
-    template<class D, SC C, SC Desc, SC H, Command... SubC>
+    template<class D, SC C, SC Desc, SC H, concepts::Command... SubC>
     constexpr auto count_cmds(const CommandBase<D, C, Desc, H, SubC...> &c);
     template<class F,
              class D,
              SC C,
              SC Desc,
              SC H,
-             Command... SubC,
+             concepts::Command... SubC,
              class... Args>
     friend constexpr void
     for_each(F &&f, CommandBase<D, C, Desc, H, SubC...> &t, Args &&...args);
@@ -263,12 +263,12 @@ namespace cli {
              SC C,
              SC Desc,
              SC H,
-             Command... SubC,
+             concepts::Command... SubC,
              class... Args>
     friend constexpr void for_each(F &&f,
                                    const CommandBase<D, C, Desc, H, SubC...> &t,
                                    Args &&...args);
-    template<Config, Command...>
+    template<concepts::Config, concepts::Command...>
     friend class CommandTree;
 
     std::tuple<SubCommands...> subcommands{};
@@ -285,7 +285,7 @@ namespace cli {
    */
   template<class Derived, SC CmdName, SC Description, SC Type>
   class CommandBase<Derived, CmdName, Description, Type> {
-    template<Config, Command...>
+    template<concepts::Config, concepts::Command...>
     friend class CommandTree;
 
   public:
@@ -309,12 +309,134 @@ namespace cli {
      * @param out where to put the results
      * @return the error
      */
-    constexpr Error execute(ExecType type,
-                            View<const char_type> args,
-                            View<char_type> &out) const {
-      return static_cast<Derived *>(this)->execute(type, args, out);
+    constexpr Error execute(View<const char_type> args,
+                            View<char_type> &out,
+                            bool &should_print_newline) {
+      return static_cast<Derived *>(this)->execute(
+        type, args, out, should_print_newline);
     }
   };
 
+  template<typename CharT>
+  struct SplitResult {
+    const CommandNode<CharT> *command{nullptr};
+    View<const CharT> args{};
+  };
+
+  template<typename CharT>
+  constexpr SplitResult<CharT> split_line(View<const CharT> line,
+                                          CharT access_separator) {
+    if (line.size() == 0)
+      return {nullptr};
+
+    std::size_t pos =
+      line.find_first_of(string_constant<CharT, ' ', '(', '='>{});
+    const View<const CharT> rest = parse::skip_ws(line.substr(pos));
+    return {nullptr, rest};
+  }
+
+  template<typename CharT>
+  constexpr const CommandNode<CharT> *
+  get_command(View<const CharT> command,
+              const CommandNode<CharT> *root,
+              CharT access_separator) {
+
+    if (command.size() == 0)
+      return nullptr;
+
+    std::size_t pos = command.find_first_of(
+      View<const CharT>{string_constant<CharT, ' ', '(', '='>{}});
+
+    if (pos == 0)
+      return {};
+
+    // get the whole command
+    View<const CharT> cmd_name = command;
+
+    if (cmd_name[cmd_name.size() - 1] == access_separator)
+      return nullptr;
+
+    // find the parent node
+    const CommandNode<CharT> *parent = root;
+    std::size_t end = cmd_name.find_first_of(access_separator);
+    while (end != View<const CharT>::npos) {
+      View name = cmd_name.substr(0, end);
+      bool found = false;
+      for (const CommandNode<CharT> &child : *parent) {
+        if (child.name == name) {
+          parent = &child;
+          cmd_name = cmd_name.substr(end + 1);
+          end = cmd_name.find_last_of(access_separator);
+          found = true;
+          break;
+        }
+      }
+      if (not found)
+        return {nullptr};
+    }
+
+    // find the child
+    for (const CommandNode<CharT> &child : *parent) {
+      if (child.name == cmd_name) {
+        return &child;
+      }
+    }
+
+    return nullptr;
+  }
+
+  template<typename CharT>
+  constexpr SplitResult<CharT> split_line(View<const CharT> line,
+                                          const CommandNode<CharT> *root,
+                                          CharT access_separator) {
+    if (line.size() == 0)
+      return {};
+
+    std::size_t pos = line.find_first_of(
+      View<const CharT>{string_constant<CharT, ' ', '(', '='>{}});
+
+    if (pos == 0)
+      return {};
+
+    // get the whole command
+    View<const CharT> cmd_name;
+    if (pos == View<const CharT>::npos) {
+      cmd_name = line;
+    } else {
+      cmd_name = line.substr(0, pos);
+    }
+
+    if (cmd_name[cmd_name.size() - 1] == access_separator) {
+      return {};
+    }
+
+    // find the parent node
+    const CommandNode<CharT> *parent = root;
+    std::size_t end = cmd_name.find_first_of(access_separator);
+    while (end != View<const CharT>::npos) {
+      View name = cmd_name.substr(0, end);
+      bool found = false;
+      for (const CommandNode<CharT> &child : *parent) {
+        if (child.name == name) {
+          parent = &child;
+          cmd_name = cmd_name.substr(end + 1);
+          end = cmd_name.find_last_of(access_separator);
+          found = true;
+          break;
+        }
+      }
+      if (not found)
+        return {nullptr};
+    }
+
+    // find the child
+    for (const CommandNode<CharT> &child : *parent) {
+      if (child.name == cmd_name) {
+        return {&child, line.substr(pos)};
+      }
+    }
+
+    return {};
+  }
 } // namespace cli
 #endif

@@ -1,5 +1,6 @@
 /**
  * @file cli.cpp
+ * @example examples/cli.cpp
  * @brief This file contains the main example for cli. It can be compiled on the
  * PC and played around with.
  */
@@ -51,6 +52,7 @@ static constinit struct Settings {
   int a{};
   int b{};
   char c{};
+  int a_long_param{6};
   void apply() {}
 } settings{};
 
@@ -63,59 +65,60 @@ using cli::arg;
 using cli::func;
 using cli::param;
 
+// clang-format off
+// the cli object itself
+static cli::Engine cli_ = cli::sim::create_cli(
+  cli::default_config{},
+  param<int>("foo"_sc, 
+            "foo description"_sc, 
+            &foo_getter, 
+            &foo_setter, 
+            &validate_foo),
+  // functions
+  // @{
+  // free functions
+  func("free1"_sc, &free1, cli::arg("param"_sc)),
+  // lambdas without templated call operator
+  func("lambda"_sc, 
+      [](int i, char c) {},
+      "i"_arg, 
+      "c"_arg),
+  // and any other functor without templated call operator
+  func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
+  func(MyFunctor2{}, "f"_arg),
+  // member functions
+  func("free2"_sc, s, &S::free2, "x"_arg),
+// @}
+// global objects
+  param("enable"_sc,"enables stuff"_sc, enable),
+  // virtual hierarchies
+  param("virtual"_sc,
+        "virtual group"_sc, 
+        virtual_,
+        param("enable"_sc,
+              "virtual enable"_sc, 
+              enable_virtual,
+        param("opts"_sc, 
+              "enable options"_sc, 
+              enable_opts))),
+  param("settings"_sc,
+        "core settings"_sc, 
+        settings,
+        param("b"_sc, &Settings::b),
+        param<&Settings::a>(),
+        param<&Settings::a_long_param>(),
+        param("c"_sc, &Settings::c),
+        func<&Settings::apply>())
+);
+// clang-format on
 int main() {
-  // clang-format off
-  // the cli object itself
-  cli::Cli my_cli = cli::sim::create_cli(
-      cli::default_config{},
-      param<int>("foo"_sc, 
-                "foo description"_sc, 
-                &foo_getter, 
-                &foo_setter, 
-                &validate_foo),
-      // functions
-      // @{
-      // free functions
-      func("free1"_sc, &free1, cli::arg("param"_sc)),
-      // lambdas without templated call operator
-      func("lambda"_sc, 
-          [](int i, char c) {},
-          "i"_arg, 
-          "c"_arg),
-      // and any other functor without templated call operator
-      func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
-      func(MyFunctor2{}, "f"_arg),
-      // member functions
-      func("free2"_sc, s, &S::free2, "x"_arg),
-    // @}
-    // global objects
-      param("enable"_sc,"enables stuff"_sc, enable),
-      // virtual hierarchies
-      param("virtual"_sc,
-            "virtual group"_sc, 
-            virtual_,
-            param("enable"_sc,
-                  "virtual enable"_sc, 
-                  enable_virtual,
-            param("opts"_sc, 
-                  "enable options"_sc, 
-                  enable_opts))),
-      param("settings"_sc,
-            "core settings"_sc, 
-            settings,
-            param("b"_sc, &Settings::b),
-            param<&Settings::a>(),
-            param("c"_sc, &Settings::c),
-            func<&Settings::apply>())
-  );
-  // clang-format on
 
   if (not cli::sim::init())
     return -1;
 
-  my_cli.print();
+  cli_.print();
 
-  while (cli::sim::get_input_and_process(my_cli)) {
+  while (cli::sim::get_input_and_process(cli_)) {
   }
 
   return 0;

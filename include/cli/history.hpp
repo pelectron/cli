@@ -13,8 +13,14 @@ namespace cli {
   /**
    * Handles command history with cursor up and down
    */
-  template<Config Cfg>
+  template<concepts::Config Cfg>
   class History {
+    static_assert(config::has_history_depth<Cfg>,
+                  "Your configuration must have a static constexpr member of "
+                  "type std::size_t called "
+                  "history_depth, which must be grater than 0, because you "
+                  "specified use_history as true.");
+
     using Str = View<const typename Cfg::char_type>;
     using Array = std::array<typename Cfg::char_type, Cfg::max_line_length>;
     struct Line {
@@ -100,6 +106,28 @@ namespace cli {
       line.contents[line.size] = 0;
     }
 
+    constexpr Str cursor_up() {
+      if (size_ == 0)
+        return {};
+
+      if (not last_action_was_push_)
+        decrement_current();
+      Str ret = buffer[current_];
+      last_action_was_push_ = false;
+      return ret;
+    }
+
+    constexpr Str cursor_down() {
+      if (size_ == 0)
+        return {};
+
+      if (not last_action_was_push_)
+        increment_current();
+      Str ret = buffer[current_];
+      last_action_was_push_ = false;
+      return ret;
+    }
+
   public:
     /**
      * adds a new command to the history
@@ -126,15 +154,12 @@ namespace cli {
      *
      * @return the command
      */
-    constexpr Str cursor_up() {
-      if (size_ == 0)
+    constexpr Str cursor_up(std::size_t n) {
+      if (n == 0)
         return {};
-
-      if (not last_action_was_push_)
-        decrement_current();
-      Str ret = buffer[current_];
-      last_action_was_push_ = false;
-      return ret;
+      for (std::size_t i = 0; i < n - 1; ++i)
+        cursor_up();
+      return cursor_up();
     }
 
     /**
@@ -142,15 +167,12 @@ namespace cli {
      *
      * @return the command
      */
-    constexpr Str cursor_down() {
-      if (size_ == 0)
+    constexpr Str cursor_down(std::size_t n) {
+      if (n == 0)
         return {};
-
-      if (not last_action_was_push_)
-        increment_current();
-      Str ret = buffer[current_];
-      last_action_was_push_ = false;
-      return ret;
+      for (std::size_t i = 0; i < n - 1; ++i)
+        cursor_down();
+      return cursor_down();
     }
 
     /**
@@ -165,14 +187,14 @@ namespace cli {
     }
   };
 
-  template<Config Cfg>
+  template<concepts::Config Cfg>
     requires(not Cfg::use_history)
   class History<Cfg> {
   public:
     using Str = View<const typename Cfg::char_type>;
-    constexpr void push_cmd(Str cmd) {}
-    constexpr Str previous() {}
-    constexpr Str next() {}
+    constexpr void push_cmd(Str) {}
+    constexpr Str cursor_up(std::size_t) {}
+    constexpr Str cursor_down(std::size_t) {}
     constexpr void reset() {}
   };
 } // namespace cli

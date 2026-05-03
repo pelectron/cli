@@ -215,6 +215,17 @@ namespace cli::format {
     constexpr FormatResult operator()(View<CharT> buf) const { return 0; }
   };
 
+  template<typename CharT>
+  struct Format<View<CharT>, CharT> {
+    constexpr FormatResult operator()(View<CharT> buf, View<CharT> s) const {
+      if (s.size() > buf.size())
+        return Error::buffer_overflow;
+      for (std::size_t i = 0; i < s.size(); ++i)
+        buf[i] = s[i];
+      return s.size();
+    }
+  };
+
   /**
    * @brief The default formatter for bool
    *

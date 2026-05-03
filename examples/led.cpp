@@ -1,4 +1,5 @@
 /**
+ * @example examples/led.cpp
  * This is an example for a CLI that controls an RGB LED.
  *
  * What the CLI should be able to do:
@@ -8,7 +9,7 @@
  *   - enable and disable the flashing
  */
 
-#include "cli/cli.hpp"
+#include "cli.hpp"
 
 #include <cstdint>
 
@@ -50,8 +51,6 @@ void LedSetFlashingInterval(Milliseconds interval) { (void)interval; }
 /// @}
 
 cli::Error write_char(char c);
-
-static_assert(cli::CharStream<decltype(write_char), char>);
 
 static RGB color{};
 static Milliseconds interval;
@@ -100,9 +99,9 @@ using config = cli::default_config;
 using cli::operator""_sc;
 
 // clang-format off
-static cli::Cli control{
+static cli::Engine control{
   config{}, 
-  cli::AnsiOutput(config{}, &write_char),
+  cli::AnsiDisplay(&write_char),
   cli::param("color"_sc, 
              "the led color"_sc, 
              color, 

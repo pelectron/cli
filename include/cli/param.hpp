@@ -119,7 +119,7 @@ namespace cli::params {
              parse::Parser Parse,
              format::Formatter Format,
              validate::Validator Validate,
-             Command... SubCommands>
+             concepts::Command... SubCommands>
     class Param : public CommandBase<Param<Name,
                                            Description,
                                            Type,
@@ -179,7 +179,7 @@ namespace cli::params {
                parse::Parser Parse_,
                format::Formatter Format_,
                validate::Validator Validate_,
-               Command... SubCommands_>
+               concepts::Command... SubCommands_>
       constexpr Param(Name,
                       Description,
                       Type,
@@ -263,19 +263,26 @@ namespace cli::params {
 
       // Param(SC /*name*/, const T &value, Get getter, Set setter);
 
-      constexpr Error
-      execute(ExecType type, View<const char_type> args, View<char_type> &out) {
-        switch (type) {
-          case ExecType::set:
-            return set_value(args);
-          case ExecType::get:
-            if (args.size() != 0)
-              return Error::too_many_argments;
-            return get_value(out);
-          default:
-            return Error::invalid_cmd;
+      constexpr Error execute(View<const char_type> args,
+                              View<char_type> &out,
+                              bool &should_print_newline) {
+        args = parse::trim_ws(args);
+        if (args.size() == 0) {
+          should_print_newline = true;
+          return get_value(out);
         }
-        return Error::unimplemented;
+
+        if (args[0] == '=') {
+          args = args.substr(1);
+          args = parse::skip_ws(args);
+        }
+
+        if (args.size() == 0)
+          return Error::expected_value;
+
+        out = {};
+        should_print_newline = false;
+        return set_value(args);
       }
 
     private:
@@ -324,7 +331,7 @@ namespace cli::params {
              parse::Parser Parse,
              format::Formatter Format,
              validate::Validator Validate,
-             Command... SubCommands>
+             concepts::Command... SubCommands>
     Param(Name,
           Description,
           Type,
@@ -333,15 +340,15 @@ namespace cli::params {
           Parse &&parse,
           Format &&format,
           Validate &&validate,
-          SubCommands &&...cmds) -> Param<std::remove_cvref_t<Name>,
-                                          std::remove_cvref_t<Description>,
-                                          std::remove_cvref_t<Type>,
-                                          std::remove_cvref_t<Get>,
-                                          std::remove_cvref_t<Set>,
-                                          std::remove_cvref_t<Parse>,
-                                          std::remove_cvref_t<Format>,
-                                          std::remove_cvref_t<Validate>,
-                                          std::remove_cvref_t<SubCommands>...>;
+          SubCommands &&...cmds) -> Param<std::decay_t<Name>,
+                                          std::decay_t<Description>,
+                                          std::decay_t<Type>,
+                                          std::decay_t<Get>,
+                                          std::decay_t<Set>,
+                                          std::decay_t<Parse>,
+                                          std::decay_t<Format>,
+                                          std::decay_t<Validate>,
+                                          std::decay_t<SubCommands>...>;
 
     template<SC Name,
              SC Description,
@@ -358,14 +365,14 @@ namespace cli::params {
           Set &&set,
           Parse &&parse,
           Format &&format,
-          Validate &&validate) -> Param<std::remove_cvref_t<Name>,
-                                        std::remove_cvref_t<Description>,
-                                        std::remove_cvref_t<Type>,
-                                        std::remove_cvref_t<Get>,
-                                        std::remove_cvref_t<Set>,
-                                        std::remove_cvref_t<Parse>,
-                                        std::remove_cvref_t<Format>,
-                                        std::remove_cvref_t<Validate>>;
+          Validate &&validate) -> Param<std::decay_t<Name>,
+                                        std::decay_t<Description>,
+                                        std::decay_t<Type>,
+                                        std::decay_t<Get>,
+                                        std::decay_t<Set>,
+                                        std::decay_t<Parse>,
+                                        std::decay_t<Format>,
+                                        std::decay_t<Validate>>;
 
     template<SC Name,
              SC Description,
@@ -375,7 +382,7 @@ namespace cli::params {
              parse::Parser Parse,
              format::Formatter Format,
              validate::Validator Validate,
-             Command... SubCommands>
+             concepts::Command... SubCommands>
     Param(Name,
           Description,
           Type,
@@ -385,15 +392,15 @@ namespace cli::params {
           Format &&format,
           Validate &&validate,
           std::tuple<SubCommands...> &&cmds)
-      -> Param<std::remove_cvref_t<Name>,
-               std::remove_cvref_t<Description>,
-               std::remove_cvref_t<Type>,
-               std::remove_cvref_t<Get>,
-               std::remove_cvref_t<Set>,
-               std::remove_cvref_t<Parse>,
-               std::remove_cvref_t<Format>,
-               std::remove_cvref_t<Validate>,
-               std::remove_cvref_t<SubCommands>...>;
+      -> Param<std::decay_t<Name>,
+               std::decay_t<Description>,
+               std::decay_t<Type>,
+               std::decay_t<Get>,
+               std::decay_t<Set>,
+               std::decay_t<Parse>,
+               std::decay_t<Format>,
+               std::decay_t<Validate>,
+               std::decay_t<SubCommands>...>;
 
     template<SC Name,
              SC Description,
@@ -403,7 +410,7 @@ namespace cli::params {
              parse::Parser Parse,
              format::Formatter Format,
              validate::Validator Validate,
-             Command... SubCommands>
+             concepts::Command... SubCommands>
     Param(Name,
           Description,
           Type,
@@ -413,15 +420,15 @@ namespace cli::params {
           Format &&format,
           Validate &&validate,
           const std::tuple<SubCommands...> &cmds)
-      -> Param<std::remove_cvref_t<Name>,
-               std::remove_cvref_t<Description>,
-               std::remove_cvref_t<Type>,
-               std::remove_cvref_t<Get>,
-               std::remove_cvref_t<Set>,
-               std::remove_cvref_t<Parse>,
-               std::remove_cvref_t<Format>,
-               std::remove_cvref_t<Validate>,
-               std::remove_cvref_t<SubCommands>...>;
+      -> Param<std::decay_t<Name>,
+               std::decay_t<Description>,
+               std::decay_t<Type>,
+               std::decay_t<Get>,
+               std::decay_t<Set>,
+               std::decay_t<Parse>,
+               std::decay_t<Format>,
+               std::decay_t<Validate>,
+               std::decay_t<SubCommands>...>;
 
     template<SC Name,
              SC Description,
@@ -430,7 +437,7 @@ namespace cli::params {
              parse::Parser Parse,
              format::Formatter Format,
              validate::Validator Validate,
-             Command... SubCommands>
+             concepts::Command... SubCommands>
     struct MemberData {
       using char_type = get_char_t<Name>;
       MemberPointer f;
@@ -442,7 +449,7 @@ namespace cli::params {
       template<parse::Parser Parse_,
                format::Formatter Format_,
                validate::Validator Validate_,
-               Command... SubCommands_>
+               concepts::Command... SubCommands_>
       constexpr MemberData(Name,
                            Description,
                            Type,
@@ -501,7 +508,7 @@ namespace cli::params {
              parse::Parser Parse,
              format::Formatter Format,
              validate::Validator Validate,
-             Command... SubCommands>
+             concepts::Command... SubCommands>
     MemberData(Name,
                Description,
                Help,
@@ -509,15 +516,14 @@ namespace cli::params {
                Parse &&,
                Format &&,
                Validate &&,
-               SubCommands &&...)
-      -> MemberData<std::remove_cvref_t<Name>,
-                    std::remove_cvref_t<Description>,
-                    std::remove_cvref_t<Help>,
-                    MemberPointer,
-                    std::remove_cvref_t<Parse>,
-                    std::remove_cvref_t<Format>,
-                    std::remove_cvref_t<Validate>,
-                    std::remove_cvref_t<SubCommands>...>;
+               SubCommands &&...) -> MemberData<std::decay_t<Name>,
+                                                std::decay_t<Description>,
+                                                std::decay_t<Help>,
+                                                MemberPointer,
+                                                std::decay_t<Parse>,
+                                                std::decay_t<Format>,
+                                                std::decay_t<Validate>,
+                                                std::decay_t<SubCommands>...>;
 
     template<typename T>
     inline constexpr bool is_member_data_v = false;
@@ -639,7 +645,7 @@ namespace cli::params {
              parse::Parser Parse,
              format::Formatter Format,
              validate::Validator Validate,
-             Command... SubCommands>
+             concepts::Command... SubCommands>
     constexpr auto to_cmd(T &obj,
                           MemberData<Name,
                                      Description,
@@ -682,7 +688,7 @@ namespace cli::params {
              parse::Parser Parse,
              format::Formatter Format,
              validate::Validator Validate,
-             Command... SubCommands>
+             concepts::Command... SubCommands>
     constexpr auto to_cmd(const T &obj,
                           MemberData<Name,
                                      Description,
@@ -720,7 +726,7 @@ namespace cli::params {
     template<class T, class CommandOrMemberDataOrMemberFunction>
     constexpr auto transform(T &obj,
                              CommandOrMemberDataOrMemberFunction &&mem) {
-      if constexpr (Command<std::remove_cvref_t<
+      if constexpr (concepts::Command<std::remove_cvref_t<
                       CommandOrMemberDataOrMemberFunction>>) {
         return mem;
       } else {
@@ -739,7 +745,7 @@ namespace cli::params {
    */
   template<typename T>
   concept CmdOrMemDataOrMemFun =
-    Command<std::remove_cvref_t<T>> or
+    concepts::Command<std::remove_cvref_t<T>> or
     dtl::is_member_data_v<std::remove_cvref_t<T>> or
     funcs::is_member_function_v<std::remove_cvref_t<T>>;
 
@@ -851,22 +857,21 @@ namespace cli::params {
    * @param cmds the sub commands.
    * @return a Command
    */
-  template<SC Name, SC Description, Command... SubCommands>
+  template<SC Name, SC Description, concepts::Command... SubCommands>
     requires(sizeof...(SubCommands) > 0)
-  constexpr auto
+  [[nodiscard]] constexpr auto
   param(Name name, Description description, SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 string_constant<get_char_t<Name>>{},
-                 NullGet{},
-                 NullSet{},
-                 parse::NullParse<get_char_t<Name>>{},
-                 format::NullFormat<get_char_t<Name>>{},
-                 validate::NullValidate{},
-                 std::forward<SubCommands>(cmds)...};
+    return dtl::Param{Name{},
+                      Description{},
+                      string_constant<get_char_t<Name>>{},
+                      dtl::NullGet{},
+                      dtl::NullSet{},
+                      parse::NullParse<get_char_t<Name>>{},
+                      format::NullFormat<get_char_t<Name>>{},
+                      validate::NullValidate{},
+                      std::forward<SubCommands>(cmds)...};
   }
 
   /**
@@ -880,20 +885,19 @@ namespace cli::params {
    * @param cmds the sub commands.
    * @return a Command
    */
-  template<SC Name, Command... SubCommands>
+  template<SC Name, concepts::Command... SubCommands>
     requires(sizeof...(SubCommands) > 0)
-  constexpr auto param(Name name, SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name, SubCommands &&...cmds) {
     (void)name;
-    using namespace dtl;
-    return Param{Name{},
-                 NoDescription<get_char_t<Name>>{},
-                 string_constant<get_char_t<Name>>{},
-                 NullGet{},
-                 NullSet{},
-                 parse::NullParse<get_char_t<Name>>{},
-                 format::NullFormat<get_char_t<Name>>{},
-                 validate::NullValidate{},
-                 std::forward<SubCommands>(cmds)...};
+    return dtl::Param{Name{},
+                      NoDescription<get_char_t<Name>>{},
+                      string_constant<get_char_t<Name>>{},
+                      dtl::NullGet{},
+                      dtl::NullSet{},
+                      parse::NullParse<get_char_t<Name>>{},
+                      format::NullFormat<get_char_t<Name>>{},
+                      validate::NullValidate{},
+                      std::forward<SubCommands>(cmds)...};
   }
   /// @}
 
@@ -1005,28 +1009,27 @@ namespace cli::params {
            parse::ParserOf<T, get_char_t<Name>> Parse,
            format::FormatterOf<T, get_char_t<Name>> Format,
            validate::ValidatorOf<T> Validate,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Get &&get,
-                       Set &&set,
-                       Parse &&parse,
-                       Format &&format,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     Get &&get,
+                                     Set &&set,
+                                     Parse &&parse,
+                                     Format &&format,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, get_char_t<Name>>(),
-                 std::forward<Get>(get),
-                 std::forward<Set>(set),
-                 std::forward<Parse>(parse),
-                 std::forward<Format>(format),
-                 std::forward<Validate>(validate),
-                 std::forward<SubCommands>(cmds)...};
+    return dtl::Param{Name{},
+                      Description{},
+                      ctti::name<T, typename Name::char_type>(),
+                      std::forward<Get>(get),
+                      std::forward<Set>(set),
+                      std::forward<Parse>(parse),
+                      std::forward<Format>(format),
+                      std::forward<Validate>(validate),
+                      std::forward<SubCommands>(cmds)...};
   }
 
   /**
@@ -1068,27 +1071,25 @@ namespace cli::params {
            SetterOf<T> Set,
            parse::ParserOf<T, get_char_t<Name>> Parse,
            format::FormatterOf<T, get_char_t<Name>> Format,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Get &&get,
-                       Set &&set,
-                       Parse &&parse,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     Get &&get,
+                                     Set &&set,
+                                     Parse &&parse,
+                                     Format &&format,
+                                     SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, get_char_t<Name>>(),
-                 std::forward<Get>(get),
-                 std::forward<Set>(set),
-                 std::forward<Parse>(parse),
-                 std::forward<Format>(format),
-                 validate::DefaultValidate<T>{},
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    std::forward<Get>(get),
+                    std::forward<Set>(set),
+                    std::forward<Parse>(parse),
+                    std::forward<Format>(format),
+                    validate::DefaultValidate<T>{},
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1124,27 +1125,24 @@ namespace cli::params {
            GetterOf<T> Get,
            SetterOf<T> Set,
            validate::ValidatorOf<T> Validate,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Get &&get,
-                       Set &&set,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       Get &&get,
+                                                       Set &&set,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using Char = get_char_t<Name>;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, Char>(),
-                 std::forward<Get>(get),
-                 std::forward<Set>(set),
-                 parse::Parse<T, Char>{},
-                 format::Format<T, Char>{},
-                 std::forward<Validate>(validate),
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    std::forward<Get>(get),
+                    std::forward<Set>(set),
+                    parse::Parse<T, get_char_t<Name>>{},
+                    format::Format<T, get_char_t<Name>>{},
+                    std::forward<Validate>(validate),
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1179,26 +1177,24 @@ namespace cli::params {
            SetterOf<T> Set,
            parse::ParserOf<T, get_char_t<Name>> Parse,
            validate::ValidatorOf<T> Validate,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Set &&set,
-                       Parse &&parse,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       Set &&set,
+                                                       Parse &&parse,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, get_char_t<Name>>(),
-                 InvalidGet<T>{},
-                 std::forward<Set>(set),
-                 std::forward<Parse>(parse),
-                 format::NoFormat<T, get_char_t<Name>>{},
-                 std::forward<Validate>(validate),
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    dtl::InvalidGet<T>{},
+                    std::forward<Set>(set),
+                    std::forward<Parse>(parse),
+                    format::NoFormat<T, get_char_t<Name>>{},
+                    std::forward<Validate>(validate),
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1234,26 +1230,24 @@ namespace cli::params {
            GetterOf<T> Get,
            format::FormatterOf<T, get_char_t<Name>> Format,
            validate::ValidatorOf<T> Validate,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Get &&get,
-                       Format &&format,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       Get &&get,
+                                                       Format &&format,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, get_char_t<Name>>(),
-                 std::forward<Get>(get),
-                 InvalidSet<T>{},
-                 parse::NoParse<T, get_char_t<Name>>{},
-                 std::forward<Format>(format),
-                 std::forward<Validate>(validate),
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    std::forward<Get>(get),
+                    dtl::InvalidSet<T>{},
+                    parse::NoParse<T, get_char_t<Name>>{},
+                    std::forward<Format>(format),
+                    std::forward<Validate>(validate),
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1286,26 +1280,23 @@ namespace cli::params {
            SC Description,
            GetterOf<T> Get,
            SetterOf<T> Set,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Get &&get,
-                       Set &&set,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       Get &&get,
+                                                       Set &&set,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using Char = get_char_t<Name>;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, Char>(),
-                 std::forward<Get>(get),
-                 std::forward<Set>(set),
-                 parse::Parse<T, Char>{},
-                 format::Format<T, Char>{},
-                 validate::DefaultValidate<T>{},
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    std::forward<Get>(get),
+                    std::forward<Set>(set),
+                    parse::Parse<T, get_char_t<Name>>{},
+                    format::Format<T, get_char_t<Name>>{},
+                    validate::DefaultValidate<T>{},
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1336,25 +1327,23 @@ namespace cli::params {
            SC Description,
            SetterOf<T> Set,
            parse::ParserOf<T, get_char_t<Name>> Parse,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Set &&set,
-                       Parse &&parse,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       Set &&set,
+                                                       Parse &&parse,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, get_char_t<Name>>(),
-                 InvalidGet<T>{},
-                 std::forward<Set>(set),
-                 std::forward<Parse>(parse),
-                 format::NoFormat<T, get_char_t<Name>>{},
-                 validate::DefaultValidate<T>{},
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    dtl::InvalidGet<T>{},
+                    std::forward<Set>(set),
+                    std::forward<Parse>(parse),
+                    format::NoFormat<T, get_char_t<Name>>{},
+                    validate::DefaultValidate<T>{},
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1386,26 +1375,23 @@ namespace cli::params {
            SC Description,
            GetterOf<T> Get,
            format::FormatterOf<T, get_char_t<Name>> Format,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Get &&get,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       Get &&get,
+                                                       Format &&format,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using CharT = get_char_t<Name>;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, CharT>(),
-                 std::forward<Get>(get),
-                 InvalidSet<T>{},
-                 parse::NoParse<T, CharT>{},
-                 std::forward<Format>(format),
-                 validate::DefaultValidate<T>{},
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    std::forward<Get>(get),
+                    dtl::InvalidSet<T>{},
+                    parse::NoParse<T, get_char_t<Name>>{},
+                    std::forward<Format>(format),
+                    validate::DefaultValidate<T>{},
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1437,25 +1423,23 @@ namespace cli::params {
            SC Description,
            SetterOf<T> Set,
            validate::ValidatorOf<T> Validate,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       Set &&set,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     Set &&set,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, get_char_t<Name>>(),
-                 InvalidGet<T>{},
-                 std::forward<Set>(set),
-                 parse::Parse<T, get_char_t<Name>>{},
-                 format::NoFormat<T, get_char_t<Name>>{},
-                 std::forward<Validate>(validate),
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    dtl::InvalidGet<T>{},
+                    std::forward<Set>(set),
+                    parse::Parse<T, get_char_t<Name>>{},
+                    format::NoFormat<T, get_char_t<Name>>{},
+                    std::forward<Validate>(validate),
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1482,22 +1466,20 @@ namespace cli::params {
            SC Name,
            SC Description,
            GetterOf<T> Get,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto
+  [[nodiscard]] constexpr concepts::Command auto
   param(Name name, Description description, Get &&get, SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, get_char_t<Name>>(),
-                 std::forward<Get>(get),
-                 InvalidSet<T>{},
-                 parse::NoParse<T, get_char_t<Name>>{},
-                 format::Format<T, get_char_t<Name>>{},
-                 validate::DefaultValidate<T>{},
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    std::forward<Get>(get),
+                    dtl::InvalidSet<T>{},
+                    parse::NoParse<T, get_char_t<Name>>{},
+                    format::Format<T, get_char_t<Name>>{},
+                    validate::DefaultValidate<T>{},
+                    std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1524,22 +1506,20 @@ namespace cli::params {
            SC Name,
            SC Description,
            SetterOf<T> Set,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto
+  [[nodiscard]] constexpr concepts::Command auto
   param(Name name, Description description, Set &&set, SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T, get_char_t<Name>>(),
-                 InvalidGet<T>{},
-                 std::forward<Set>(set),
-                 parse::Parse<T, get_char_t<Name>>{},
-                 format::NoFormat<T, get_char_t<Name>>{},
-                 validate::DefaultValidate<T>{},
-                 std::forward<SubCommands>(cmds)...};
+    return param<T>(Name{},
+                    Description{},
+                    dtl::InvalidGet<T>{},
+                    std::forward<Set>(set),
+                    parse::Parse<T, get_char_t<Name>>{},
+                    format::NoFormat<T, get_char_t<Name>>{},
+                    validate::DefaultValidate<T>{},
+                    std::forward<SubCommands>(cmds)...);
   }
   /// @}
 
@@ -1635,27 +1615,26 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Get &&get,
-                       Set &&set,
-                       Parse &&parse,
-                       Format &&format,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Get &&get,
+                                                       Set &&set,
+                                                       Parse &&parse,
+                                                       Format &&format,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T>(),
-                 std::forward<Get>(get),
-                 std::forward<Set>(set),
-                 std::forward<Parse>(parse),
-                 std::forward<Format>(format),
-                 std::forward<Validate>(validate),
-                 transform(t, std::forward<SubCommands>(cmds))...};
+    return dtl::Param{Name{},
+                      Description{},
+                      ctti::name<T>(),
+                      std::forward<Get>(get),
+                      std::forward<Set>(set),
+                      std::forward<Parse>(parse),
+                      std::forward<Format>(format),
+                      std::forward<Validate>(validate),
+                      dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
 
   /**
@@ -1701,26 +1680,25 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Get &&get,
-                       Set &&set,
-                       Parse &&parse,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Get &&get,
+                                                       Set &&set,
+                                                       Parse &&parse,
+                                                       Format &&format,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
+                 t,
                  std::forward<Get>(get),
                  std::forward<Set>(set),
                  std::forward<Parse>(parse),
                  std::forward<Format>(format),
                  validate::DefaultValidate<T>{},
-                 transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1763,26 +1741,24 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Get &&get,
-                       Set &&set,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Get &&get,
+                                                       Set &&set,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using Char = get_char_t<Name>;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
+                 t,
                  std::forward<Get>(get),
                  std::forward<Set>(set),
-                 parse::Parse<T, Char>{},
-                 format::Format<T, Char>{},
+                 parse::Parse<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  std::forward<Validate>(validate),
-                 transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1826,26 +1802,25 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Set &&set,
-                       Parse &&parse,
-                       Format &&format,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Set &&set,
+                                                       Parse &&parse,
+                                                       Format &&format,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
+                 t,
+                 dtl::DefaultGet<T>{t},
                  std::forward<Set>(set),
                  std::forward<Parse>(parse),
                  std::forward<Format>(format),
                  std::forward<Validate>(validate),
-                 transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1889,26 +1864,25 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Get &&get,
-                       Parse &&parse,
-                       Format &&format,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Get &&get,
+                                                       Parse &&parse,
+                                                       Format &&format,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
+                 t,
                  std::forward<Get>(get),
-                 DefaultSet<T>{t},
+                 dtl::DefaultSet<T>{t},
                  std::forward<Parse>(parse),
                  std::forward<Format>(format),
                  std::forward<Validate>(validate),
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -1943,25 +1917,23 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Get &&get,
-                       Set &&set,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Get &&get,
+                                                       Set &&set,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using Char = get_char_t<Name>;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
+                 t,
                  std::forward<Get>(get),
                  std::forward<Set>(set),
-                 parse::Parse<T, Char>{},
-                 format::Format<T, Char>{},
+                 parse::Parse<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2001,25 +1973,24 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Set &&set,
-                       Parse &&parse,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Set &&set,
+                                                       Parse &&parse,
+                                                       Format &&format,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
+                 t,
+                 dtl::DefaultGet<T>{t},
                  std::forward<Set>(set),
                  std::forward<Parse>(parse),
                  std::forward<Format>(format),
                  validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2060,25 +2031,24 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Get &&get,
-                       Parse &&parse,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Get &&get,
+                                                       Parse &&parse,
+                                                       Format &&format,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
+                 t,
                  std::forward<Get>(get),
-                 DefaultSet<T>{t},
+                 dtl::DefaultSet<T>{t},
                  std::forward<Parse>(parse),
                  std::forward<Format>(format),
                  validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2114,25 +2084,23 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Set &&set,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Set &&set,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using CharT = get_char_t<Name>;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
+                 t,
+                 dtl::DefaultGet<T>{t},
                  std::forward<Set>(set),
-                 parse::Parse<T, CharT>{},
-                 format::Format<T, CharT>{},
+                 parse::Parse<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  std::forward<Validate>(validate),
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2168,25 +2136,23 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Get &&get,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Get &&get,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using CharT = get_char_t<Name>;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
+                 t,
                  std::forward<Get>(get),
-                 DefaultSet<T>{t},
-                 parse::Parse<T, CharT>{},
-                 format::Format<T, CharT>{},
+                 dtl::DefaultSet<T>{t},
+                 parse::Parse<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  std::forward<Validate>(validate),
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2226,25 +2192,24 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Parse &&parse,
-                       Format &&format,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Parse &&parse,
+                                                       Format &&format,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
-                 DefaultSet<T>{t},
+                 t,
+                 dtl::DefaultGet<T>{t},
+                 dtl::DefaultSet<T>{t},
                  std::forward<Parse>(parse),
                  std::forward<Format>(format),
                  std::forward<Validate>(validate),
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2276,24 +2241,22 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Get &&get,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Get &&get,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using CharT = get_char_t<Name>;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
+                 t,
                  std::forward<Get>(get),
-                 DefaultSet<T>{t},
-                 parse::Parse<T, CharT>{},
-                 format::Format<T, CharT>{},
+                 dtl::DefaultSet<T>{t},
+                 parse::Parse<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2325,24 +2288,22 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Set &&set,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Set &&set,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using CharT = get_char_t<Name>;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
+                 t,
+                 dtl::DefaultGet<T>{t},
                  std::forward<Set>(set),
-                 parse::Parse<T, CharT>{},
-                 format::Format<T, CharT>{},
+                 parse::Parse<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2379,24 +2340,23 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Parse &&parse,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Parse &&parse,
+                                                       Format &&format,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
-                 DefaultSet<T>{t},
+                 t,
+                 dtl::DefaultGet<T>{t},
+                 dtl::DefaultSet<T>{t},
                  std::forward<Parse>(parse),
                  std::forward<Format>(format),
                  validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2427,24 +2387,22 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto param(Name name,
-                       Description description,
-                       T &t,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       T &t,
+                                                       Validate &&validate,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using CharT = get_char_t<Name>;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
-                 DefaultSet<T>{t},
-                 parse::Parse<T, CharT>{},
-                 format::Format<T, CharT>{},
+                 t,
+                 dtl::DefaultGet<T>{t},
+                 dtl::DefaultSet<T>{t},
+                 parse::Parse<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  std::forward<Validate>(validate),
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2470,21 +2428,19 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  constexpr auto
+  [[nodiscard]] constexpr concepts::Command auto
   param(Name name, Description description, T &t, SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using CharT = get_char_t<Name>;
-    using namespace dtl;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
-                 DefaultSet<T>{t},
-                 parse::Parse<T, CharT>{},
-                 format::Format<T, CharT>{},
+                 t,
+                 dtl::DefaultGet<T>{t},
+                 dtl::DefaultSet<T>{t},
+                 parse::Parse<T, get_char_t<Name>>{},
+                 format::Format<T, get_char_t<Name>>{},
                  validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
   /// @}
 
@@ -2539,25 +2495,23 @@ namespace cli::params {
            format::FormatterOf<T, get_char_t<Name>> Format,
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       const T &t,
-                       Get &&get,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       const T &t,
+                                                       Get &&get,
+                                                       Format &&format,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using CharT = get_char_t<Name>;
-    return Param{Name{},
-                 Description{},
-                 ctti::name<T>(),
-                 std::forward<Get>(get),
-                 InvalidSet<T>{},
-                 parse::NoParse<T, CharT>{},
-                 std::forward<Format>(format),
-                 validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+    return dtl::Param{Name{},
+                      Description{},
+                      ctti::name<T>(),
+                      std::forward<Get>(get),
+                      dtl::InvalidSet<T>{},
+                      parse::NoParse<T, get_char_t<Name>>{},
+                      std::forward<Format>(format),
+                      validate::DefaultValidate<T>{},
+                      dtl::transform(t, std::forward<SubCommands>(cmds))...};
   }
 
   /**
@@ -2588,24 +2542,19 @@ namespace cli::params {
            GetterOf<T> Get,
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       const T &t,
-                       Get &&get,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       const T &t,
+                                                       Get &&get,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using CharT = get_char_t<Name>;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
+                 t,
                  std::forward<Get>(get),
-                 InvalidSet<T>{},
-                 parse::NoParse<T, CharT>{},
-                 format::Format<T, CharT>{},
-                 validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 format::Format<T, get_char_t<Name>>{},
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2636,24 +2585,19 @@ namespace cli::params {
            format::FormatterOf<T, get_char_t<Name>> Format,
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto param(Name name,
-                       Description description,
-                       const T &t,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(Name name,
+                                                       Description description,
+                                                       const T &t,
+                                                       Format &&format,
+                                                       SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using CharT = get_char_t<Name>;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
-                 InvalidSet<T>{},
-                 parse::NoParse<T, CharT>{},
+                 t,
+                 dtl::DefaultGet<T>{t},
                  std::forward<Format>(format),
-                 validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -2678,21 +2622,16 @@ namespace cli::params {
            typename T,
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  constexpr auto
+  [[nodiscard]] constexpr concepts::Command auto
   param(Name name, Description description, const T &t, SubCommands &&...cmds) {
     (void)name;
     (void)description;
-    using namespace dtl;
-    using CharT = get_char_t<Name>;
-    return Param{Name{},
+    return param(Name{},
                  Description{},
-                 ctti::name<T>(),
-                 DefaultGet<T>{t},
-                 InvalidSet<T>{},
-                 parse::NoParse<T, CharT>{},
-                 format::Format<T, CharT>{},
-                 validate::DefaultValidate<T>{},
-                 dtl::transform(t, std::forward<SubCommands>(cmds))...};
+                 t,
+                 dtl::DefaultGet<T>{t},
+                 format::Format<T, get_char_t<Name>>{},
+                 std::forward<SubCommands>(cmds)...);
   }
   /// @}
 
@@ -2716,9 +2655,10 @@ namespace cli::params {
   // template <SC Name, typename T, GetterOf<T> Get,
   //           parse::ParserOf<T, get_char_t<Name>> Parse,
   //           format::FormatterOf<T, get_char_t<Name>> Format,
-  //           Command... SubCommands>
+  //           concepts::Command... SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, T &t, Get &&get, Parse &&parse, Format
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Get &&get, Parse
+  // &&parse, Format
   // &&format,
   //                      SubCommands &&...cmds) {
   //   (void)name;
@@ -2751,9 +2691,11 @@ namespace cli::params {
   // template <SC Name, typename T, SetterOf<T> Set,
   //           parse::ParserOf<T, get_char_t<Name>> Parse,
   //           format::FormatterOf<T, get_char_t<Name>> Format,
-  //           validate::ValidatorOf<T> Validate, Command... SubCommands>
+  //           validate::ValidatorOf<T> Validate, concepts::Command...
+  //           SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, T &t, Set &&set, Parse &&parse, Format
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Set &&set, Parse
+  // &&parse, Format
   // &&format,
   //                      Validate &&validate, SubCommands &&...cmds) {
   //   (void)name;
@@ -2788,9 +2730,10 @@ namespace cli::params {
   // template <SC Name, typename T, SetterOf<T> Set,
   //           parse::ParserOf<T, get_char_t<Name>> Parse,
   //           format::FormatterOf<T, get_char_t<Name>> Format,
-  //           Command... SubCommands>
+  //           concepts::Command... SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, T &t, Set &&set, Parse &&parse, Format
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Set &&set, Parse
+  // &&parse, Format
   // &&format,
   //                      SubCommands &&...cmds) {
   //   (void)name;
@@ -2824,9 +2767,11 @@ namespace cli::params {
   //  */
   // template <SC Name, SC Description, typename T, GetterOf<T> Get, SetterOf<T>
   // Set,
-  //           validate::ValidatorOf<T> Validate, Command... SubCommands>
+  //           validate::ValidatorOf<T> Validate, concepts::Command...
+  //           SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, Description description, T &t, Set &&set,
+  // [[nodiscard]] constexpr auto param(Name name, Description description, T
+  // &t, Set &&set,
   //                      Validate &&validate, SubCommands &&...cmds) {
   //   (void)name;
   //   (void)description;
@@ -2860,9 +2805,10 @@ namespace cli::params {
   // template <SC Name, typename T,
   //           parse::ParserOf<T, get_char_t<Name>> Parse,
   //           format::FormatterOf<T, get_char_t<Name>> Format,
-  //           Command... SubCommands>
+  //           concepts::Command... SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, T &t, Parse &&parse, Format &&format,
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Parse &&parse, Format
+  // &&format,
   //                      SubCommands &&...cmds) {
   //   (void)name;
   //   using namespace dtl;
@@ -2899,9 +2845,11 @@ namespace cli::params {
   //  * @param cmds optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, SC Description, class T, Command... SubCommands>
+  // template <SC Name, SC Description, class T, concepts::Command...
+  // SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, Description description, T &t,
+  // [[nodiscard]] constexpr auto param(Name name, Description description, T
+  // &t,
   //                      SubCommands &&...cmds) {
   //   (void)name;
   //   (void)description;
@@ -2934,9 +2882,9 @@ namespace cli::params {
   //  * @return a Command
   //  */
   // template <SC Name, typename T, GetterOf<T> Get, SetterOf<T> Set,
-  //           Command... SubCommands>
+  //           concepts::Command... SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, T &t, Get &&get, Set &&set,
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Get &&get, Set &&set,
   //                      SubCommands &&...cmds) {
   //   (void)name;
   //   using namespace dtl;
@@ -2965,9 +2913,11 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T, SetterOf<T> Set, Command... SubCommands>
+  // template <SC Name, typename T, SetterOf<T> Set, concepts::Command...
+  // SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, T &t, Set &&set, SubCommands &&...cmds) {
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Set &&set, SubCommands
+  // &&...cmds) {
   //   (void)name;
   //   using namespace dtl;
   //   using Char = get_char_t<Name>;
@@ -2995,9 +2945,11 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T, GetterOf<T> Get, Command... SubCommands>
+  // template <SC Name, typename T, GetterOf<T> Get, concepts::Command...
+  // SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, T &t, Get &&get, SubCommands &&...cmds) {
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Get &&get, SubCommands
+  // &&...cmds) {
   //   (void)name;
   //   using namespace dtl;
   //   using Char = get_char_t<Name>;
@@ -3032,9 +2984,10 @@ namespace cli::params {
   //  * @param cmds optional subcommands
   //  * @return a Command
   //  */
-  // // template <SC Name, class T, Command... SubCommands>
+  // // template <SC Name, class T, concepts::Command... SubCommands>
   // //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // // constexpr auto param(Name name, T &t, SubCommands &&...cmds) {
+  // // [[nodiscard]] constexpr auto param(Name name, T &t, SubCommands
+  // &&...cmds) {
   // //   (void)name;
   // //   using namespace dtl;
   // //   return Param{
@@ -3077,8 +3030,9 @@ namespace cli::params {
   //  */
   // template <SC Name, SC Description, SC Type, Getter Get, Setter Set,
   //           parse::Parser Parse, format::Formatter Format,
-  //           validate::Validator Validate, Command... SubCommands>
-  // constexpr auto param(Name name, Description description, Type type, Get
+  //           validate::Validator Validate, concepts::Command... SubCommands>
+  // [[nodiscard]] constexpr auto param(Name name, Description description, Type
+  // type, Get
   // &&get,
   //                      Set &&set, Parse &&parse, Format &&format,
   //                      Validate &&validate, SubCommands &&...cmds) {
@@ -3116,7 +3070,7 @@ namespace cli::params {
   //  */
   // template <SC Name, class T, class... CommandOrMemberDataOrMemberFunction>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(Name name, T &obj,
+  // [[nodiscard]] constexpr auto param(Name name, T &obj,
   //                      CommandOrMemberDataOrMemberFunction &&...m) {
   //   (void)name;
   //   using namespace dtl;
@@ -3153,7 +3107,8 @@ namespace cli::params {
   //  */
   // template <SC Name, SC Description, class T,
   //           class... CommandOrMemberDataOrMemberFunction>
-  // constexpr auto param(Name name, Description description, T &obj,
+  // [[nodiscard]] constexpr auto param(Name name, Description description, T
+  // &obj,
   //                      CommandOrMemberDataOrMemberFunction &&...m) {
   //   (void)name;
   //   (void)description;
@@ -3194,7 +3149,8 @@ namespace cli::params {
   //  * @return a Command
   //  */
   // template <auto &Obj, class... CommandOrMemberDataOrMemberFunction>
-  // constexpr auto param(CommandOrMemberDataOrMemberFunction &&...m) {
+  // [[nodiscard]] constexpr auto param(CommandOrMemberDataOrMemberFunction
+  // &&...m) {
   //   using T = std::remove_cvref_t<decltype(Obj)>;
   //   return dtl::Param{
   //       ctti::object_name<Obj>(),
@@ -3234,7 +3190,7 @@ namespace cli::params {
   //  */
   // template <auto &Obj, SC Description,
   //           class... CommandOrMemberDataOrMemberFunction>
-  // constexpr auto param(Description description,
+  // [[nodiscard]] constexpr auto param(Description description,
   //                      CommandOrMemberDataOrMemberFunction &&...m) {
   //   (void)description;
   //   using namespace dtl;
@@ -3264,7 +3220,8 @@ namespace cli::params {
   // template <class T, CmdOrMemDataOrMemFun...
   // CommandOrMemberDataOrMemberFunction>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // constexpr auto param(T &obj, CommandOrMemberDataOrMemberFunction &&...m) {
+  // [[nodiscard]] constexpr auto param(T &obj,
+  // CommandOrMemberDataOrMemberFunction &&...m) {
   //   using namespace dtl;
   //   return Param{
   //       cli::to_lower(cli::ctti::name<std::remove_cvref_t<T>>()),
@@ -3340,15 +3297,15 @@ namespace cli::params {
     parse::ParserOf<mem_data_type<MemberPointer>, get_char_t<Name>> Parse,
     format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
     validate::ValidatorOf<mem_data_type<MemberPointer>> Validate,
-    Command... SubCommands>
+    concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
-  constexpr auto param(Name name,
-                       Description description,
-                       MemberPointer f,
-                       Parse &&parse,
-                       Format &&format,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     MemberPointer f,
+                                     Parse &&parse,
+                                     Format &&format,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) {
     (void)name;
     (void)description;
     using namespace dtl;
@@ -3381,14 +3338,14 @@ namespace cli::params {
     class MemberPointer,
     parse::ParserOf<mem_data_type<MemberPointer>, get_char_t<Name>> Parse,
     format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
-    Command... SubCommands>
+    concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
-  constexpr auto param(Name name,
-                       Description description,
-                       MemberPointer f,
-                       Parse &&parse,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     MemberPointer f,
+                                     Parse &&parse,
+                                     Format &&format,
+                                     SubCommands &&...cmds) {
     (void)name;
     (void)description;
     using namespace dtl;
@@ -3418,14 +3375,14 @@ namespace cli::params {
            SC Description,
            class MemberPointer,
            validate::ValidatorOf<mem_data_type<MemberPointer>> Validate,
-           Command... SubCommands>
+           concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
              validate::ValidatorOf<Validate, mem_data_type<MemberPointer>>
-  constexpr auto param(Name name,
-                       Description description,
-                       MemberPointer f,
-                       Validate &&validate,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     MemberPointer f,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) {
     (void)name;
     (void)description;
     using namespace dtl;
@@ -3459,12 +3416,15 @@ namespace cli::params {
    * cli::string_constant.
    * @param cmds the subcommands
    */
-  template<SC Name, SC Description, class MemberPointer, Command... SubCommands>
+  template<SC Name,
+           SC Description,
+           class MemberPointer,
+           concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
-  constexpr auto param(Name name,
-                       Description description,
-                       MemberPointer f,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     MemberPointer f,
+                                     SubCommands &&...cmds) {
     (void)name;
     (void)description;
     using namespace dtl;
@@ -3508,9 +3468,10 @@ namespace cli::params {
    * @param f member data pointer
    * @param cmds the subcommands
    */
-  template<SC Name, class MemberPointer, Command... SubCommands>
+  template<SC Name, class MemberPointer, concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
-  constexpr auto param(Name name, MemberPointer f, SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto
+  param(Name name, MemberPointer f, SubCommands &&...cmds) {
     (void)name;
     using namespace dtl;
     return param(Name{},
@@ -3536,10 +3497,11 @@ namespace cli::params {
    * cli::string_constant.
    * @param cmds the subcommands
    */
-  template<auto MemberPointer, SC Description, Command... SubCommands>
+  template<auto MemberPointer, SC Description, concepts::Command... SubCommands>
     requires std::is_member_pointer_v<
       std::remove_cvref_t<decltype(MemberPointer)>>
-  constexpr auto param(Description description, SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Description description,
+                                     SubCommands &&...cmds) {
     (void)description;
     using namespace dtl;
     return param(
@@ -3564,10 +3526,10 @@ namespace cli::params {
    * @tparam MemberPointer member data pointer
    * @param cmds the subcommands
    */
-  template<auto MemberPointer, Command... SubCommands>
+  template<auto MemberPointer, concepts::Command... SubCommands>
     requires std::is_member_pointer_v<
       std::remove_cvref_t<decltype(MemberPointer)>>
-  constexpr auto param(SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(SubCommands &&...cmds) {
     using namespace dtl;
     return param<MemberPointer>(NoDescription<char>{},
                                 std::forward<SubCommands>(cmds)...);
@@ -3631,13 +3593,13 @@ namespace cli::params {
     SC Description,
     class MemberPointer,
     format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
-    Command... SubCommands>
+    concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
-  constexpr auto param(Name name,
-                       Description description,
-                       MemberPointer f,
-                       Format &&format,
-                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     MemberPointer f,
+                                     Format &&format,
+                                     SubCommands &&...cmds) {
     (void)name;
     (void)description;
     using namespace dtl;

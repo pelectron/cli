@@ -1,3 +1,5 @@
+docs/
+subprojects/
 subprojects/cpp-terminal
 subprojects/gcem
 subprojects/tl-expected.wrap

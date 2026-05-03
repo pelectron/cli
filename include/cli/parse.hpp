@@ -378,10 +378,9 @@ namespace cli::parse {
    * @tparam CharT the character type
    */
   template<class P, class T, typename CharT>
-  concept ParserOf =
-    requires(std::remove_cvref_t<P> &parse, View<const CharT> str) {
-      { parse(str) } -> std::same_as<ParseResult<T, CharT>>;
-    };
+  concept ParserOf = requires(std::decay_t<P> parse, View<const CharT> str) {
+    { parse(str) } -> std::same_as<ParseResult<T, CharT>>;
+  };
 
   /**
    * A parser turns a string into a T. It is a callable that takes a
@@ -418,6 +417,20 @@ namespace cli::parse {
   constexpr View<CharT> skip_ws(View<CharT> str) {
     return str.substr(str.find_first_not_of(" \n\r\t\v\f"));
   }
+
+  template<typename CharT>
+  constexpr View<CharT> trim_ws(View<CharT> str) {
+    View s = skip_ws(str);
+    std::size_t idx = s.find_last_not_of(" \n\r\t\v\f");
+    if (idx == View<CharT>::npos)
+      return s;
+    return s.substr(0, idx + 1);
+  }
+
+  static_assert(trim_ws(View{" hello "}) == "hello");
+  static_assert(trim_ws(View{" hello"}) == "hello");
+  static_assert(trim_ws(View{"hello "}) == "hello");
+  static_assert(trim_ws(View{"hello"}) == "hello");
 
   /**
    * A parser for integers.

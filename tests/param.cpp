@@ -1,5 +1,4 @@
-#include "catch2/catch_test_macros.hpp"
-#include "cli/cli.hpp"
+#include "cli.hpp"
 #include "cli/enums.hpp"
 #include "cli/format.hpp"
 #include "cli/parse.hpp"

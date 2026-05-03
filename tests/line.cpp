@@ -1,0 +1,819 @@
+#include "cli/line.hpp"
+#include "cli/concepts.hpp"
+#include "cli/enums.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+#include <vector>
+
+struct Display {
+  std::size_t cursor = 0;
+  std::string data{};
+  std::vector<std::string> past;
+
+  cli::Error write(char c) {
+    data.insert(data.begin() + cursor, c);
+    ++cursor;
+    data.erase(data.begin() + cursor);
+    return cli::Error::none;
+  }
+
+  cli::Error write(cli::View<const char> s) {
+    const std::size_t size = data.size();
+    for (const char &ch : s) {
+      data.insert(data.begin() + cursor, ch);
+      ++cursor;
+    }
+    if (cursor != data.size())
+      data.erase(cursor, s.size());
+    return cli::Error::none;
+  }
+
+  cli::Error backspace(std::size_t n) {
+    data.erase(data.begin() + (n >= cursor ? 0 : cursor - n),
+               data.begin() + cursor);
+    if (n >= cursor)
+      cursor = 0;
+    else
+      cursor -= n;
+    return cli::Error::none;
+  }
+
+  cli::Error clear_line() {
+    data.clear();
+    cursor = 0;
+    return cli::Error::none;
+  }
+
+  cli::Error clear_screen() {
+    data.clear();
+    cursor = 0;
+    return cli::Error::none;
+  }
+
+  cli::Error newline() {
+    past.push_back(std::move(data));
+    cursor = 0;
+    return cli::Error::none;
+  }
+
+  constexpr cli::Error delete_char() {
+    data.erase(data.begin() + cursor);
+    return cli::Error::none;
+  }
+
+  constexpr cli::Error clear_line_to_end() {
+    data.erase(data.begin() + cursor, data.end());
+    return cli::Error::none;
+  }
+
+  constexpr cli::Error clear_line_to_begin() {
+    data.erase(data.begin(), data.begin() + cursor);
+    cursor = 0;
+    return cli::Error::none;
+  }
+
+  constexpr cli::Error cursor_left(std::size_t n) {
+    if (n >= cursor)
+      n = cursor;
+    cursor -= n;
+    return cli::Error::none;
+  }
+
+  constexpr cli::Error cursor_right(std::size_t n) {
+    if (n + cursor > data.size())
+      n = data.size() - cursor;
+    cursor += n;
+    return cli::Error::none;
+  }
+};
+
+TEST_CASE("Display") {
+  Display d;
+  d.data = "hello world";
+  SECTION("cursor left") {
+    d.cursor_left(1);
+    REQUIRE(d.cursor == 0);
+    d.cursor = 5;
+    d.cursor_left(4);
+    REQUIRE(d.cursor == 1);
+  }
+  SECTION("cursor right") {
+    d.cursor_right(1);
+    REQUIRE(d.cursor == 1);
+    d.cursor = d.data.size() + 5;
+    d.cursor_right(d.data.size() + 5);
+    REQUIRE(d.cursor == d.data.size());
+  }
+  SECTION("clear to begin") {
+    d.cursor = 5;
+    d.clear_line_to_begin();
+    REQUIRE(d.data == " world");
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("clear to end") {
+    d.cursor = 5;
+    d.clear_line_to_end();
+    REQUIRE(d.data == "hello");
+    REQUIRE(d.cursor == 5);
+  }
+  SECTION("delete char") {
+    d.cursor = 5;
+    d.delete_char();
+    REQUIRE(d.data == "helloworld");
+    REQUIRE(d.cursor == 5);
+  }
+  SECTION("clear") {
+    d.clear_line();
+    REQUIRE(d.data == "");
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("backspace") {
+    d.cursor = 5;
+    d.backspace(1);
+    REQUIRE(d.data == "hell world");
+    REQUIRE(d.cursor == 4);
+    d.backspace(10);
+    REQUIRE(d.cursor == 0);
+    REQUIRE(d.data == " world");
+  }
+  SECTION("write") {
+    d.cursor = d.data.size();
+    d.write('1');
+    REQUIRE(d.cursor == d.data.size());
+    REQUIRE(d.data == "hello world1");
+
+    d.cursor = 5;
+    d.write('1');
+    REQUIRE(d.cursor == 6);
+    REQUIRE(d.data == "hello1world1");
+
+    d.data = "hello world";
+    d.cursor = d.data.size();
+    d.write("12");
+    REQUIRE(d.cursor == d.data.size());
+    REQUIRE(d.data == "hello world12");
+
+    d.cursor = 5;
+    d.write("12");
+    REQUIRE(d.cursor == 7);
+    REQUIRE(d.data == "hello12orld12");
+  }
+}
+
+struct NoCursor_NoAutocomplete {
+  using char_type = char;
+  static constexpr char access_separator = '.';
+  static constexpr bool use_cursor = false;
+  static constexpr bool use_autocomplete = false;
+  static constexpr std::size_t max_line_length = 32;
+};
+
+struct NoCursor_Autocomplete {
+  using char_type = char;
+  static constexpr char access_separator = '.';
+  static constexpr bool use_cursor = false;
+  static constexpr bool use_autocomplete = true;
+  static constexpr std::size_t max_line_length = 32;
+};
+
+struct Cursor_NoAutocomplete {
+  using char_type = char;
+  static constexpr char access_separator = '.';
+  static constexpr bool use_cursor = true;
+  static constexpr bool use_autocomplete = false;
+  static constexpr std::size_t max_line_length = 32;
+};
+
+struct Cursor_Autocomplete {
+  using char_type = char;
+  static constexpr char access_separator = '.';
+  static constexpr bool use_cursor = true;
+  static constexpr bool use_autocomplete = true;
+  static constexpr std::size_t max_line_length = 32;
+};
+
+static_assert(cli::concepts::DisplayWithoutCursor<Display, char>);
+static_assert(cli::concepts::DisplayWithCursor<Display, char>);
+static_assert(cli::concepts::Display<Display, char>);
+
+#define DEFINE_COMMANDS()                                                      \
+  cli::CommandNode<char> root;                                                 \
+  cli::CommandNode<char> c1{.name = "c1", .description = {}};                  \
+  cli::CommandNode<char> c2{.name = "c2", .description = {}};                  \
+  cli::CommandNode<char> c3{.name = "c3", .description = {}};                  \
+  cli::CommandNode<char> c4{.name = "c4long", .description = {}};              \
+  cli::CommandNode<char> c5{.name = "c5long", .description = {}};              \
+  root.add_sub(c1);                                                            \
+  root.add_sub(c2);                                                            \
+  c2.add_sub(c3);                                                              \
+  root.add_sub(c4);                                                            \
+  c4.add_sub(c5)
+
+TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
+  DEFINE_COMMANDS();
+  Display d;
+  cli::Line<NoCursor_NoAutocomplete, Display> line(root, d);
+  REQUIRE(line.on_char('c') == cli::Error::none);
+  REQUIRE(line.on_char('1') == cli::Error::none);
+  REQUIRE(line.view() == "c1");
+  REQUIRE(line.on_char('.') == cli::Error::none);
+  REQUIRE(line.on_char('c') == cli::Error::none);
+  REQUIRE(line.on_char('2') == cli::Error::none);
+  REQUIRE(line.view() == "c1.c2");
+  SECTION("backspace(1)") {
+    line.on_backspace(1);
+    REQUIRE(line.view() == "c1.c");
+    line.on_backspace(4);
+    REQUIRE(line.view().size() == 0);
+  }
+  SECTION("backspace(2)") {
+    line.on_backspace(2);
+    REQUIRE(line.view() == "c1.");
+    line.on_backspace(3);
+    REQUIRE(line.view().size() == 0);
+  }
+  SECTION("autocomplete") {
+    line.set_data("c1.c2");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+  }
+  SECTION("clear") {
+    line.clear();
+    REQUIRE(line.view().size() == 0);
+  }
+  // TODO: execute
+}
+
+TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
+  DEFINE_COMMANDS();
+  Display d;
+  cli::Line<NoCursor_Autocomplete, Display> line(root, d);
+  REQUIRE(line.on_char('a') == cli::Error::none);
+  REQUIRE(line.view().size() == 0);
+  REQUIRE(d.data.empty());
+  SECTION("on_char no subcommands") {
+    REQUIRE(line.on_char('c') == cli::Error::none);
+    REQUIRE(line.on_char('1') == cli::Error::none);
+    REQUIRE(line.view() == "c1");
+    REQUIRE(d.data == "c1");
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.view() == "c1");
+    REQUIRE(d.data == "c1");
+  }
+  SECTION("autocomplete with empty line") {
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c1");
+    REQUIRE(d.data == "c1");
+  }
+  SECTION("correct set_data without subcommands") {
+    REQUIRE(line.set_data("c1") == cli::Error::none);
+    REQUIRE(d.data == "c1");
+    REQUIRE(line.set_data("c1 args") == cli::Error::none);
+    REQUIRE(d.data == "c1 args");
+  }
+  SECTION("incorrect set_data without subcommands") {
+    REQUIRE_FALSE(line.set_data("c1.") == cli::Error::none);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c1. args") == cli::Error::none);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c3") == cli::Error::none);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c3 args") == cli::Error::none);
+    REQUIRE(d.data.empty());
+  }
+  SECTION("correct set_data with subcommands") {
+    REQUIRE(line.set_data("c2") == cli::Error::none);
+    REQUIRE(line.view() == "c2");
+    REQUIRE(d.data == "c2");
+    REQUIRE(line.set_data("c2 args") == cli::Error::none);
+    REQUIRE(line.view() == "c2 args");
+    REQUIRE(d.data == "c2 args");
+    REQUIRE(line.set_data("c2.") == cli::Error::none);
+    REQUIRE(line.view() == "c2.");
+    REQUIRE(d.data == "c2.");
+    REQUIRE(line.set_data("c2.c") == cli::Error::none);
+    REQUIRE(line.view() == "c2.c");
+    REQUIRE(d.data == "c2.c");
+    REQUIRE(line.set_data("c2.c3") == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3");
+    REQUIRE(d.data == "c2.c3");
+    REQUIRE(line.set_data("c2.c3 args") == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3 args");
+    REQUIRE(d.data == "c2.c3 args");
+  }
+  SECTION("incorrect set_data with subcommands") {
+    REQUIRE_FALSE(line.set_data("c3") == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c2. args") == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c3 args") == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c2.c4") == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c2.c4 args") == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c2.c3.") == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE_FALSE(line.set_data("c2.c3. args") == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+  }
+  SECTION("autocomplete without subcommands") {
+    REQUIRE(line.set_data("c1") == cli::Error::none);
+    REQUIRE(d.data == "c1");
+    REQUIRE(d.cursor == 2);
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c1");
+    REQUIRE(d.data == "c1");
+    REQUIRE(d.cursor == 2);
+  }
+  SECTION("autocomplete with subcommands with starting character") {
+    line.set_data("c2");
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.on_char('c') == cli::Error::none);
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3");
+    REQUIRE(d.data == "c2.c3");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3");
+    REQUIRE(d.data == "c2.c3");
+  }
+  SECTION("autocomplete with full name") {
+    line.set_data("c2");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.");
+    REQUIRE(d.data == "c2.");
+  }
+  SECTION("autocomplete with full name and separator") {
+    line.set_data("c2.");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3");
+    REQUIRE(d.data == "c2.c3");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3");
+    REQUIRE(d.data == "c2.c3");
+  }
+  SECTION("autocomplete with full name and separator") {
+    line.set_data("c2.c");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3");
+    REQUIRE(d.data == "c2.c3");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3");
+    REQUIRE(d.data == "c2.c3");
+  }
+  line.clear();
+}
+
+TEST_CASE("cli::Line<Cursor, NoAutocomplete>") {
+  DEFINE_COMMANDS();
+  Display d;
+  cli::Line<Cursor_NoAutocomplete, Display> line(root, d);
+  SECTION("on_char cursor at the end") {
+    REQUIRE(line.on_char('c') == cli::Error::none);
+    REQUIRE(line.on_char('1') == cli::Error::none);
+    REQUIRE(line.view() == "c1");
+    REQUIRE(d.data == "c1");
+    REQUIRE(d.cursor == 2);
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.on_char('c') == cli::Error::none);
+    REQUIRE(line.on_char('2') == cli::Error::none);
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 5);
+  }
+  SECTION("on_char cursor in the middle") {
+    line.set_data("c1.c2");
+    REQUIRE(d.cursor == 5);
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+
+    REQUIRE(line.on_cursor_right(1) == cli::Error::none);
+    REQUIRE(d.cursor == d.data.size());
+
+    REQUIRE(line.on_cursor_left(1) == cli::Error::none);
+    REQUIRE(d.cursor == 4);
+
+    REQUIRE(line.on_char('b') == cli::Error::none);
+    REQUIRE(line.view() == "c1.cb2");
+    REQUIRE(d.data == "c1.cb2");
+    REQUIRE(d.cursor == 5);
+
+    REQUIRE(line.on_char('a') == cli::Error::none);
+    REQUIRE(line.view() == "c1.cba2");
+    REQUIRE(d.data == "c1.cba2");
+    REQUIRE(line.on_cursor_left(6) == cli::Error::none);
+    REQUIRE(line.on_char('x') == cli::Error::none);
+    REQUIRE(line.view() == "xc1.cba2");
+    REQUIRE(line.on_cursor_left(1) == cli::Error::none);
+    REQUIRE(line.on_cursor_left(5) == cli::Error::none);
+    REQUIRE(d.data == "xc1.cba2");
+  }
+  SECTION("backspace at the end") {
+    line.set_data("c1.c2");
+    line.on_backspace();
+    REQUIRE(line.view() == "c1.c");
+    REQUIRE(d.data == "c1.c");
+
+    line.on_backspace(4);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+
+    line.on_backspace(4);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+  }
+  SECTION("backspace in the middle") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(1);
+    line.on_backspace();
+    REQUIRE(d.cursor == 3);
+    REQUIRE(line.view() == "c1.2");
+    REQUIRE(d.data == "c1.2");
+
+    line.on_backspace(3);
+    REQUIRE(line.view() == "2");
+    REQUIRE(d.data == "2");
+  }
+  SECTION("backspace at the beginning") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(5);
+    line.on_backspace();
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 0);
+    line.on_cursor_right(1);
+    line.on_backspace(2);
+    REQUIRE(line.view() == "1.c2");
+    REQUIRE(d.data == "1.c2");
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("delete_char at the end") {
+    line.set_data("c1.c2");
+    line.on_delete_char();
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 5);
+  }
+  SECTION("delete_char in the middle") {
+    line.set_data("c1.c2");
+    REQUIRE(d.cursor == 5);
+    line.on_cursor_left(1);
+    line.on_delete_char();
+    REQUIRE(line.view() == "c1.c");
+    REQUIRE(d.data == "c1.c");
+    REQUIRE(d.cursor == 4);
+    line.on_cursor_left(2);
+    line.on_delete_char();
+    line.on_delete_char();
+    REQUIRE(line.view() == "c1");
+    REQUIRE(d.data == "c1");
+    REQUIRE(d.cursor == 2);
+    line.set_data("c1.c2");
+    line.on_cursor_left(3);
+    line.on_delete_char();
+    line.on_delete_char();
+    REQUIRE(line.view() == "c12");
+    REQUIRE(d.data == "c12");
+  }
+  SECTION("delete_char at the beginning") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(5);
+    line.on_delete_char();
+    REQUIRE(line.view() == "1.c2");
+    REQUIRE(d.data == "1.c2");
+    REQUIRE(d.cursor == 0);
+    for (auto i = 0; i < 10; ++i)
+      line.on_delete_char();
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE(d.cursor == 0);
+  }
+}
+
+TEST_CASE("cli::Line<Cursor, Autocomplete>") {
+  DEFINE_COMMANDS();
+  Display d;
+  cli::Line<Cursor_Autocomplete, Display> line(root, d);
+  SECTION("on_char cursor at the end") {
+    REQUIRE(line.on_char('c') == cli::Error::none);
+    REQUIRE(line.on_char('1') == cli::Error::none);
+    REQUIRE(line.view() == "c1");
+    REQUIRE(d.data == "c1");
+    REQUIRE(d.cursor == 2);
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.on_char('c') == cli::Error::none);
+    REQUIRE(line.on_char('2') == cli::Error::none);
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 5);
+  }
+  SECTION("on_char cursor in the middle") {
+    line.set_data("c1.c2");
+    REQUIRE(d.cursor == 5);
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+
+    REQUIRE(line.on_cursor_right(1) == cli::Error::none);
+    REQUIRE(d.cursor == d.data.size());
+
+    REQUIRE(line.on_cursor_left(1) == cli::Error::none);
+    REQUIRE(d.cursor == 4);
+
+    REQUIRE(line.on_char('b') == cli::Error::none);
+    REQUIRE(line.view() == "c1.cb2");
+    REQUIRE(d.data == "c1.cb2");
+    REQUIRE(d.cursor == 5);
+
+    REQUIRE(line.on_char('a') == cli::Error::none);
+    REQUIRE(line.view() == "c1.cba2");
+    REQUIRE(d.data == "c1.cba2");
+    REQUIRE(line.on_cursor_left(6) == cli::Error::none);
+    REQUIRE(line.on_char('x') == cli::Error::none);
+    REQUIRE(line.view() == "xc1.cba2");
+    REQUIRE(line.on_cursor_left(1) == cli::Error::none);
+    REQUIRE(line.on_cursor_left(5) == cli::Error::none);
+    REQUIRE(d.data == "xc1.cba2");
+  }
+  SECTION("backspace at the end") {
+    line.set_data("c1.c2");
+    line.on_backspace();
+    REQUIRE(line.view() == "c1.c");
+    REQUIRE(d.data == "c1.c");
+
+    line.on_backspace(4);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+
+    line.on_backspace(4);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+  }
+  SECTION("backspace in the middle") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(1);
+    line.on_backspace();
+    REQUIRE(d.cursor == 3);
+    REQUIRE(line.view() == "c1.2");
+    REQUIRE(d.data == "c1.2");
+
+    line.on_backspace(3);
+    REQUIRE(line.view() == "2");
+    REQUIRE(d.data == "2");
+  }
+  SECTION("backspace at the beginning") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(5);
+    line.on_backspace();
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 0);
+    line.on_cursor_right(1);
+    line.on_backspace(2);
+    REQUIRE(line.view() == "1.c2");
+    REQUIRE(d.data == "1.c2");
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("delete_char at the end") {
+    line.set_data("c1.c2");
+    line.on_delete_char();
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 5);
+  }
+  SECTION("delete_char in the middle") {
+    line.set_data("c1.c2");
+    REQUIRE(d.cursor == 5);
+    line.on_cursor_left(1);
+    line.on_delete_char();
+    REQUIRE(line.view() == "c1.c");
+    REQUIRE(d.data == "c1.c");
+    REQUIRE(d.cursor == 4);
+    line.on_cursor_left(2);
+    line.on_delete_char();
+    line.on_delete_char();
+    REQUIRE(line.view() == "c1");
+    REQUIRE(d.data == "c1");
+    REQUIRE(d.cursor == 2);
+    line.set_data("c1.c2");
+    line.on_cursor_left(3);
+    line.on_delete_char();
+    line.on_delete_char();
+    REQUIRE(line.view() == "c12");
+    REQUIRE(d.data == "c12");
+  }
+  SECTION("delete_char at the beginning") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(5);
+    line.on_delete_char();
+    REQUIRE(line.view() == "1.c2");
+    REQUIRE(d.data == "1.c2");
+    REQUIRE(d.cursor == 0);
+    for (auto i = 0; i < 10; ++i)
+      line.on_delete_char();
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("autocomplete at end") {
+    SECTION("autocomplete with empty line") {
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c1");
+      REQUIRE(d.data == "c1");
+      REQUIRE(d.cursor == 2);
+    }
+    SECTION("autocomplete at end of command") {
+      line.set_data("c1.c2");
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c1.c2");
+      REQUIRE(d.data == "c1.c2");
+      REQUIRE(d.cursor == d.data.size());
+
+      line.set_data("c1.c2 args");
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c1.c2 args");
+      REQUIRE(d.data == "c1.c2 args");
+      REQUIRE(d.cursor == d.data.size());
+
+      line.set_data("c4");
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c4long");
+      REQUIRE(d.data == "c4long");
+      REQUIRE(d.cursor == d.data.size());
+
+      line.set_data("c4long");
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c4long.");
+      REQUIRE(d.data == "c4long.");
+      REQUIRE(d.cursor == d.data.size());
+
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c4long.c5long");
+      REQUIRE(d.data == "c4long.c5long");
+      REQUIRE(d.cursor == d.data.size());
+
+      line.set_data("c4 args");
+      line.on_cursor_left(5);
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c4long args");
+      REQUIRE(d.data == "c4long args");
+      REQUIRE(d.cursor == 6);
+
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c4long. args");
+      REQUIRE(d.data == "c4long. args");
+      REQUIRE(d.cursor == 7);
+
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c4long.c5long args");
+      REQUIRE(d.data == "c4long.c5long args");
+      REQUIRE(d.cursor == 13);
+
+      REQUIRE(line.set_data("c1") == cli::Error::none);
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c1");
+      REQUIRE(d.data == "c1");
+      REQUIRE(d.cursor == d.data.size());
+
+      REQUIRE(line.set_data("c1 args") == cli::Error::none);
+      line.on_cursor_left(5);
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "c1 args");
+      REQUIRE(d.data == "c1 args");
+      REQUIRE(d.cursor == 2);
+    }
+  }
+  SECTION("autocomplete in the middle") {
+    SECTION("no args") {
+      SECTION("on separator with partial name") {
+        line.set_data("c.c3");
+        line.on_cursor_left(3);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c1.c3");
+        REQUIRE(d.data == "c1.c3");
+        REQUIRE(d.cursor == 2);
+
+        line.set_data("c4l.");
+        line.on_cursor_left(1);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.");
+        REQUIRE(d.data == "c4long.");
+        REQUIRE(d.cursor == d.data.size() - 1);
+
+        line.set_data("c4long.c");
+        line.on_cursor_left(2);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c");
+        REQUIRE(d.data == "c4long.c");
+        REQUIRE(d.cursor == d.data.size() - 1);
+      }
+      SECTION("on separator with full name") {
+        line.set_data("c2.c3");
+        line.on_cursor_left(3);
+        REQUIRE(d.cursor == 2);
+
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c2.c3");
+        REQUIRE(d.data == "c2.c3");
+        REQUIRE(d.cursor == 3);
+
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c2.c3");
+        REQUIRE(d.data == "c2.c3");
+        REQUIRE(d.cursor == 5);
+
+        line.set_data("c4long.c5long");
+        line.on_cursor_left(7);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long");
+        REQUIRE(d.data == "c4long.c5long");
+        REQUIRE(d.cursor == 7);
+
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long");
+        REQUIRE(d.data == "c4long.c5long");
+        REQUIRE(d.cursor == d.data.size());
+      }
+      SECTION("not on separator at beginning") {
+        line.set_data("c4long.c5long");
+        line.on_cursor_left(13);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long");
+        REQUIRE(d.data == "c4long.c5long");
+        REQUIRE(d.cursor == 6);
+      }
+      SECTION("not on separator in middle") {
+        line.set_data("c4long.c5long");
+        line.on_cursor_left(10);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long");
+        REQUIRE(d.data == "c4long.c5long");
+        REQUIRE(d.cursor == 6);
+      }
+    }
+    SECTION("with args") {
+      SECTION("no subcommands") {
+        line.set_data(" args");
+        line.on_cursor_left(5);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c1 args");
+        REQUIRE(d.data == "c1 args");
+        REQUIRE(d.cursor == 2);
+      }
+      SECTION("on separator with partial name") {
+        line.set_data("c.c3 args");
+        line.on_cursor_left(8);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c1.c3 args");
+        REQUIRE(d.data == "c1.c3 args");
+        REQUIRE(d.cursor == 2);
+
+        line.set_data("c4l. args");
+        line.on_cursor_left(6);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long. args");
+        REQUIRE(d.data == "c4long. args");
+        REQUIRE(d.cursor == 6);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long. args");
+        REQUIRE(d.data == "c4long. args");
+        REQUIRE(d.cursor == 7);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long args");
+        REQUIRE(d.data == "c4long.c5long args");
+        REQUIRE(d.cursor == 13);
+      }
+      SECTION("on separator with full name") {
+        line.set_data("c2.c3 args");
+        line.on_cursor_left(8);
+        REQUIRE(d.cursor == 2);
+
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c2.c3 args");
+        REQUIRE(d.data == "c2.c3 args");
+        REQUIRE(d.cursor == 3);
+
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c2.c3 args");
+        REQUIRE(d.data == "c2.c3 args");
+        REQUIRE(d.cursor == 5);
+
+        line.set_data("c4long.c5long args");
+        line.on_cursor_left(12);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long args");
+        REQUIRE(d.data == "c4long.c5long args");
+        REQUIRE(d.cursor == 7);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long args");
+        REQUIRE(d.data == "c4long.c5long args");
+        REQUIRE(d.cursor == 13);
+      }
+    }
+  }
+}

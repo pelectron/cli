@@ -1,3 +1,9 @@
+/**
+ * @file cli/ctti.hpp
+ * @brief This file contains compile time type nfromation utilities.
+ * @defgroup ctti Compile Time Type Information
+ */
+
 #ifndef CLI_CTTI_HPP
 #define CLI_CTTI_HPP
 
@@ -41,9 +47,10 @@
 namespace cli::ctti {
 
   /**
-   * a name value pair used for constrcuting an agregate from a tuple /
+   * a name value pair used for constructing an agregate from a tuple /
    * deconstructing an aggregate into a tuple
    *
+   * @ingroup ctti
    * @tparam Name the name of the field
    * @tparam T the field's type
    */
@@ -1576,8 +1583,9 @@ namespace cli::ctti {
   } // namespace dtl
 
   /**
-   * get the name of T as a string_constant
+   * type alias for the name of T as a string_constant
    *
+   * @ingroup ctti
    * @tparam T the type to get the name of
    * @tparam CharT the character type of the string_constant
    */
@@ -1587,6 +1595,7 @@ namespace cli::ctti {
   /**
    * get the name of T as a string_constant
    *
+   * @ingroup ctti
    * @tparam T the type to get the name of
    * @tparam CharT the character type of the returned string_constant
    */
@@ -1598,6 +1607,7 @@ namespace cli::ctti {
   /**
    * get the name of a value as a string_constant
    *
+   * @ingroup ctti
    * @tparam V the value
    * @tparam CharT the character type of the returned string_constant
    */
@@ -1609,6 +1619,7 @@ namespace cli::ctti {
   /**
    * get the name of a variable as a string_constant
    *
+   * @ingroup ctti
    * @tparam V the variable
    * @tparam CharT the character type of the returned string_constant
    */
@@ -1620,6 +1631,7 @@ namespace cli::ctti {
   /**
    * get the name of an enum value
    *
+   * @ingroup ctti
    * @tparam E the enums type
    * @tparam CharT the character type to use
    * @param value the enum value
@@ -1648,6 +1660,7 @@ namespace cli::ctti {
   /**
    * get the name of an enum value
    *
+   * @ingroup ctti
    * @tparam E the enums type
    * @tparam CharT the character type to use
    * @param value the enum value
@@ -1672,13 +1685,26 @@ namespace cli::ctti {
                            'n'>{};
   }
 
+  /**
+   * @brief
+   *
+   * @ingroup ctti
+   * @tparam T
+   */
   template<class T>
     requires std::is_aggregate_v<T>
   struct StructInfo {
-    /// a type list of FieldInfo :TypeList<FieldInfo...>
+    /// a type list of FieldInfo, i.e. TypeList<FieldInfo...>
     using fields = decltype(::cli::ctti::dtl::to_tuple(std::declval<T>()));
   };
 
+  /**
+   * @brief
+   *
+   * @ingroup ctti
+   * @tparam T
+   * @tparam CharT the charcter type to use for names
+   */
   template<class T, typename CharT = char>
   struct TypeInfo {
     using type = T;
@@ -1687,6 +1713,13 @@ namespace cli::ctti {
     using field_tuple = std::tuple<>;
   };
 
+  /**
+   * @brief
+   *
+   * @ingroup ctti
+   * @tparam T
+   * @tparam CharT the charcter type to use for names
+   */
   template<class T, typename CharT>
     requires std::is_aggregate_v<std::remove_cvref_t<T>>
   struct TypeInfo<T, CharT> {
@@ -1709,8 +1742,9 @@ namespace cli::ctti {
     }(std::make_index_sequence<::cli::ctti::dtl::num_members<T>()>()));
 
   /**
-   * deconstructs a T into a tuple of Fields
+   * deconstructs a T into a tuple of ctti::Fields
    *
+   * @ingroup ctti
    * @tparam T
    * @param t
    * @return
@@ -1723,8 +1757,9 @@ namespace cli::ctti {
   }
 
   /**
-   * converts a tuple of Fields into a T
+   * converts a tuple of ctti::Fields into a T
    *
+   * @ingroup ctti
    * @tparam T
    * @param tuple
    * @return

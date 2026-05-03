@@ -2,3 +2,4 @@ option('tests', type: 'feature', value: 'auto', description: 'enable building th
 option('examples', type: 'feature', value: 'auto', description: 'enable building the examples')
 option('sim', type: 'feature', value: 'auto', description: 'enable simulation')
 option('docs', type: 'boolean', value: false, description: 'set to true to build documentation')
+option('cli-term', type: 'feature', value: 'auto', description: 'set to true to build cli-term')

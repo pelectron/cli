@@ -19,6 +19,7 @@
 #else
 #define CLI_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
+
 namespace cli {
   template<class>
   inline constexpr bool always_false = false;
@@ -111,7 +112,7 @@ namespace cli {
     static constexpr std::size_t value = 1;
   };
 
-  template<Command C>
+  template<concepts::Command C>
   inline constexpr std::size_t num_cmds_v =
     num_cmds<C, typename C::sub_command_list>::value;
 
@@ -129,7 +130,7 @@ namespace cli {
     static constexpr std::size_t value = 0;
   };
 
-  template<Command C>
+  template<concepts::Command C>
   inline constexpr std::size_t num_levels_v =
     num_cmds<C, typename C::sub_command_list>::value;
 
@@ -146,7 +147,7 @@ namespace cli {
     static constexpr std::size_t value = T::name.size();
   };
 
-  template<Command C>
+  template<concepts::Command C>
   inline constexpr std::size_t max_name_length_v =
     max_name_length<C, typename C::sub_command_list>::value;
 

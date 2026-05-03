@@ -21,6 +21,7 @@
 #include "cli/enums.hpp"
 #include "cli/format.hpp"
 #include "cli/parse.hpp"
+#include "cli/string.hpp"
 #include "cli/type_list.hpp"
 #include "cli/util.hpp"
 #include "cli/validator.hpp"
@@ -96,8 +97,8 @@ namespace cli::funcs {
                                           Description,
                                           T,
                                           DefaultValue,
-                                          std::remove_cvref_t<Parse>,
-                                          std::remove_cvref_t<Validate>>;
+                                          std::decay_t<Parse>,
+                                          std::decay_t<Validate>>;
 
   template<SC Name,
            SC Description,
@@ -109,8 +110,8 @@ namespace cli::funcs {
                    Description,
                    parse::value_type_t<typename Name::char_type, Parse>,
                    DefaultValue,
-                   std::remove_cvref_t<Parse>,
-                   std::remove_cvref_t<Validate>>;
+                   std::decay_t<Parse>,
+                   std::decay_t<Validate>>;
 
   template<SC Name,
            SC Description,
@@ -121,8 +122,8 @@ namespace cli::funcs {
                    Description,
                    parse::value_type_t<typename Name::char_type, Parse>,
                    parse::value_type_t<typename Name::char_type, Parse>{},
-                   std::remove_cvref_t<Parse>,
-                   std::remove_cvref_t<Validate>>;
+                   std::decay_t<Parse>,
+                   std::decay_t<Validate>>;
 
   template<SC Name,
            SC Description,
@@ -163,8 +164,8 @@ namespace cli::funcs {
     -> FunctionArgWithoutDefault<Name,
                                  Description,
                                  T,
-                                 std::remove_cvref_t<Parse>,
-                                 std::remove_cvref_t<Validate>>;
+                                 std::decay_t<Parse>,
+                                 std::decay_t<Validate>>;
 
   template<SC Name,
            SC Description,
@@ -175,8 +176,8 @@ namespace cli::funcs {
       Name,
       Description,
       parse::value_type_t<typename Name::char_type, Parse>,
-      std::remove_cvref_t<Parse>,
-      std::remove_cvref_t<Validate>>;
+      std::decay_t<Parse>,
+      std::decay_t<Validate>>;
 
   template<SC Name, SC Description>
   struct UndeducedArg {
@@ -236,7 +237,7 @@ namespace cli::funcs {
                     std::is_same_v<D, NoDescription<typename N::char_type>>)
         return FunctionArgWithoutDefault{
           N{},
-          cli::ctti::name<type>(),
+          cli::ctti::name<type, typename N::char_type>(),
           identity<type>{},
           parse::Parse<type, typename N::char_type>{},
           validate::DefaultValidate<type>{}};
@@ -264,7 +265,9 @@ namespace cli::funcs {
     constexpr auto pretty_arg_name(
       const FunctionArgWithoutDefault<Name, Description, T, Parse, Validate>
         &) {
-      return Name{} + ": "_sc + ctti::name<T>();
+      using CharT = typename Name::char_type;
+      return Name{} + string_constant<CharT, ':', ' '>{} +
+             ctti::name<T, CharT>();
     }
 
     template<SC Name,
@@ -276,35 +279,41 @@ namespace cli::funcs {
     constexpr auto pretty_arg_name(
       const FunctionArg<Name, Description, T, DefaultValue, Parse, Validate>
         &) {
-      return Name{} + ": "_sc + ctti::name<T>() + "?"_sc;
+      using CharT = typename Name::char_type;
+      return Name{} + string_constant<CharT, ':', ' '>{} +
+             ctti::name<T, CharT>() + string_constant<CharT, '?'>{};
     }
 
     template<FuncArg A, FuncArg... As>
     constexpr auto make_pretty_signature_name(const A &arg, const As &...args) {
+      using CharT = typename A::name::char_type;
       if constexpr (sizeof...(As) == 0)
         return pretty_arg_name(arg);
       else
-        return pretty_arg_name(arg) + ", "_sc +
+        return pretty_arg_name(arg) + string_constant<CharT, ',', ' '>{} +
                make_pretty_signature_name(args...);
     }
 
-    template<Callable F, FuncArg... Args>
+    template<typename CharT, Callable F, FuncArg... Args>
     constexpr auto pretty_signature_name(const Args &...args) {
-      return "("_sc + make_pretty_signature_name(args...) + ")->"_sc +
-             ctti::name<typename function_traits<F>::return_type>();
+      return string_constant<CharT, '('>{} +
+             make_pretty_signature_name(args...) +
+             string_constant<CharT, ')', '-', '>'>{} +
+             ctti::name<typename function_traits<F>::return_type, CharT>();
     }
 
-    template<Callable F, FuncArg... Args>
+    template<typename CharT, Callable F, FuncArg... Args>
     constexpr auto pretty_signature_name(const std::tuple<Args...> &args) {
       return []<std::size_t... Is>(std::index_sequence<Is...>,
                                    const std::tuple<Args...> &args) {
-        return "("_sc + make_pretty_signature_name(std::get<Is>(args)...) +
-               ")->"_sc +
-               ctti::name<typename function_traits<F>::return_type>();
+        return string_constant<CharT, '('>{} +
+               make_pretty_signature_name(std::get<Is>(args)...) +
+               string_constant<CharT, ')', '-', '>'>{} +
+               ctti::name<typename function_traits<F>::return_type, CharT>();
       }(std::make_index_sequence<sizeof...(Args)>(), args);
     }
 
-    template<Callable F>
+    template<typename CharT, Callable F>
     constexpr auto pretty_signature_name() {
       return "()->"_sc + ctti::name<typename function_traits<F>::return_type>();
     }
@@ -786,7 +795,7 @@ namespace cli::funcs {
   constexpr auto arg(Name name, Description description) {
     (void)name;
     (void)description;
-    using T = std::remove_cvref_t<decltype(DefaultValue)>;
+    using T = std::decay_t<decltype(DefaultValue)>;
     return FunctionArg{Name{},
                        Description{},
                        identity<T>{},
@@ -815,7 +824,7 @@ namespace cli::funcs {
   template<auto DefaultValue, SC Name>
   constexpr auto arg(Name name) {
     (void)name;
-    using T = std::remove_cvref_t<decltype(DefaultValue)>;
+    using T = std::decay_t<decltype(DefaultValue)>;
     return FunctionArg{Name{},
                        NoDescription<typename Name::char_type>{},
                        identity<T>{},
@@ -1100,37 +1109,54 @@ namespace cli::funcs {
       Name, Description, Type, Func &&function, std::tuple<Args...> &&args)
       : func_(std::forward<Func>(function)), args_(std::move(args)) {}
 
-    Error execute(ExecType type,
-                  View<const char_type> args,
-                  [[maybe_unused]] View<char_type> &out) {
+    constexpr Error execute(View<const char_type> args,
+                            [[maybe_unused]] View<char_type> &out,
+                            bool &should_print_newline) {
       using Ret = typename traits::return_type;
 
-      if (type != ExecType::call)
-        return Error::invalid_cmd;
-
       Parser parse{dtl::parse_field_from_args(this->args_)};
+
+      args = parse::trim_ws(args);
+
+      if (args.size() == 1 and args[0] == '(') {
+        return Error::expected_rparen;
+      }
+
+      if (args.size() > 1) {
+        if (args[0] == '(') {
+          if (args[args.size() - 1] != ')') {
+            return Error::expected_rparen;
+          }
+          args = args.substr(1, args.size() - 2);
+        }
+      }
 
       auto res = parse(args);
       if (not res)
         return res.error;
 
-      return [&tuple = res.value, &out, this]<std::size_t... Is>(
-               std::index_sequence<Is...>) {
-        if (not validate(tuple, std::index_sequence<Is...>{}))
-          return Error::invalid_argument;
+      return
+        [&tuple = res.value,
+         &out,
+         this,
+         &should_print_newline]<std::size_t... Is>(std::index_sequence<Is...>) {
+          if (not validate(tuple, std::index_sequence<Is...>{}))
+            return Error::invalid_argument;
 
-        if constexpr (std::is_same_v<void, Ret>) {
-          static_cast<void>(out);
-          func_(std::get<Is>(tuple).value...);
-          return Error::none;
-        } else {
-          auto res = func_(std::get<Is>(tuple).value...);
-          format::Format<Ret, typename Base::char_type> format;
-          auto fmt_result = format(out, res);
-          out = out.substr(0, fmt_result.size_written);
-          return fmt_result.error;
-        }
-      }(std::make_index_sequence<sizeof...(Args)>());
+          if constexpr (std::is_same_v<void, Ret>) {
+            out = {};
+            should_print_newline = false;
+            func_(std::get<Is>(tuple).value...);
+            return Error::none;
+          } else {
+            should_print_newline = true;
+            Ret res = func_(std::get<Is>(tuple).value...);
+            format::Format<Ret, typename Base::char_type> format;
+            auto fmt_result = format(out, res);
+            out = out.substr(0, fmt_result.size_written);
+            return fmt_result.error;
+          }
+        }(std::make_index_sequence<sizeof...(Args)>());
       return Error::unimplemented;
     }
 
@@ -1180,18 +1206,38 @@ namespace cli::funcs {
     constexpr Function(Name, Description, Type, Func &&function)
       : func_(std::forward<Func>(function)) {}
 
-    Error execute(ExecType type,
-                  View<const char_type> args,
-                  [[maybe_unused]] View<char_type> &out) {
+    constexpr Error execute(View<const char_type> args,
+                            [[maybe_unused]] View<char_type> &out,
+                            bool &should_print_newline) {
       using Ret = typename traits::return_type;
 
-      if (type != ExecType::call)
-        return Error::invalid_cmd;
+      args = parse::trim_ws(args);
+
+      if (args.size() == 1 and args[0] == '(') {
+        return Error::expected_rparen;
+      }
+
+      if (args.size() > 1) {
+        if (args[0] == '(') {
+          if (args[args.size() - 1] != ')') {
+            return Error::expected_rparen;
+          }
+          args = args.substr(1, args.size() - 2);
+        }
+      }
+
+      args = parse::trim_ws(args);
+
+      if (args.size() != 0)
+        return Error::invalid_argument;
 
       if constexpr (std::is_same_v<void, Ret>) {
+        should_print_newline = false;
         func_();
+        out = {};
         return Error::none;
       } else {
+        should_print_newline = true;
         auto res = format_(out, func_());
         return res.error;
       }
@@ -1211,16 +1257,16 @@ namespace cli::funcs {
     -> Function<Name,
                 Description,
                 Type,
-                std::remove_cvref_t<F>,
-                std::remove_cvref_t<Args>...>;
+                std::decay_t<F>,
+                std::decay_t<Args>...>;
 
   template<SC Name, SC Description, SC Type, Callable F, FuncArg... Args>
   Function(Name, Description, Type, F &&, const std::tuple<Args...> &)
-    -> Function<Name, Description, Type, std::remove_cvref_t<F>, Args...>;
+    -> Function<Name, Description, Type, std::decay_t<F>, Args...>;
 
   template<SC Name, SC Description, SC Type, Callable F, FuncArg... Args>
   Function(Name, Description, Type, F &&, std::tuple<Args...> &&)
-    -> Function<Name, Description, Type, std::remove_cvref_t<F>, Args...>;
+    -> Function<Name, Description, Type, std::decay_t<F>, Args...>;
   /**
    * @defgroup Functions
    * @ingroup Commands
@@ -1302,7 +1348,7 @@ namespace cli::funcs {
    * @return
    */
   template<SC Name, SC Description, Callable F, class... Args>
-  constexpr auto
+  [[nodiscard]] constexpr auto
   func(Name name, Description description, F &&f, Args &&...args) {
     (void)name;
     (void)description;
@@ -1312,15 +1358,16 @@ namespace cli::funcs {
       "All arguments of f must be named");
     if constexpr (sizeof...(Args) > 0) {
       auto deduced = dtl::deduce_args<F>(std::forward<Args>(args)...);
-      return Function{Name{},
-                      Description{},
-                      dtl::pretty_signature_name<F>(deduced),
-                      std::forward<F>(f),
-                      deduced};
+      return Function{
+        Name{},
+        Description{},
+        dtl::pretty_signature_name<typename Name::char_type, F>(deduced),
+        std::forward<F>(f),
+        deduced};
     } else {
       return Function{Name{},
                       Description{},
-                      dtl::pretty_signature_name<F>(),
+                      dtl::pretty_signature_name<typename Name::char_type, F>(),
                       std::forward<F>(f)};
     }
   }
@@ -1357,7 +1404,7 @@ namespace cli::funcs {
    * @return
    */
   template<SC Name, Callable F, class... Args>
-  constexpr auto func(Name name, F &&f, Args &&...args) {
+  [[nodiscard]] constexpr auto func(Name name, F &&f, Args &&...args) {
     (void)name;
     static_assert(
       type_list::list_size_v<typename function_traits<F>::arguments> ==
@@ -1365,15 +1412,16 @@ namespace cli::funcs {
       "All arguments of f must be named");
     if constexpr (sizeof...(Args) > 0) {
       auto deduced = dtl::deduce_args<F>(std::forward<Args>(args)...);
-      return Function{Name{},
-                      NoDescription<typename Name::char_type>{},
-                      dtl::pretty_signature_name<F>(deduced),
-                      std::forward<F>(f),
-                      deduced};
+      return Function{
+        Name{},
+        NoDescription<typename Name::char_type>{},
+        dtl::pretty_signature_name<typename Name::char_type, F>(deduced),
+        std::forward<F>(f),
+        deduced};
     } else {
       return Function{Name{},
                       NoDescription<typename Name::char_type>{},
-                      dtl::pretty_signature_name<F>(),
+                      dtl::pretty_signature_name<typename Name::char_type, F>(),
                       std::forward<F>(f)};
     }
   }
@@ -1401,7 +1449,8 @@ namespace cli::funcs {
    */
   template<Callable F, SC Description, class... Args>
     requires(not std::is_pointer_v<std::decay_t<F>>)
-  constexpr auto func(F &&f, Description description, Args &&...args) {
+  [[nodiscard]] constexpr auto
+  func(F &&f, Description description, Args &&...args) {
     (void)description;
     static_assert(
       type_list::list_size_v<typename function_traits<F>::arguments> ==
@@ -1409,16 +1458,18 @@ namespace cli::funcs {
       "All arguments of f must be named");
     if constexpr (sizeof...(Args) > 0) {
       auto deduced = dtl::deduce_args<F>(std::forward<Args>(args)...);
-      return Function{ctti::name<std::remove_cvref_t<F>>(),
-                      Description{},
-                      dtl::pretty_signature_name<F>(deduced),
-                      std::forward<F>(f),
-                      deduced};
+      return Function{
+        ctti::name<std::decay_t<F>>(),
+        Description{},
+        dtl::pretty_signature_name<typename Description::char_type, F>(deduced),
+        std::forward<F>(f),
+        deduced};
     } else {
-      return Function{ctti::name<std::remove_cvref_t<F>>(),
-                      Description{},
-                      dtl::pretty_signature_name<F>(),
-                      std::forward<F>(f)};
+      return Function{
+        ctti::name<std::decay_t<F>>(),
+        Description{},
+        dtl::pretty_signature_name<typename Description::char_type, F>(),
+        std::forward<F>(f)};
     }
   }
 
@@ -1440,7 +1491,7 @@ namespace cli::funcs {
    */
   template<Callable F, class... Args>
     requires(not std::is_pointer_v<std::decay_t<F>>)
-  constexpr auto func(F &&f, Args &&...args) {
+  [[nodiscard]] constexpr auto func(F &&f, Args &&...args) {
     // TODO: check that each args char_type if char, or extract the args
     // char_type
     static_assert(
@@ -1449,15 +1500,15 @@ namespace cli::funcs {
       "All arguments of f must be named");
     if constexpr (sizeof...(Args) > 0) {
       auto deduced = dtl::deduce_args<F>(std::forward<Args>(args)...);
-      return Function{ctti::name<std::remove_cvref_t<F>>(),
+      return Function{ctti::name<std::decay_t<F>>(),
                       NoDescription<char>{},
-                      dtl::pretty_signature_name<F>(deduced),
+                      dtl::pretty_signature_name<char, F>(deduced),
                       std::forward<F>(f),
                       deduced};
     } else {
-      return Function{ctti::name<std::remove_cvref_t<F>>(),
+      return Function{ctti::name<std::decay_t<F>>(),
                       NoDescription<char>{},
-                      dtl::pretty_signature_name<F>(),
+                      dtl::pretty_signature_name<char, F>(),
                       std::forward<F>(f)};
     }
   }
@@ -1494,11 +1545,11 @@ namespace cli::funcs {
            class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer> and
              (not function_traits<MemberFunctionPointer>::is_const)
-  constexpr auto func(Name name,
-                      Description description,
-                      T &t,
-                      MemberFunctionPointer mem_fun,
-                      Args &&...args) {
+  [[nodiscard]] constexpr auto func(Name name,
+                                    Description description,
+                                    T &t,
+                                    MemberFunctionPointer mem_fun,
+                                    Args &&...args) {
     (void)name;
     (void)description;
     static_assert(
@@ -1514,7 +1565,8 @@ namespace cli::funcs {
       return Function{
         Name{},
         Description{},
-        dtl::pretty_signature_name<MemberFunctionPointer>(deduced),
+        dtl::pretty_signature_name<typename Name::char_type,
+                                   MemberFunctionPointer>(deduced),
         Binder{t, mem_fun},
         deduced
       };
@@ -1522,7 +1574,8 @@ namespace cli::funcs {
       return Function{
         Name{},
         Description{},
-        dtl::pretty_signature_name<MemberFunctionPointer>(),
+        dtl::pretty_signature_name<typename Name::char_type,
+                                   MemberFunctionPointer>(),
         Binder{t, mem_fun}
       };
     }
@@ -1560,11 +1613,11 @@ namespace cli::funcs {
            class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer> and
              function_traits<MemberFunctionPointer>::is_const
-  constexpr auto func(Name name,
-                      Description description,
-                      const T &t,
-                      MemberFunctionPointer mem_fun,
-                      Args &&...args) {
+  [[nodiscard]] constexpr auto func(Name name,
+                                    Description description,
+                                    const T &t,
+                                    MemberFunctionPointer mem_fun,
+                                    Args &&...args) {
     (void)name;
     (void)description;
     static_assert(
@@ -1580,7 +1633,8 @@ namespace cli::funcs {
       return Function{
         Name{},
         Description{},
-        dtl::pretty_signature_name<MemberFunctionPointer>(deduced),
+        dtl::pretty_signature_name<typename Name::char_type,
+                                   MemberFunctionPointer>(deduced),
         Binder{t, mem_fun},
         deduced
       };
@@ -1588,7 +1642,8 @@ namespace cli::funcs {
       return Function{
         Name{},
         Description{},
-        dtl::pretty_signature_name<MemberFunctionPointer>(),
+        dtl::pretty_signature_name<typename Name::char_type,
+                                   MemberFunctionPointer>(),
         Binder{t, mem_fun}
       };
     }
@@ -1619,7 +1674,7 @@ namespace cli::funcs {
   template<SC Name, class T, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer> and
              (not function_traits<MemberFunctionPointer>::is_const)
-  constexpr auto
+  [[nodiscard]] constexpr auto
   func(Name name, T &t, MemberFunctionPointer mem_fun, Args &&...args) {
     return func(name,
                 NoDescription<typename Name::char_type>{},
@@ -1653,7 +1708,7 @@ namespace cli::funcs {
   template<SC Name, class T, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer> and
              function_traits<MemberFunctionPointer>::is_const
-  constexpr auto
+  [[nodiscard]] constexpr auto
   func(Name name, const T &t, MemberFunctionPointer mem_fun, Args &&...args) {
     return func(name,
                 NoDescription<typename Name::char_type>{},
@@ -1707,26 +1762,26 @@ namespace cli::funcs {
 
   template<SC Name, SC Description, SC Help, class Function, class... Args>
   MemberFunction(Name &&, Description &&, Help &&, Function &&, Args &&...)
-    -> MemberFunction<std::remove_cvref_t<Name>,
-                      std::remove_cvref_t<Description>,
-                      std::remove_cvref_t<Help>,
-                      std::remove_cvref_t<Function>,
-                      std::remove_cvref_t<Args>...>;
+    -> MemberFunction<std::decay_t<Name>,
+                      std::decay_t<Description>,
+                      std::decay_t<Help>,
+                      std::decay_t<Function>,
+                      std::decay_t<Args>...>;
   template<SC Name, SC Description, SC Help, class Function, FuncArg... Args>
   MemberFunction(
     Name &&, Description &&, Help &&, Function &&, const std::tuple<Args...> &)
-    -> MemberFunction<std::remove_cvref_t<Name>,
-                      std::remove_cvref_t<Description>,
-                      std::remove_cvref_t<Help>,
-                      std::remove_cvref_t<Function>,
-                      std::remove_cvref_t<Args>...>;
+    -> MemberFunction<std::decay_t<Name>,
+                      std::decay_t<Description>,
+                      std::decay_t<Help>,
+                      std::decay_t<Function>,
+                      std::decay_t<Args>...>;
 
   template<SC Name, SC Description, SC Help, class Function>
   MemberFunction(Name &&, Description &&, Help &&, Function &&)
-    -> MemberFunction<std::remove_cvref_t<Name>,
-                      std::remove_cvref_t<Description>,
-                      std::remove_cvref_t<Help>,
-                      std::remove_cvref_t<Function>>;
+    -> MemberFunction<std::decay_t<Name>,
+                      std::decay_t<Description>,
+                      std::decay_t<Help>,
+                      std::decay_t<Function>>;
 
   template<typename T>
   inline constexpr bool is_member_function_v = false;
@@ -1811,10 +1866,10 @@ namespace cli::funcs {
    */
   template<SC Name, SC Description, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer>
-  constexpr auto func(Name name,
-                      Description description,
-                      MemberFunctionPointer mem_fun,
-                      Args &&...args) {
+  [[nodiscard]] constexpr auto func(Name name,
+                                    Description description,
+                                    MemberFunctionPointer mem_fun,
+                                    Args &&...args) {
     (void)name;
     (void)description;
     if constexpr (sizeof...(Args) > 0) {
@@ -1823,13 +1878,15 @@ namespace cli::funcs {
       return MemberFunction{
         Name{},
         Description{},
-        dtl::pretty_signature_name<decltype(mem_fun)>(deduced_args),
+        dtl::pretty_signature_name<typename Name::char_type, decltype(mem_fun)>(
+          deduced_args),
         mem_fun,
         deduced_args};
     } else {
       return MemberFunction{Name{},
                             Description{},
-                            dtl::pretty_signature_name<decltype(mem_fun)>(),
+                            dtl::pretty_signature_name<typename Name::char_type,
+                                                       decltype(mem_fun)>(),
                             mem_fun};
     }
   }
@@ -1870,7 +1927,7 @@ namespace cli::funcs {
    */
   template<SC Name, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer>
-  constexpr auto
+  [[nodiscard]] constexpr auto
   func(Name name, MemberFunctionPointer mem_fun, Args &&...args) {
     (void)name;
     if constexpr (sizeof...(Args) > 0) {
@@ -1879,13 +1936,15 @@ namespace cli::funcs {
       return MemberFunction{
         Name{},
         NoDescription<typename Name::char_type>{},
-        dtl::pretty_signature_name<decltype(mem_fun)>(deduced_args),
+        dtl::pretty_signature_name<typename Name::char_type, decltype(mem_fun)>(
+          deduced_args),
         mem_fun,
         deduced_args};
     } else {
       return MemberFunction{Name{},
                             NoDescription<typename Name::char_type>{},
-                            dtl::pretty_signature_name<decltype(mem_fun)>(),
+                            dtl::pretty_signature_name<typename Name::char_type,
+                                                       decltype(mem_fun)>(),
                             mem_fun};
     }
   }
@@ -1933,15 +1992,17 @@ namespace cli::funcs {
    */
   template<auto MemberFunctionPointer, SC Description, class... Args>
     requires std::is_member_function_pointer_v<decltype(MemberFunctionPointer)>
-  constexpr auto func(Description description, Args &&...args) {
+  [[nodiscard]] constexpr auto func(Description description, Args &&...args) {
     if constexpr (sizeof...(Args) > 0) {
       constexpr auto deduced_args =
         dtl::deduce_args<decltype(MemberFunctionPointer)>(
           std::forward<Args>(args)...);
       return MemberFunction{
-        ctti::value_name<MemberFunctionPointer>(),
+        ctti::value_name<MemberFunctionPointer,
+                         typename Description::char_type>(),
         Description{},
-        dtl::pretty_signature_name<decltype(MemberFunctionPointer)>(
+        dtl::pretty_signature_name<typename Description::char_type,
+                                   decltype(MemberFunctionPointer)>(
           deduced_args),
         MemberFunctionPointer,
         deduced_args};
@@ -1949,7 +2010,8 @@ namespace cli::funcs {
       return MemberFunction{
         ctti::value_name<MemberFunctionPointer>(),
         Description{},
-        dtl::pretty_signature_name<decltype(MemberFunctionPointer)>(),
+        dtl::pretty_signature_name<typename Description::char_type,
+                                   decltype(MemberFunctionPointer)>(),
         MemberFunctionPointer};
     }
   }
@@ -1993,15 +2055,17 @@ namespace cli::funcs {
    */
   template<auto MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<decltype(MemberFunctionPointer)>
-  constexpr auto func(Args &&...args) {
+  [[nodiscard]] constexpr auto func(Args &&...args) {
     if constexpr (sizeof...(Args) > 0) {
+      using CharT = typename type_list::
+        type_at_t<0, type_list::TypeList<Args...>>::name::char_type;
       constexpr auto deduced_args =
         dtl::deduce_args<decltype(MemberFunctionPointer)>(
           std::forward<Args>(args)...);
       return MemberFunction{
-        ctti::value_name<MemberFunctionPointer>(),
-        NoDescription<char>{},
-        dtl::pretty_signature_name<decltype(MemberFunctionPointer)>(
+        ctti::value_name<MemberFunctionPointer, CharT>(),
+        NoDescription<CharT>{},
+        dtl::pretty_signature_name<CharT, decltype(MemberFunctionPointer)>(
           deduced_args),
         MemberFunctionPointer,
         deduced_args};
@@ -2009,7 +2073,7 @@ namespace cli::funcs {
       return MemberFunction{
         ctti::value_name<MemberFunctionPointer>(),
         NoDescription<char>{},
-        dtl::pretty_signature_name<decltype(MemberFunctionPointer)>(),
+        dtl::pretty_signature_name<char, decltype(MemberFunctionPointer)>(),
         MemberFunctionPointer};
     }
   }

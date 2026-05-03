@@ -17,26 +17,26 @@ namespace cli {
    * @tparam Cfg the cli configuration
    * @tparam Commands the commands
    */
-  template<Config Cfg, Command... Commands>
+  template<concepts::Config Cfg, concepts::Command... Commands>
   class CommandTree {
   public:
     using config = Cfg;
     using char_type = typename config::char_type;
     using command_node = CommandNode<char_type>;
 
-    template<Config Cfg_, Command... Cmds>
+    template<concepts::Config Cfg_, concepts::Command... Cmds>
     constexpr CommandTree(Cfg_ &&, Cmds &&...cmds)
       : commands_{create_help(cmds_[0]), std::forward<Cmds>(cmds)...} {
       init_commands();
     }
 
-    template<Config Cfg_, Command... Cmds>
+    template<concepts::Config Cfg_, concepts::Command... Cmds>
     constexpr CommandTree(Cfg_ &&, const std::tuple<Cmds...> &cmds)
       : commands_{init_tuple(std::move(cmds))} {
       init_commands();
     }
 
-    template<Config Cfg_, Command... Cmds>
+    template<concepts::Config Cfg_, concepts::Command... Cmds>
     constexpr CommandTree(Cfg_ &&, std::tuple<Cmds...> &&cmds)
       : commands_{init_tuple(cmds)} {
       init_commands();
@@ -98,7 +98,7 @@ namespace cli {
       return create_help_cmd<char_type, config::access_separator>(root);
     }
 
-    template<Command... Cmds>
+    template<concepts::Command... Cmds>
     constexpr std::tuple<Help, Commands...>
     init_tuple(const std::tuple<Cmds...> &t) {
       return [&t, this]<std::size_t... Is>(
@@ -107,7 +107,7 @@ namespace cli {
       }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 
-    template<Command... Cmds>
+    template<concepts::Command... Cmds>
     constexpr std::tuple<Help, Commands...>
     init_tuple(std::tuple<Cmds...> &&t) {
       return [&t, this]<std::size_t... Is>(
@@ -116,7 +116,7 @@ namespace cli {
       }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 
-    template<Command Cmd>
+    template<concepts::Command Cmd>
     constexpr void
     init_cmd(std::size_t &index, CommandNode<char_type> &parent, Cmd &cmd) {
       // initialize the node
@@ -126,18 +126,20 @@ namespace cli {
       node.type = Cmd::type;
       node.this_ = &cmd;
       node.exec_ = +[](void *this_,
-                       ExecType type,
                        View<const char_type> args,
-                       View<char_type> &out) -> Error {
-        return static_cast<Cmd *>(this_)->execute(type, args, out);
+                       View<char_type> &out,
+                       bool &newline) -> Error {
+        return static_cast<Cmd *>(this_)->execute(args, out, newline);
       };
       // add the node to the parent
       parent.add_sub(node);
       // initialize sub commands of cmd
       if constexpr (requires { cmd.subcommands; })
-        for_each([this, &index, &node](
-                   Command auto &c) { this->init_cmd(++index, node, c); },
-                 cmd.subcommands);
+        for_each(
+          [this, &index, &node](concepts::Command auto &c) {
+            this->init_cmd(++index, node, c);
+          },
+          cmd.subcommands);
     }
 
     constexpr void init_commands() {
@@ -151,15 +153,15 @@ namespace cli {
     }
   };
 
-  template<Config Cfg, Command... Cmds>
+  template<concepts::Config Cfg, concepts::Command... Cmds>
   CommandTree(Cfg &&, Cmds &&...)
     -> CommandTree<std::remove_cvref_t<Cfg>, std::remove_cvref_t<Cmds>...>;
 
-  template<Config Cfg, Command... Cmds>
+  template<concepts::Config Cfg, concepts::Command... Cmds>
   CommandTree(Cfg &&, std::tuple<Cmds...> &&)
     -> CommandTree<std::remove_cvref_t<Cfg>, std::remove_cvref_t<Cmds>...>;
 
-  template<Config Cfg, Command... Cmds>
+  template<concepts::Config Cfg, concepts::Command... Cmds>
   CommandTree(Cfg &&, const std::tuple<Cmds...> &)
     -> CommandTree<std::remove_cvref_t<Cfg>, std::remove_cvref_t<Cmds>...>;
 } // namespace cli

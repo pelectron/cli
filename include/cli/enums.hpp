@@ -1,6 +1,9 @@
 /**
  * @file cli/enums.hpp
  * This file defines core enumerations of cli
+ *
+ * @defgroup enumerations Enumerations
+ * This group contains all enumerations used by cli.
  */
 
 #ifndef CLI_ENUMS_HPP
@@ -12,6 +15,7 @@ namespace cli {
 
   /**
    * This enumerates every possible error occuring in cli
+   * @ingroup enumerations
    */
   enum class Error : std::uint32_t {
     none,                 //< no error
@@ -27,15 +31,14 @@ namespace cli {
     buffer_overflow,      //< a buffer would overflow
     buffer_underflow,     //< a buffer would underflow
     incorrect_num_params, //< an incorrect number of parameters/arguments has
-                          // been
-                          // provided
+                          //< been provided
     too_many_argments,    //< too many arguments have been provided
     too_few_arguments,    //< too few arguments have been provided
     invalid_esc_seq,      //< an invalid escape sequence has been encountered
     invalid_state,        //< an invalid sate has been encountered
     expected_value,       //< expected a value but none has been given
     unexpected_characters_after_closing_paren, //< characters after closing
-                                               // parentheses
+                                               //< parentheses
     expected_rparen,                           //< expected closing parentheses
     //
     // parse errors
@@ -56,17 +59,8 @@ namespace cli {
   };
 
   /**
-   * The execution type
-   */
-  enum class ExecType : std::uint8_t {
-    none, //< invalid type
-    get,  //< a get command
-    set,  //< a set command
-    call  //< a call command
-  };
-
-  /**
-   * This enumerates the possible delimiters of the input/output system
+   * This enumerates the possible delimiters of the input system
+   * @ingroup enumerations
    */
   enum class Delimiter {
     lf,  //< line feed, i.e. '\n'
@@ -75,24 +69,9 @@ namespace cli {
   };
 
   /**
-   * This enumerates the different types of control of the input/output system
-   */
-  enum class Control {
-    bell,
-    backspace,
-    autocomplete,
-    cursor_up,
-    cursor_down,
-    cursor_left,
-    cursor_right,
-    delete_char,
-    clear,
-    enter
-  };
-
-  /**
    * This enumerates the possible options for formatting and parsing integers
    * and characters. Can be or'ed for multiple options.
+   * @ingroup enumerations
    */
   enum class Fmt {
     normal = 1 << 0, //< default format
@@ -103,6 +82,7 @@ namespace cli {
   /**
    * combines two format options
    *
+   * @ingroup enumerations
    * @param a a format option
    * @param b a format option
    * @return the combination of a and b
@@ -115,6 +95,7 @@ namespace cli {
   /**
    * intersects two format options
    *
+   * @ingroup enumerations
    * @param a a format option
    * @param b a format option
    * @return the intersection of a and b

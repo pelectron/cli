@@ -1,15 +1,24 @@
-project('cli', 'cpp', meson_version: '>=1.1.0', default_options: ['cpp_std=c++20'])
+project(
+  'cli', 
+  'cpp', 
+  license: 'BSL-1.0', 
+  license_files: 'LICENSE_1_0.txt', 
+  meson_version: '>=1.1.0', 
+  default_options: ['cpp_std=c++20']
+)
 
 inc = include_directories('include')
 
 build_tests = get_option('tests')
 build_examples = get_option('examples')
 simulation = get_option('sim')
+cli_term = get_option('cli-term')
 
 # testing, building examples, and simulation can only be done for  non-embeded targets
-build_tests.disable_if(meson.is_cross_build(), error_message: 'cant build tests for embedded targets')
-build_examples.disable_if(meson.is_cross_build(), error_message: 'cant build examples on embedded targets')
-simulation.disable_if(meson.is_cross_build(), error_message: 'cant have simulation with embedded targets')
+build_tests.disable_if(meson.is_cross_build(), error_message: 'can\'t build tests for embedded targets')
+build_examples.disable_if(meson.is_cross_build(), error_message: 'can\'t build examples on embedded targets')
+simulation.disable_if(meson.is_cross_build(), error_message: 'can\'t have simulation with embedded targets')
+cli_term.disable_if(meson.is_cross_build(), error_message: 'cli-term can\'t be built for embedded targets')
 
 deps = [
   dependency('gcem', required: true),
@@ -26,6 +35,18 @@ cli_dep = declare_dependency(
 
 meson.override_dependency('cli',cli_dep)
 
+must_fail_to_compile = files(
+  'tests/fails/param_t.cpp'
+)
+
+cpp = meson.get_compiler('cpp')
+
+foreach file: must_fail_to_compile 
+  if(cpp.compiles(file, include_directories: inc))
+    error('CLI is able to compile '+ file.full_path()+ ', which should be a compile error.')
+  endif
+endforeach
+
 if(not build_examples.disabled())
 
   if(not simulation.disabled())
@@ -36,10 +57,11 @@ if(not build_examples.disabled())
     )
   endif
 
-  executable('led-example',
-    'examples/led.cpp',
-    dependencies: cli_dep
-  )
+  # executable('led-example',
+  #   'examples/led.cpp',
+  #   dependencies: cli_dep
+  # )
+
 endif
 
 if(not build_tests.disabled())
@@ -78,9 +100,9 @@ if(not build_tests.disabled())
     'tests/parse_format/sequence.cpp',
     'tests/parse_format/struct.cpp',
     'tests/history.cpp',
+    'tests/line.cpp',
     'tests/param.cpp',
     'tests/string.cpp',
-    # 'tests/tracker.cpp',
     include_directories: test_inc,
     dependencies: [cli_dep, catch_dep],
   )
@@ -90,5 +112,28 @@ endif
 
 if(get_option('docs'))
   doxygen = find_program('doxygen', required: true)
-  run_command(doxygen, 'Doxyfile')
+  run_command(doxygen, 'Doxyfile', check: false)
+endif
+
+if(not cli_term.disabled())
+  deps = [
+    dependency('cpp-terminal', required: true),
+    dependency('asio', required: true)
+  ]
+
+  executable(
+    'cli-term',
+    'source/cli-term.cpp',
+    dependencies: deps,
+    include_directories: inc,
+    cpp_args:['-DASIO_NO_DEPRECATED']
+  )
+
+  executable(
+    'cli-term-mock',
+    'source/cli-term-mock.cpp',
+    dependencies: deps,
+    include_directories: inc,
+    cpp_args:['-DASIO_NO_DEPRECATED']
+  )
 endif

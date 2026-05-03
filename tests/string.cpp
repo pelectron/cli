@@ -1,10 +1,4 @@
 #include "cli/string.hpp"
-#include "cli/cli.hpp"
-#include "cli/command.hpp"
-#include "cli/config.hpp"
-#include "cli/ctti.hpp"
-#include "cli/input.hpp"
-#include "cli/param.hpp"
 
 #include "catch2/catch_test_macros.hpp"
 #include <catch2/catch_all.hpp>
@@ -98,6 +92,7 @@ TEST_CASE("View::find_last_of") {
   REQUIRE(CharView{"hello"}.find_last_of('a', 2) == CharView::npos);
   REQUIRE(CharView{"hello"}.find_last_of("l") == 3);
   REQUIRE(CharView{"hello"}.find_last_of("l", 2) == 2);
+  REQUIRE(CharView{"hello"}.find_last_of(' ') == CharView::npos);
 }
 
 TEST_CASE("View::find_last_not_of") {
@@ -107,6 +102,11 @@ TEST_CASE("View::find_last_not_of") {
   REQUIRE(CharView{"hello"}.find_last_not_of('a', 2) == 2);
   REQUIRE(CharView{"hello"}.find_last_not_of("o") == 3);
   REQUIRE(CharView{"hello"}.find_last_not_of("o", 2) == 2);
+  REQUIRE(CharView{"hello"}.find_last_not_of("helo") == CharView::npos);
+  REQUIRE(CharView{"BCDEF"}.find_last_not_of("DEF") == 1);
+  REQUIRE(CharView{"BCDEFG"}.find_last_not_of("EFG", 3) == 2);
+  REQUIRE(CharView{"ABBA"}.find_last_not_of('A') == 2);
+  REQUIRE(CharView{"ABBA"}.find_last_not_of('A', 1) == 1);
 }
 
 TEST_CASE("View::find") {
