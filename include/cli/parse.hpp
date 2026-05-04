@@ -391,8 +391,9 @@ namespace cli::parse {
    * @tparam P the parser
    */
   template<class P>
-  concept Parser = Callable<P> and is_const_view_v<buffer_type_t<P>> and
-                   is_parse_result_v<result_type_t<P>>;
+  concept Parser =
+    Callable<P> and cli::dtl::is_const_view_v<cli::parse::buffer_type_t<P>> and
+    is_parse_result_v<cli::parse::result_type_t<P>>;
 
   template<typename CharT, class T>
   constexpr ParseResult<std::remove_cvref_t<T>, CharT> ok(T &&t) {
@@ -641,7 +642,7 @@ namespace cli::parse {
     }
   };
 
-  template<traits::Character T, typename CharT>
+  template<concepts::Character T, typename CharT>
   class Char {
   public:
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
@@ -679,7 +680,7 @@ namespace cli::parse {
    * 'hello\"world' -> 'hello\"world'
    * '"hello \"world\""' -> 'hello \"world\"'
    */
-  template<traits::StringView T, typename CharT>
+  template<concepts::StringView T, typename CharT>
   class StringView {
   public:
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
@@ -731,7 +732,7 @@ namespace cli::parse {
    * @param str
    * @return
    */
-  template<traits::String T, typename CharT>
+  template<concepts::String T, typename CharT>
   class String {
   public:
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
@@ -780,7 +781,7 @@ namespace cli::parse {
                   "The floating point parser is unimplemented for now");
   };
 
-  template<traits::FixPoint T,
+  template<concepts::FixPoint T,
            typename CharT,
            Fmt Format = Fmt::normal | Fmt::hex | Fmt::binary,
            CharT FixPointSeparator = '.'>
@@ -1046,11 +1047,11 @@ namespace cli::parse {
     }
   };
 
-  template<traits::Enum T, typename CharT, bool AllowNumbers>
+  template<concepts::Enum T, typename CharT, bool AllowNumbers>
   class Enum {
   public:
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
-      if constexpr (traits::FlagEnum<T>) {
+      if constexpr (traits::enum_traits<T>::is_flag) {
         T val{};
         bool read_one = true;
         while (str.size() != 0) {
@@ -1109,9 +1110,9 @@ namespace cli::parse {
    * @brief
    *
    */
-  template<traits::Sequence T,
+  template<concepts::Sequence T,
            typename CharT,
-           ParserOf<traits::sequence_value_type_t<T>, CharT> ElementParser,
+           ParserOf<typename T::value_type, CharT> ElementParser,
            CharT Delimiter = ','>
   class Sequence {
   public:
@@ -1168,9 +1169,9 @@ namespace cli::parse {
    * @tparam ElementParser
    * @tparam Delimiter
    */
-  template<traits::FixedSizeSequence T,
+  template<concepts::FixedSizeSequence T,
            typename CharT,
-           ParserOf<traits::sequence_value_type_t<T>, CharT> ElementParser,
+           ParserOf<typename T::value_type, CharT> ElementParser,
            CharT Delimiter = ','>
   class FixedSizeSequence {
   public:
@@ -1257,25 +1258,25 @@ namespace cli::parse {
     }
   };
 
-  template<traits::Character T, typename CharT>
+  template<concepts::Character T, typename CharT>
   struct Parse<T, CharT> : public Char<T, CharT> {};
 
-  template<traits::Integer T, typename CharT>
+  template<concepts::Integer T, typename CharT>
   struct Parse<T, CharT> : public Int<T, CharT> {};
 
-  template<traits::Float T, typename CharT>
+  template<concepts::Float T, typename CharT>
   struct Parse<T, CharT> : public Float<T> {};
 
-  template<traits::FixPoint T, typename CharT>
+  template<concepts::FixPoint T, typename CharT>
   struct Parse<T, CharT> : public FixPoint<T, CharT> {};
 
-  template<traits::StringView T, typename CharT>
+  template<concepts::StringView T, typename CharT>
   struct Parse<T, CharT> : public StringView<T, CharT> {};
 
-  template<traits::String T, typename CharT>
+  template<concepts::String T, typename CharT>
   struct Parse<T, CharT> : public String<T, CharT> {};
 
-  template<traits::Enum T, typename CharT>
+  template<concepts::Enum T, typename CharT>
   struct Parse<T, CharT> : Enum<T, CharT, false> {};
 
   template<typename CharT>
@@ -1302,15 +1303,13 @@ namespace cli::parse {
     }
   };
 
-  template<traits::Sequence T, typename CharT>
+  template<concepts::Sequence T, typename CharT>
   struct Parse<T, CharT>
     : public Sequence<T, CharT, Parse<typename T::value_type, CharT>> {};
 
-  template<traits::FixedSizeSequence T, typename CharT>
+  template<concepts::FixedSizeSequence T, typename CharT>
   struct Parse<T, CharT>
-    : public FixedSizeSequence<T,
-                               CharT,
-                               Parse<traits::sequence_value_type_t<T>, CharT>> {
+    : public FixedSizeSequence<T, CharT, Parse<typename T::value_type, CharT>> {
   };
 
   template<typename CharT,
@@ -1607,7 +1606,7 @@ namespace cli::parse {
     using type = FieldWithOutDefault<CharT, name, type_, parser>;
   };
 
-  template<traits::Struct T,
+  template<concepts::Struct T,
            typename CharT,
            CharT Assignment = '=',
            CharT MemberSeparator = ',',
@@ -1630,7 +1629,7 @@ namespace cli::parse {
       type_list::transform_t<tpf, typename ctti::TypeInfo<T>::fields>>;
   };
 
-  template<traits::Struct T,
+  template<concepts::Struct T,
            typename CharT,
            class Name = string_constant<CharT>,
            CharT Assignment = '=',
@@ -1683,7 +1682,7 @@ namespace cli::parse {
     }
   };
 
-  template<traits::Struct T, typename CharT>
+  template<concepts::Struct T, typename CharT>
   struct Parse<T, CharT> : public Struct<T, CharT> {};
 
   template<typename CharT>

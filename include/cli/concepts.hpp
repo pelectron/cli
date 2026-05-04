@@ -4,21 +4,20 @@
 #include "cli/enums.hpp"
 #include "cli/event.hpp"
 #include "cli/string.hpp"
+#include "cli/traits.hpp"
+
 #include <concepts>
 #include <type_traits>
 
 namespace cli {
 
   /**
-   * @brief This concept denotes a cli::string_constant
+   * @brief This concept is true if T is a cli::string_constant
    *
    * @tparam T
    */
   template<class T>
-  concept SC = is_string_constant_v<std::remove_cvref_t<T>>;
-
-  template<typename T>
-  concept TriviallyDestructible = std::is_trivially_destructible_v<T>;
+  concept SC = cli::dtl::is_string_constant_v<std::remove_cvref_t<T>>;
 
   namespace concepts {
 
@@ -237,6 +236,183 @@ namespace cli {
         View<const typename std::remove_cvref_t<T>::char_type>>;
     };
 
+    /**
+     * The character concept. It is satified if T is one of char, unsigned char,
+     * signed char, char8_t, char16_t, or char32_t.
+     *
+     * @tparam T the type to check
+     */
+    template<typename T>
+    concept Character =
+      cli::traits::is_char<T>::value or std::same_as<T, char> or
+      std::same_as<T, unsigned char> or std::same_as<T, signed char> or
+      std::same_as<T, char8_t> or std::same_as<T, char16_t> or
+      std::same_as<T, char32_t>;
+
+    /**
+     * @brief The integer concept is true is the is_integer traits is true and T
+     * is not a Character and T is not bool.
+     *
+     * @tparam T
+     */
+    template<class T>
+    concept Integer =
+      cli::traits::is_integer<T>::value or
+      ((not Character<T>) and std::integral<T> and not std::same_as<T, bool>);
+
+    /**
+     * @brief The fixpoint concept.
+     *
+     * A fixpoint number type T must:
+     * - have an inner typedef called raw_value_type, which is the underlying
+     *   representation of the fixpoint type. The raw_value_type must be
+     * integral.
+     * - be constructible from the raw_value_type
+     * - have static constants num_int_digits: the number of integer digits
+     * - have static constants num_frac_digits: the number of fractional digits
+     * - have the method fraction(): returns the fractional part of T
+     * - have the method integer(): returns the integer part of T
+     * - have the method value(): which returns the value of T as a
+     * raw_value_type
+     * - be less than comparable
+     * - be negatable
+     * - be assignable
+     *
+     * In addition, cli::traits::is_fixpoint must be specialized for T to
+     * satisfy the FixPoint concept.
+     *
+     * @tparam T the type to check
+     */
+    template<class T>
+    concept FixPoint =
+      cli::traits::is_fixpoint<T>::value and
+      std::constructible_from<T, typename T::raw_value_type> and
+      std::integral<typename T::raw_value_type> and requires(T a, T b) {
+        { T::num_int_digits } -> std::convertible_to<std::size_t>;
+        { T::num_frac_digits } -> std::convertible_to<std::size_t>;
+        { a.integer() } -> std::convertible_to<typename T::raw_value_type>;
+        { a.fraction() } -> std::convertible_to<typename T::raw_value_type>;
+        { a.value() } -> std::convertible_to<typename T::raw_value_type>;
+        { a < b };
+        { -a };
+        { a = b };
+      };
+
+    /**
+     * @brief The floating point concept.
+     *
+     * @tparam T the type to check
+     */
+    template<class T>
+    concept Float = std::floating_point<T> or cli::traits::is_float<T>::value;
+
+    /**
+     * @brief This concept denotes a string view, i.e. a non owning string.
+     *
+     * To "enable" this concept, you must specialize cli::traits::is_string_view
+     * and inherit that specialization from std::true_type.
+     *
+     * @tparam T the type to check
+     */
+    template<class T>
+    concept StringView =
+      cli::traits::is_string_view<T>::value and
+      std::integral<typename T::value_type> and
+      std::
+        constructible_from<T, const typename T::value_type *, std::size_t> and
+      requires(T &&t, std::size_t i) {
+        { T{} };
+        { t.size() } -> std::convertible_to<std::size_t>;
+        { t.begin() } -> std::forward_iterator;
+        { t.end() } -> std::forward_iterator;
+        { t[i] } -> std::convertible_to<const typename T::value_type &>;
+      };
+
+    /**
+     * @brief This concept denotes a string.
+     *
+     * To "enable" this concept, you must specialize cli::traits::is_string and
+     * inherit that specialization from std::true_type.
+     *
+     * @tparam T
+     */
+    template<class T>
+    concept String = cli::traits::is_string<T>::value and
+                     std::integral<typename T::value_type> and
+                     std::constructible_from<T,
+                                             const typename T::value_type *,
+                                             std::size_t> and
+                     requires(T &&t, typename T::value_type c, std::size_t i) {
+                       { T{} };
+                       { t.size() } -> std::convertible_to<std::size_t>;
+                       { t.begin() } -> std::forward_iterator;
+                       { t.end() } -> std::forward_iterator;
+                       {
+                         t[i]
+                       } -> std::convertible_to<const typename T::value_type &>;
+                       { t.push_back(c) };
+                     };
+
+    /**
+     * @brief This concept denotes a list of values.
+     *
+     * T contains a variable amount of elements of type T::value_type, for
+     * example cli::FixedCapacityVector. To "enable"" this concept, you must
+     * specialize cli::traits::is_sequence and inherit that specialization from
+     * std::true_type.
+     *
+     * @tparam T
+     */
+    template<class T>
+    concept Sequence =
+      cli::traits::is_sequence<T>::value and std::copy_constructible<T> and
+      requires(T a, typename T::value_type value) {
+        { T{} };
+        { a.begin() };
+        { a.end() };
+        { a.max_size() } -> std::convertible_to<std::size_t>;
+        { a.push_back(value) };
+      };
+
+    /**
+     * @brief This concept denotes a list of values. T contains a fixed amount
+     * of elements of type T::value_type, for example std::array. To "enable""
+     * this concept, you must specialize cli::traits::is_fixed_size_sequence and
+     * inherit that specialization from std::true_type.
+     *
+     * @tparam T
+     */
+    template<class T>
+    concept FixedSizeSequence =
+      cli::traits::is_fixed_size_sequence<T>::value and
+      std::copy_constructible<T> and
+      requires(T a, std::size_t i, typename T::value_type value) {
+        { T{} };
+        { a.begin() };
+        { a.end() };
+        { a.size() } -> std::convertible_to<std::size_t>;
+        { a[i] = value };
+      };
+
+    /**
+     * @brief This concept denotes a "struct".
+     *
+     * It would be more appropriate to say that this represents an aggregate,
+     * i.e. something that can be decomposed into structuerd bindings.
+     *
+     * @tparam T
+     */
+    template<class T>
+    concept Struct = cli::traits::is_struct<T>::value and
+                     not(Sequence<T> or FixedSizeSequence<T>);
+
+    /**
+     * @brief The enum concept
+     *
+     * @tparam T
+     */
+    template<class T>
+    concept Enum = cli::traits::is_enum<T>::value;
   } // namespace concepts
 } // namespace cli
 #endif

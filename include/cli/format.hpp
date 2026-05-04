@@ -159,8 +159,10 @@ namespace cli::format {
    */
   template<class F>
   concept Formatter =
-    is_non_const_view_v<typename formatter_buffer_type<F>::type> and
-    (not std::same_as<void, typename formatter_value_type<F>::type>);
+    cli::dtl::is_non_const_view_v<
+      typename cli::format::formatter_buffer_type<F>::type> and
+    (not std::same_as<void,
+                      typename cli::format::formatter_value_type<F>::type>);
 
   /**
    * @brief This class, and its various specializations, are used to format
@@ -192,7 +194,8 @@ namespace cli::format {
 
   template<typename CharT>
   struct NullFormat {
-    constexpr FormatResult operator()(View<CharT> buf, const dummy &) const {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      const cli::dummy &) const {
       return 0;
     }
   };
@@ -568,7 +571,7 @@ namespace cli::format {
    * @tparam T the integer type
    * @tparam CharT the character type
    */
-  template<traits::Integer T, typename CharT>
+  template<concepts::Integer T, typename CharT>
   struct Format<T, CharT> : public Int<T, CharT> {};
 
   /**
@@ -580,7 +583,7 @@ namespace cli::format {
    * @tparam CharT the buffer character type
    * @tparam Format how to format characters
    */
-  template<traits::Character T, typename CharT, Fmt Format = Fmt::normal>
+  template<concepts::Character T, typename CharT, Fmt Format = Fmt::normal>
   struct Char {
     constexpr FormatResult operator()(View<CharT> buf, T value) const {
       if constexpr (Format == Fmt::normal) {
@@ -603,7 +606,7 @@ namespace cli::format {
    * @tparam T the type of the character to format
    * @tparam CharT the buffer character type
    */
-  template<traits::Character T, typename CharT>
+  template<concepts::Character T, typename CharT>
   struct Format<T, CharT> : public Char<T, CharT> {};
 
   /**
@@ -615,7 +618,7 @@ namespace cli::format {
    *
    * @tparam CharT
    */
-  template<traits::FixPoint T,
+  template<concepts::FixPoint T,
            typename CharT,
            std::size_t Precision = 11,
            bool PrintTrailingZeros = false,
@@ -1014,10 +1017,10 @@ namespace cli::format {
     }
   };
 
-  template<traits::FixPoint T, typename CharT>
+  template<concepts::FixPoint T, typename CharT>
   struct Format<T, CharT> : public FixPoint<T, CharT> {};
 
-  template<traits::Float T,
+  template<concepts::Float T,
            typename CharT,
            Fmt Format = Fmt::normal,
            char FixPointSeparator = '.'>
@@ -1057,11 +1060,10 @@ namespace cli::format {
    * @tparam ElementFormatter the formatter of the sequence's value_type
    * @tparam Delimiter the character used to seperate elements of the sequence
    */
-  template<
-    traits::Sequence T,
-    typename CharT,
-    FormatterOf<traits::sequence_value_type_t<T>, CharT> ElementFormatter,
-    CharT Delimiter = ','>
+  template<concepts::Sequence T,
+           typename CharT,
+           FormatterOf<typename T::value_type, CharT> ElementFormatter,
+           CharT Delimiter = ','>
   struct Sequence {
     constexpr FormatResult operator()(View<CharT> buf, const T &seq) const {
       if (buf.size() < 2)
@@ -1134,11 +1136,10 @@ namespace cli::format {
    * @tparam ElementFormatter the formatter of the sequence's value_type
    * @tparam Delimiter the character used to seperate elements of the sequence
    */
-  template<
-    traits::FixedSizeSequence T,
-    typename CharT,
-    FormatterOf<traits::sequence_value_type_t<T>, CharT> ElementFormatter,
-    CharT Delimiter = ','>
+  template<concepts::FixedSizeSequence T,
+           typename CharT,
+           FormatterOf<typename T::value_type, CharT> ElementFormatter,
+           CharT Delimiter = ','>
   struct FixedSizeSequence {
     constexpr FormatResult operator()(View<CharT> buf, const T &seq) const {
       if (buf.size() < 2)
@@ -1185,15 +1186,13 @@ namespace cli::format {
    * @tparam T the sequence
    * @tparam CharT the buffer's character type
    */
-  template<traits::Sequence T, typename CharT>
+  template<concepts::Sequence T, typename CharT>
   struct Format<T, CharT>
     : Sequence<T, CharT, Format<typename T::value_type, CharT>> {};
 
-  template<traits::FixedSizeSequence T, typename CharT>
+  template<concepts::FixedSizeSequence T, typename CharT>
   struct Format<T, CharT>
-    : FixedSizeSequence<T,
-                        CharT,
-                        Format<traits::sequence_value_type_t<T>, CharT>> {};
+    : FixedSizeSequence<T, CharT, Format<typename T::value_type, CharT>> {};
   /**
    * @brief The default formatter for enumerations.
    * If your enum is signed and has values outside the range of [-128, 127], or
@@ -1202,7 +1201,7 @@ namespace cli::format {
    * @tparam Enum the enumeration type
    * @tparam CharT the buffer's character type
    */
-  template<traits::Enum Enum, typename CharT>
+  template<concepts::Enum Enum, typename CharT>
   struct Format<Enum, CharT> {
     constexpr FormatResult operator()(View<CharT> buf, Enum value) const {
       if constexpr (traits::enum_traits<Enum>::is_flag) {
@@ -1287,7 +1286,7 @@ namespace cli::format {
    * @param str
    * @return
    */
-  template<traits::StringView T, typename CharT>
+  template<concepts::StringView T, typename CharT>
   struct StringView {
     constexpr FormatResult operator()(View<CharT> buf, const T &str) const {
       static_assert(
@@ -1373,7 +1372,7 @@ namespace cli::format {
    * @tparam T the string type
    * @tparam CharT
    */
-  template<traits::StringView T, typename CharT>
+  template<concepts::StringView T, typename CharT>
   struct Format<T, CharT> : public StringView<T, CharT> {};
 
   /**
@@ -1381,7 +1380,7 @@ namespace cli::format {
    *
    * @tparam CharT
    */
-  template<traits::String T, typename CharT>
+  template<concepts::String T, typename CharT>
   struct String {
     constexpr FormatResult operator()(View<CharT> buf, const T &str) const {
       static_assert(
@@ -1460,7 +1459,7 @@ namespace cli::format {
     }
   };
 
-  template<traits::String T, typename CharT>
+  template<concepts::String T, typename CharT>
   struct Format<T, CharT> : public String<T, CharT> {};
 
   template<typename CharT,
@@ -1550,7 +1549,7 @@ namespace cli::format {
     }
   };
 
-  template<traits::Struct T,
+  template<concepts::Struct T,
            typename CharT,
            CharT Assignment = '=',
            CharT MemberSeparator = ',',
@@ -1576,7 +1575,7 @@ namespace cli::format {
    * @tparam T the struct type
    * @tparam CharT
    */
-  template<traits::Struct T,
+  template<concepts::Struct T,
            typename CharT,
            class Name = string_constant<CharT>,
            CharT Assignment = '=',
@@ -1634,7 +1633,7 @@ namespace cli::format {
    * @tparam T the struct type
    * @tparam CharT
    */
-  template<traits::Struct T, typename CharT>
+  template<concepts::Struct T, typename CharT>
   struct Format<T, CharT> : public Struct<T, CharT> {};
 
 } // namespace cli::format

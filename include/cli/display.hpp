@@ -1,7 +1,7 @@
 /**
  * @file cli/display.hpp
  * @brief This file contains the AnsiDisplay class.
- * @defgroup Output
+ * @defgroup display Display
  *
  * CLI uses the @ref cli::concept::Display "Display Concept" to output
  * characters to a screen.
@@ -17,6 +17,8 @@
  * @note To use cursor movement in your cli, your Display must support cursor
  * movement.
  *
+ * For a detailed description of the Display concept, see
+ * [the markdown documentation](docs.md).
  */
 
 #ifndef CLI_DISPLAY_HPP
@@ -139,7 +141,7 @@ namespace cli {
    *
    * This class satisfies the @ref DisplayWithCursor concept.
    *
-   * @ingroup Output
+   * @ingroup Display
    * @tparam Out the type to output characters.
    */
   template<concepts::Output Out>

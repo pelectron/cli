@@ -490,36 +490,37 @@ namespace cli {
     }(std::make_index_sequence<S.size()>());
   }
 
-  template<typename T>
-  inline constexpr bool is_string_constant_v = false;
+  namespace dtl {
+    template<typename T>
+    inline constexpr bool is_view_v = false;
 
-  template<typename CharT, CharT... Cs>
-  inline constexpr bool is_string_constant_v<string_constant<CharT, Cs...>> =
-    true;
+    template<typename CharT>
+    inline constexpr bool is_view_v<View<CharT>> = true;
 
-  template<typename T>
-  inline constexpr bool is_view_v = false;
+    template<typename T>
+    inline constexpr bool is_const_view_v = false;
 
-  template<typename CharT>
-  inline constexpr bool is_view_v<View<CharT>> = true;
+    template<typename CharT>
+    inline constexpr bool is_const_view_v<View<CharT>> = false;
 
-  template<typename T>
-  inline constexpr bool is_const_view_v = false;
+    template<typename CharT>
+    inline constexpr bool is_const_view_v<View<const CharT>> = true;
 
-  template<typename CharT>
-  inline constexpr bool is_const_view_v<View<CharT>> = false;
+    template<typename T>
+    inline constexpr bool is_non_const_view_v = false;
 
-  template<typename CharT>
-  inline constexpr bool is_const_view_v<View<const CharT>> = true;
+    template<typename CharT>
+    inline constexpr bool is_non_const_view_v<View<const CharT>> = false;
 
-  template<typename T>
-  inline constexpr bool is_non_const_view_v = false;
+    template<typename CharT>
+    inline constexpr bool is_non_const_view_v<View<CharT>> = true;
 
-  template<typename CharT>
-  inline constexpr bool is_non_const_view_v<View<const CharT>> = false;
+    template<typename T>
+    inline constexpr bool is_string_constant_v = false;
 
-  template<typename CharT>
-  inline constexpr bool is_non_const_view_v<View<CharT>> = true;
-
+    template<typename CharT, CharT... Cs>
+    inline constexpr bool
+      is_string_constant_v<cli::string_constant<CharT, Cs...>> = true;
+  } // namespace dtl
 } // namespace cli
 #endif

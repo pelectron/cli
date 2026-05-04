@@ -1,44 +1,20 @@
 #ifndef CLI_TRAITS_HPP
 #define CLI_TRAITS_HPP
 #include "cli/string.hpp"
-#include "cli/util.hpp"
 #include "cli/vector.hpp"
 
-#include <concepts>
+#include <array>
 #include <limits>
 #include <type_traits>
 
 namespace cli::traits {
 
   namespace dtl {
-    template<typename T, typename = void>
-    struct sequence_value_type {
-      static_assert(
-        always_false<T>,
-        "T is not a sequence. T must have an inner typedef called value_type.");
-    };
-
-    template<typename T>
-    struct sequence_value_type<T, std::void_t<typename T::value_type>> {
-      using type = typename T::value_type;
+    template<class T>
+    concept FlagEnum = std::is_enum_v<T> and requires(T a, T b) {
+      { a | b } -> std::same_as<T>;
     };
   } // namespace dtl
-
-  template<typename T>
-  using sequence_value_type_t =
-    typename dtl::sequence_value_type<std::remove_cvref_t<T>>::type;
-
-  enum class Kind {
-    Integer,
-    FixPoint,
-    Float,
-    String,
-    Struct,
-    Sequence
-  };
-
-  template<class T>
-  struct kind;
 
   /**
    * @defgroup type-categories Type Categories
@@ -103,131 +79,6 @@ namespace cli::traits {
   template<class T, std::size_t Size>
   struct is_fixed_size_sequence<std::array<T, Size>> : std::true_type {};
 
-  template<typename T>
-  concept Character =
-    is_char<T>::value or std::same_as<T, char> or
-    std::same_as<T, unsigned char> or std::same_as<T, signed char> or
-    std::same_as<T, char8_t> or std::same_as<T, char16_t> or
-    std::same_as<T, char32_t> or std::same_as<T, wchar_t>;
-
-  template<class T>
-  concept Integer =
-    is_integer<T>::value or
-    ((not Character<T>) and std::integral<T> and not std::same_as<T, bool>);
-
-  template<class T>
-  concept FixPoint =
-    is_fixpoint<T>::value and
-    std::constructible_from<T, typename T::raw_value_type> and
-    std::integral<typename T::raw_value_type> and requires(T a, T b) {
-      { T::num_int_digits } -> std::convertible_to<std::size_t>;
-      { T::num_frac_digits } -> std::convertible_to<std::size_t>;
-      { a.integer() } -> std::convertible_to<typename T::raw_value_type>;
-      { a.fraction() } -> std::convertible_to<typename T::raw_value_type>;
-      { a.value() } -> std::convertible_to<typename T::raw_value_type>;
-      { a < b };
-      { -a };
-      { a = b };
-    };
-
-  template<class T>
-  concept Float = std::floating_point<T> or is_float<T>::value;
-
-  /**
-   * @brief This concept denotes a string view, i.e. a non owning string.
-   *
-   * To "enable" this concept, you must specialize cli::traits::is_string_view
-   * and inherit that specialization from std::true_type.
-   *
-   * @tparam T
-   */
-  template<class T>
-  concept StringView =
-    is_string_view<T>::value and std::integral<typename T::value_type> and
-    std::constructible_from<T, const typename T::value_type *, std::size_t> and
-    requires(T &&t, std::size_t i) {
-      { T{} };
-      { t.size() } -> std::convertible_to<std::size_t>;
-      { t.begin() } -> std::forward_iterator;
-      { t.end() } -> std::forward_iterator;
-      { t[i] } -> std::convertible_to<const typename T::value_type &>;
-    };
-
-  /**
-   * @brief This concept denotes a string.
-   *
-   * To "enable" this concept, you must specialize cli::traits::is_string and
-   * inherit that specialization from std::true_type.
-   *
-   * @tparam T
-   */
-  template<class T>
-  concept String =
-    is_string<T>::value and std::integral<typename T::value_type> and
-    std::constructible_from<T, const typename T::value_type *, std::size_t> and
-    requires(T &&t, typename T::value_type c, std::size_t i) {
-      { T{} };
-      { t.size() } -> std::convertible_to<std::size_t>;
-      { t.begin() } -> std::forward_iterator;
-      { t.end() } -> std::forward_iterator;
-      { t[i] } -> std::convertible_to<const typename T::value_type &>;
-      { t.push_back(c) };
-    };
-
-  /**
-   * @brief This concept denotes a list of values.
-   *
-   * T contains a variable amount of elements of type T::value_type, for example
-   * cli::FixedCapacityVector. To "enable"" this concept, you must specialize
-   * cli::traits::is_sequence and inherit that specialization from
-   * std::true_type.
-   *
-   * @tparam T
-   */
-  template<class T>
-  concept Sequence = is_sequence<T>::value and std::copy_constructible<T> and
-                     requires(T a, sequence_value_type_t<T> value) {
-                       { T{} };
-                       { a.begin() };
-                       { a.end() };
-                       { a.max_size() } -> std::convertible_to<std::size_t>;
-                       { a.push_back(value) };
-                     };
-
-  /**
-   * @brief This concept denotes a list of values. T contains a fixed amount
-   * of elements of type T::value_type, for example std::array. To "enable""
-   * this concept, you must specialize cli::traits::is_fixed_size_sequence and
-   * inherit that specialization from std::true_type.
-   *
-   * @tparam T
-   */
-  template<class T>
-  concept FixedSizeSequence =
-    is_fixed_size_sequence<T>::value and std::copy_constructible<T> and
-    requires(T a, std::size_t i, sequence_value_type_t<T> value) {
-      { T{} };
-      { a.begin() };
-      { a.end() };
-      { a.size() } -> std::convertible_to<std::size_t>;
-      { a[i] = value };
-    };
-
-  /**
-   * @brief This concept denotes a "struct".
-   *
-   * It would be more appropriate to say that this represents an aggregate, i.e.
-   * something that can be decomposed into structuerd bindings.
-   *
-   * @tparam T
-   */
-  template<class T>
-  concept Struct =
-    is_struct<T>::value and not(Sequence<T> or FixedSizeSequence<T>);
-
-  template<class T>
-  concept Enum = is_enum<T>::value;
-
   template<std::integral T>
   struct integer_traits {
     using type = T;
@@ -247,7 +98,7 @@ namespace cli::traits {
     static constexpr auto align = alignof(type);
   };
 
-  template<FixPoint T>
+  template<typename T>
   struct fixpoint_traits {
     using type = T;
     using raw_value_type = typename T::raw_value_type;
@@ -256,40 +107,33 @@ namespace cli::traits {
     static constexpr std::size_t num_frac_digits = T::num_frac_digits;
   };
 
-  template<class T>
-  struct string_traits : std::false_type {};
-
-  template<class T>
-  struct sequence_traits : std::false_type {};
-
-  template<class T>
-  concept FlagEnum = Enum<T> and requires(T a, T b) {
-    { a | b } -> std::same_as<T>;
-  };
-
-  template<Enum T>
+  template<class E>
   struct enum_traits;
 
-  template<Enum T>
-    requires std::is_signed_v<std::underlying_type_t<T>> and (not FlagEnum<T>)
-  struct enum_traits<T> {
-    static constexpr std::underlying_type_t<T> min = -128;
-    static constexpr std::underlying_type_t<T> max = 127;
+  template<class E>
+    requires std::is_enum_v<E> and
+             std::is_signed_v<std::underlying_type_t<E>> and
+             (not cli::traits::dtl::FlagEnum<E>)
+  struct enum_traits<E> {
+    static constexpr std::underlying_type_t<E> min = -128;
+    static constexpr std::underlying_type_t<E> max = 127;
     static constexpr bool is_flag = false;
   };
 
-  template<Enum T>
-    requires std::is_unsigned_v<std::underlying_type_t<T>> and (not FlagEnum<T>)
-  struct enum_traits<T> {
-    static constexpr std::underlying_type_t<T> min = 0;
-    static constexpr std::underlying_type_t<T> max = 255;
+  template<class E>
+    requires std::is_enum_v<E> and
+             std::is_unsigned_v<std::underlying_type_t<E>> and
+             (not cli::traits::dtl::FlagEnum<E>)
+  struct enum_traits<E> {
+    static constexpr std::underlying_type_t<E> min = 0;
+    static constexpr std::underlying_type_t<E> max = 255;
     static constexpr bool is_flag = false;
   };
 
-  template<FlagEnum T>
-  struct enum_traits<T> {
-    static constexpr std::underlying_type_t<T> min = 0u;
-    static constexpr std::underlying_type_t<T> max = sizeof(T) * 8u - 1u;
+  template<cli::traits::dtl::FlagEnum E>
+  struct enum_traits<E> {
+    static constexpr std::underlying_type_t<E> min = 0u;
+    static constexpr std::underlying_type_t<E> max = sizeof(E) * 8u - 1u;
     static constexpr bool is_flag = true;
   };
 

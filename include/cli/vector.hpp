@@ -1,8 +1,6 @@
 #ifndef CLI_VECTOR_HPP
 #define CLI_VECTOR_HPP
 
-#include "cli/concepts.hpp"
-
 #include <concepts>
 #include <cstddef>
 #include <memory>
@@ -195,7 +193,7 @@ namespace cli {
     }
 
     constexpr ~FixedCapacityVector()
-      requires TriviallyDestructible<T>
+      requires std::is_trivially_destructible_v<T>
     = default;
 
     constexpr ~FixedCapacityVector() { this->clear(); }

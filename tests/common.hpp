@@ -1,5 +1,6 @@
 #ifndef CLI_TEST_COMMON_HPP
 #define CLI_TEST_COMMON_HPP
+#include "cli/concepts.hpp"
 #include "cli/enums.hpp"
 #include "cli/traits.hpp"
 // #include "fixpoint.hpp"
@@ -11,11 +12,11 @@ namespace cli::traits {
 
   template<class T, class A>
   struct is_sequence<std::vector<T, A>> : std::true_type {};
-  static_assert(Sequence<std::vector<int>>);
+  static_assert(cli::concepts::Sequence<std::vector<int>>);
 
   template<>
   struct is_string<std::string> : std::true_type {};
-  static_assert(String<std::string>);
+  static_assert(cli::concepts::String<std::string>);
 
   /*
   template <std::size_t I, std::size_t F>

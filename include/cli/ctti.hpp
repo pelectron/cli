@@ -7,6 +7,7 @@
 #ifndef CLI_CTTI_HPP
 #define CLI_CTTI_HPP
 
+#include "cli/concepts.hpp"
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
 
@@ -89,7 +90,7 @@ namespace cli::ctti {
 
     template<typename T, typename CharT = char>
     consteval auto name() {
-      if constexpr (is_view_v<T>) {
+      if constexpr (cli::dtl::is_view_v<T>) {
         return string_constant<CharT, 's', 't', 'r', 'i', 'n', 'g'>{};
       } else {
         return []<std::size_t... Is>(std::index_sequence<Is...>) {
@@ -281,7 +282,7 @@ namespace cli::ctti {
     }
 
     template <class E, typename CharT, std::size_t... Is>
-      requires traits::FlagEnum<E>
+      requires traits::enum_traits<E>::is_flag
     consteval std::size_t generate_enum_names_size(std::index_sequence<Is...>) {
       using Pair = std::pair<E, View<const CharT>>;
       using RawArray = std::array<Pair, sizeof...(Is)>;
@@ -298,7 +299,7 @@ namespace cli::ctti {
     }
 
     template <class E, typename CharT, std::size_t... Is>
-      requires traits::FlagEnum<E>
+      requires traits::enum_traits<E>::is_flag
     consteval auto generate_enum_names(std::index_sequence<Is...>) {
       using Pair = std::pair<E, View<const CharT>>;
       using RawArray = std::array<Pair, sizeof...(Is)>;
@@ -326,7 +327,7 @@ namespace cli::ctti {
                                traits::enum_traits<E>::min + 1>{});
 
     template<class E, typename CharT>
-      requires traits::FlagEnum<E>
+      requires traits::enum_traits<E>::is_flag
     inline constexpr auto enum_name_map<E, CharT> =
       generate_enum_names<E, CharT>(
         std::make_index_sequence<traits::enum_traits<E>::max -
@@ -1636,8 +1637,8 @@ namespace cli::ctti {
    * @tparam CharT the character type to use
    * @param value the enum value
    */
-  template<traits::Enum E, typename CharT = char>
-    requires(not traits::FlagEnum<E>)
+  template<concepts::Enum E, typename CharT = char>
+    requires(not traits::enum_traits<E>::is_flag)
   constexpr View<const CharT> enum_name(E value) {
     for (const auto &[e, s] : ::cli::ctti::dtl::enum_name_map<E, CharT>) {
       if (e == value)
@@ -1665,8 +1666,8 @@ namespace cli::ctti {
    * @tparam CharT the character type to use
    * @param value the enum value
    */
-  template<traits::Enum E, typename CharT = char>
-    requires traits::FlagEnum<E>
+  template<concepts::Enum E, typename CharT = char>
+    requires traits::enum_traits<E>::is_flag
   constexpr View<const CharT> enum_name(E value) {
     for (const auto &[e, s] : ::cli::ctti::dtl::enum_name_map<E, CharT>) {
       if (value == e)
