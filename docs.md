@@ -34,11 +34,14 @@
     - [Output Example](#output-example)
 - [Commands](#commands)
   - [Parameters](#parameters)
+    - [Virtual Parameters](#virtual-parameters)
     - [Parameters Without Object Declarations](#parameters-without-object-declarations)
     - [Parameters With Object/Variable Declarations](#parameters-with-objectvariable-declarations)
     - [Parameters With Const Object/Variable Declarations](#parameters-with-const-objectvariable-declarations)
     - [Member Data Parameters](#member-data-parameters)
   - [Functions](#functions)
+    - [Free Functions And Callables](#free-functions-and-callables)
+    - [Member Functions](#member-functions)
     - [Arguments](#arguments)
       - [Optional Arguments](#optional-arguments)
       - [Required Arguments](#required-arguments)
@@ -53,6 +56,9 @@
   - [Fixpoint Parsing](#fixpoint-parsing)
   - [Struct Parsing](#struct-parsing)
   - [Custom Parsing](#custom-parsing)
+- [cli-term](#cli-term)
+  - [Usage](#cli-term-usage)
+  - [Compiling](#compiling-cli-term)
 
 ## Engine
 
@@ -523,9 +529,19 @@ cli::AnsiDisplay display{MyOutput{}};
 
 ## Commands
 
+Commands are the functionality to execute on the cli.
+
+There are two types of commands:
+
+- [Parameters](#parameters)
+- [Functions](#functions)
+
+Parameters are values that can be set and retrieved, functions are
+functionality that can be executed.
+
 ### Parameters
 
-Parameters are what they sound like. They are values the CLI makes available.
+Parameters are values the CLI makes available.
 
 As an example: A parameter with the name "enable" with type bool can be set
 with `enable = true`, and can be retrieved with `enable` (which will print
@@ -535,9 +551,29 @@ To create a parameter, use the `cli::param` template overload set.
 
 There are several different forms for creating parameters, described below.
 
+#### Virtual Parameters
+
+Virtual parameters don't have a value associated with them and can only be used
+to group subcommands.
+
+To create a virtual parameters, use one of the following overloads:
+
+```cpp
+param(name, description, subcommands...);
+param(name, subcommands...);
+```
+
+where
+
+- name is a `cli::string_constant` that makes up the command name.
+- description is a `cli::string_constant` that describes the command.
+- subcommands are subcommands of the parameter, either
+  [parameters](#parameters) or [functions](#functions). You must have at least
+  one subcommand.
+
 #### Parameters Without Object Declarations
 
-Paramters Without Object/Variable Declarations
+Parameters Without Object/Variable Declarations
 
 Parameter commands without an object/variable declaration can be setup with the
 following functions.
@@ -743,7 +779,7 @@ param(name, description, ptr_to_member);
 
 ### Functions
 
-Functions are commands that can be called. They take arguments and optionally
+Functions are commands that execute an action. They take arguments and optionally
 return a value. Functions can be called like so:
 
 ```bash
@@ -752,6 +788,136 @@ function(name1 = arg1, name2 = arg2)
 # parentheses are optional
 function arg1, arg2
 function name1 = arg1, name2 = arg2
+```
+
+To create a function, you can use the `cli::func` template overload set.
+
+#### Free Functions and Callables
+
+A function is fully defined by:
+
+- name: the function's name. Must be a `cli::string_constant`.
+- description: the function's description. Must be a `cli::string_constant`.
+- f: the C++ callable that actually performs the action. This
+  may be a free function, a functor/lambda, or a member function.
+- arguments: Elements that describe the callable's arguments.
+
+The following overloads are available for free functions and
+functors/callables:
+
+```cpp
+// the base form
+cli::func(name, description, f, arguments...);
+
+// a function without a description
+cli::func(name, f, arguments...);
+
+// the functions name will be the type of f. I.e. if f's type is called
+// "Functor", the function's name will be "Functor".
+cli::func(f, description, arguments...);
+
+// same as the previous overload without a description.
+cli::func(f, arguments...);
+```
+
+Example:
+
+```cpp
+#include <cli.hpp>
+
+using cli::operator""_sc;
+using cli::operator""_arg;
+
+int free1(int i, char c);
+char free2();
+
+struct func1{
+  void operator()(int k);
+};
+
+struct func2{
+  void operator()(int k, char c);
+};
+
+cli::func("free1"_sc, "free1 description"_sc, &free1, "i"_arg, "c"_arg);
+cli::func("free2"_sc, &free2);
+cli::func(func1{}, "func1 description"_sc, "k"_arg);
+cli::func(func2{}, "k"_arg, "c"_arg);
+
+```
+
+These functions can then be called on the cli like so:
+
+```python
+free1(i = 5, c = k)
+free2()
+func1(k=10)
+func2(k=10, c = d)
+```
+
+#### Member Functions
+
+For member functions, the following overloads are available, where `t`
+has the member function pointed to by `mem_fun_ptr`.
+
+Warning: `t` is taken in by reference! `t` must live for the duration of the
+engine's lifetime.
+
+```cpp
+cli::func(name, description, t, mem_fun_ptr, arguments...);
+cli::func(name, t, mem_fun_ptr, arguments...);
+```
+
+Example:
+
+```cpp
+#include <cli.hpp>
+
+using cli::operator""_sc;
+using cli::operator""_arg;
+
+struct T1{
+  void m1();
+};
+
+static T1 t1;
+
+cli::func("m1"_sc, t, &T1::m1);
+```
+
+There are additional overload for member functions available, but these require
+a parent command that the corresponding member function can be executed upon.
+
+```cpp
+cli::func(name, description, mem_fun_ptr, args...);
+cli::func(name, mem_fun_ptr, args...);
+cli::func<mem_fun_ptr>(description, args...);
+cli::func<mem_fun_ptr>(args...);
+```
+
+Example:
+
+```cpp
+struct S{
+  int a;
+  void apply();
+  int foo();
+};
+
+static S s;
+
+cii::param("s"_sc,
+           "s description"_sc,
+           s,
+           cli::func("apply"_sc, &S::apply),
+           cli::func<&S::foo>())
+```
+
+Then `apply` and `foo` can be called like so:
+
+```bash
+s.apply()
+s.foo()
 ```
 
 #### Arguments
@@ -1206,4 +1372,60 @@ struct Parse<MyClass, CharT>{
 
 }
 
+```
+
+## cli-term
+
+`cli-term` is a command line executable to connect to an embedded system
+running `CLI` over a serial port or an ethernet connection.
+
+### cli-term Usage
+
+```bash
+cli-term args...
+```
+
+where args are:
+
+- -a, --address: a serial port, or ip address in the form ip:port. Must be
+  supplied. Example: "COM4" or "168.0.0.1:80".
+- -s, --size: the character size used by your cli. One of [8, 16, 32].
+  Default is 8.
+- -sb, --stopbits: number of serial poprt stop bits. One of [1, 1.5, 2, one,
+  one_point_five, two]. Default is none.
+- -p, --parity: serial port parity. One of [none, odd, even]. Default is
+  none.
+- -d, --delimiter: the cli delimiter. One of [lf, cr, crlf]. Defualt is
+  lf.
+- -e, --endian: the endian used on the system running cli. Only applicable if
+  size is not 8. One of [big, little]. Default is big.
+- -b, --baudrate: the serial port baudrate. A positive number. Default is 115200.
+
+Example command:
+
+```bash
+cli-term --address COM4 --parity odd --stopbits 1.5 --baudrate 115200
+```
+
+### Compiling cli-term
+
+Building cli-term requires these dependencies:
+
+- [asio](https://think-async.com/Asio/)
+- [cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal)
+
+When you use meson, simply execute this command in the project root:
+
+```bash
+meson setup build -Dcli-term=enabled
+meson compile -C build
+```
+
+If you don't use meson, you must have asio and cpp-terminal available and
+also add CLI's include folder to your include path.
+
+Example command to build it with g++:
+
+```bash
+g++ source/cli-term.cpp -Iinclude -o cli-term
 ```

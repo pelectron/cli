@@ -160,6 +160,13 @@ meson compile -C build
 
 This will generate `cli-term` in the `build` directory.
 
+If you are on windows, you may need to add `--vsenv` to the meson setup command
+
+```bash
+meson setup build -Dcli-term=enabled --vsenv
+meson compile -C build
+```
+
 ### Other Build Systems
 
 If you use another build system, just add CLI's `include` folder to your build
@@ -228,18 +235,14 @@ If you don't use meson but want the simulation capability, you will need
 
 ## Documentation
 
-This project is documented using doxygen.
+This project is documented using doxygen. Either use the provided `Doxyfile`
+and manually invoke doxygen or build the documentation with meson by setting
+the `docs` project option to true.
 
-To get a good overview of the main components and a quick reference, use
+To get a good overview of the main components and a reference, use the
 [accompanying markdown documentation (docs.md)](./docs.md).
-
-and an accomp [markdown](./docs.md). Either
-use the provided `Doxyfile` and manually invoke doxygen or build the
-documentation with meson by setting the `docs` project option to true.
 
 ```bash
 meson setup build -Ddocs=true
 meson compile -C build
 ```
-
-If you dont have doxyen available, you can also read [docs.md](./docs.md).
