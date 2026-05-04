@@ -1,14 +1,11 @@
 /**
- * @defgroup Input
+ * @defgroup Input Input
  *
  * Character input to the CLI system is handled by @ref cli::Input and classes
  * that satisfy the @ref cli::concepts::Input "Input concept".
  *
- * ## Using Custom Input Classes
+ * See [here](docs.md#input) for a detailed explanation.
  *
- * To use a custom input class, the cli::Config passed to cli::Engine must
- * contain an inner typedef called input_type. That input_type must satisfy the
- * @ref cli::concepts::Input "Input concept".
  */
 #ifndef CLI_INPUT_HPP
 #define CLI_INPUT_HPP
@@ -25,7 +22,6 @@
 
 namespace cli {
 
-  // TODO: modify examples
   /**
    * This class represents an ANSI input device, e.g. a keyboard or UART
    * input stream.
@@ -37,69 +33,8 @@ namespace cli {
    * - handlling a basc set of ANSI escape sequences
    * - passing through any "normal" character data.
    *
-   * This class template uses a single parameter, a cli::Config called Cfg. The
-   * following properties from Cfg are used:
-   * - `char_type`: the character type
-   * - `use_volatile_input_buffer`: if set to true, this class uses a volatile
-   *   buffer to store events. This should be set to true if you call on_char()
-   *   in an ISR.
-   * - `rx_size`: the number of events the internal ring buffer uses.
-   * - `delimiter`: the delimiter used to enter a single command.
-   * - `use_autocomplete`: if true, a tab will autocomplete the current command
-   *   input.
-   *
-   * ## Recognized Escape Sequences And Special Characters
-   *
-   * In the following paragraph, *CSI* stands for [Control Sequence
-   * Inroducer](https://en.wikipedia.org/wiki/ANSI_escape_code#Control_Sequence_Introducer_commands),
-   * which is the character sequence ``0x1B 0x5B``, also commonly written as
-   * ``ESC[``.
-   *
-   * These special characters and escape sequences are recognized by cli::Input:
-   * - ``BEL`` (0x07) -> Control::bell
-   * - ``backspace`` (0x08, \\b) -> Control::backspace. This means deleting the
-   *   character before the cursor (or the last character in case
-   *   Cfg::use_cursor is false).
-   * - ``tab`` (0x09, \\t) -> passed through as is if autocomplete is not
-   *   enabled, else Control:autocomplete.
-   * - ``linefeed`` (0x0A, \\n) -> Control::enter if Cfg::delimiter is lf, else
-   *   passed through as is.
-   * - ``carriage return`` (0x0D, \\r) -> Control::enter if Cfg::delimiter is
-   *   cr, else passed through as is.
-   * - ``carriage return + linefeed`` ([0x0A, 0x0B], \\r\\n) -> Control::enter
-   *   if Cfg::delimiter is crlf.
-   * - ``delete`` (0x7F) -> Control::delete_char. Deletes the character under
-   *   the cursor. If cursor is not enabled, this has no effect.
-   * - ``CSI n A`` -> Control::cursor_up. cursor up movement. If history is
-   *   enabled, this translates to going back in history. n is optional.
-   * - ``CSI n B`` -> Control::cursor_down. cursor down movement. If history is
-   *   enabled, this translates to moving forward in history. n is optional.
-   * - ``CSI n C`` -> Control::cursor_right. cursor right movement. If cursor is
-   *   enabled, this translates to moving the cursor to the right. If the cursor
-   *   is at the end of the current input, nothing happens. n is optional.
-   * - ``CSI n D`` -> Control::cursor_left: cursor left movement. If cursor is
-   *   enabled, this translates to moving the cursor to the left. If the cursor
-   *   is at the start of the current input, nothing happens. n is optional.
-   * - ``CSI 0 K`` -> Control::clear_line_to_end: clears the line from the
-   *   cursor to the end. The cursor position will not change. If the cursor is
-   *   not enabled, this has no effect.
-   * - ``CSI 1 K`` -> Control::clear_line_to_begin. Clears the line from the
-   *   cursor to the beginning. The cursor moves to the beginning of the input.
-   *   If the cursor is not enabled, this has no effect.
-   * - ``CSI 2 K`` -> Control::clear_line. Clears the entire line. The cursor
-   *   moves to the beginning of the input. If the cursor is not enabled, this
-   *   has no effect.
-   * - ``CSI 2 J`` -> Control::clear_screen. Clears the entire screen. The
-   *   cursor moves to the top starting position. If the cursor is not enabled,
-   *   this has no effect.
-   *
-   * @note Certain escape sequences effects differ from the ANSI standard
-   * because CLI is intended to be used as a single line interface, not a fully
-   * featured ANSI terminal. This affects the sequences ``CSI n K`` and
-   * ``CSI 2 J``.
-   * However, if your display/output is connected to a fully ANSI compliant
-   * device, then you can use cli::AnsiOutput, which sends the needed cursor
-   * move sequences to be ANSI compliant.
+   * See [here](docs.md#input-class-template) for a detailed explanation of
+   * which escape sequences are recognized.
    *
    * @ingroup Input
    * @tparam Cfg the cli config.

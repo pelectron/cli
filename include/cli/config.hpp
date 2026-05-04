@@ -1,3 +1,11 @@
+/**
+ * @defgroup config Config
+ *
+ * The Config is used by the engine.
+ *
+ * See [here](docs.md#config) for a more detailed explanation.
+ */
+
 #ifndef CLI_CONFIG_HPP
 #define CLI_CONFIG_HPP
 
@@ -84,17 +92,6 @@ namespace cli {
       static constexpr bool value = C::empty_help_prints_commands;
     };
 
-    template<concepts::Config C, typename = void>
-    struct multiline_display : std::false_type {};
-
-    template<concepts::Config C>
-    struct multiline_display<
-      C,
-      std::enable_if_t<
-        std::is_convertible_v<decltype(C::multiline_display), bool>>> {
-      static constexpr bool value = C::multiline_display;
-    };
-
     template<concepts::Config C, typename Display>
     struct display_fits_config : std::false_type {};
 
@@ -107,36 +104,80 @@ namespace cli {
           : true;
     };
 
+    /**
+     * evaluates to true if C specifies the use of a volatile input buffer.
+     * @ingroup config
+     * @tparam C the configuration
+     */
     template<concepts::Config C>
     inline constexpr bool use_volatile_input_buffer_v =
       use_volatile_input_buffer<C, void>::value;
 
+    /**
+     * evaluates to the delimier specified by C
+     * @ingroup config
+     * @tparam C the configuration
+     */
     template<concepts::Config C>
     inline constexpr Delimiter input_delimiter_v =
       input_delimiter<C, void>::value;
 
+    /**
+     * evaluates to the number of Events that the input should be able to store.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
     template<concepts::Config C>
     inline constexpr std::size_t input_size_v = input_size<C, void>::value;
 
+    /**
+     * evaluates to the output buffer size.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
     template<concepts::Config C>
     inline constexpr std::size_t output_size_v = output_size<C, void>::value;
 
+    /**
+     * evaluates to the input type specified by C.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
     template<concepts::Config C>
     using input_type_t = typename input_type<C, void>::type;
 
+    /**
+     * is true if C has a valid history_depth entry.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
     template<typename C>
     concept has_history_depth = requires {
       { C::history_depth } -> std::convertible_to<std::size_t>;
     } and (C::history_depth > 0);
 
+    /**
+     * is true if C specifies that en empty help string prints the whole
+     * command structure.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
     template<concepts::Config C>
     inline constexpr bool empty_help_prints_commands_v =
       empty_help_prints_commands<C, void>::value;
 
-    template<concepts::Config C>
-    inline constexpr bool multiline_display_v =
-      multiline_display<C, void>::value;
-
+    /**
+     * checks if the config C and the Display fit together.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     * @tparam Display the display
+     */
     template<concepts::Config C, typename Display>
     inline constexpr bool display_fits_config_v =
       display_fits_config<C, Display>::value;
@@ -158,11 +199,9 @@ namespace cli {
     static constexpr bool use_volatile_input_buffer = false;
     static constexpr std::size_t output_size = 256;
     static constexpr bool empty_help_prints_commands = true;
-    static constexpr bool multiline_display = true;
   };
 
   static_assert(concepts::Config<default_config>);
-  static_assert(config::multiline_display_v<default_config>);
 } // namespace cli
 
 #endif

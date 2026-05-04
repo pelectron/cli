@@ -60,6 +60,8 @@ namespace cli::params {
   /**
    * concept for a Getter with value type V.
    *
+   * See [here](docs.md#getters) for more details.
+   *
    * @ingroup Parameters
    * @tparam G the getter type
    * @tparam V the value type
@@ -71,6 +73,8 @@ namespace cli::params {
 
   /**
    * concept for a Setter with value type V.
+   *
+   * See [here](docs.md#setters) for more details.
    *
    * @ingroup Parameters
    * @tparam S the setter type
@@ -87,6 +91,8 @@ namespace cli::params {
    * reference denotes the place where the getter should store its value. If G
    * cannot produce a value, it should return the error that occurred.
    *
+   * See [here](docs.md#getters) for more details.
+   *
    * @ingroup Parameters
    * @tparam G the type to test
    */
@@ -98,6 +104,8 @@ namespace cli::params {
   /**
    * A Setter S sets the value of a parameter. An instance of S must be
    * callable with a const l value reference and return a cli::Error.
+   *
+   * See [here](docs.md#setters) for more details.
    *
    * @ingroup Parameters
    * @tparam S the type to test
@@ -790,7 +798,7 @@ namespace cli::params {
   }
 
   /**
-   * @defgroup Parameters
+   * @defgroup Parameters Parameters
    * @ingroup Commands
    *
    * Parameters are commands that represent a value.
@@ -807,34 +815,8 @@ namespace cli::params {
    * parameter
    * ```
    *
-   * A Parameter is fully defined by a:
-   * - name: the parameter name. Must be a cli::string_constant.
-   * - description: the parameter description. Must be a cli::string_constant.
-   * - set: a Setter, i.e. a callback the sets the parameter value.
-   * - get: a Getter, i.e. callback that gets the parameter value.
-   * - parse: a callable that parses the value from a string. See @ref Parsing.
-   * - format: a callable that formats the value into a string. See @ref
-   *   Formatting.
-   * - validate: a callable that checks wether the parsed value is considered
-   *   valid. See @ref Validation.
-   * - subcommands: optional subcommands, which may be parameters or functions.
-   *
-   * There are four kinds of parameter categories:
-   * 1. Parameters without object/variable declarations. These kinds of
-   * parameters don't store their value in a variable, as far as CLI is
-   * concerned. They give complete control regarding read and write access
-   * of the values and is the most flexible. The drawback is that using these
-   * requires more boilerplate. See @ref params-without-object.
-   * 2. Parameters with object/variable declarations. These parameters store
-   * their value in a variable. See @ref params-with-object and @ref
-   * params-with-const-object.
-   * 3. Member data parameters. These are subcommands of a parent parameter. See
-   * @ref memdata and @ref const-memdata.
-   * 4. Virtual parameters. These can't be read or written to, but act as a
-   * grouping for sub commands. See @ref virtual-params.
-   *
-   * The second and third category reduce the boilerplate required of the first
-   * category and provide sensible defaults.
+   * Parameters can be created with the cli::param overload set. See
+   * [here](docs.md#parameters) for more details.
    */
 
   /**

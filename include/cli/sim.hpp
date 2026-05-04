@@ -3,35 +3,11 @@
  * @brief This header contains the functions to simulate a cli on a PC terminal.
  * See also @ref Simulation.
  *
- * @defgroup Simulation
+ * @defgroup Simulation Simulation
+ *
  * clis can also be simulated on a PC.
  *
- * Basic usage example:
- *
- * ```
- * #include "cli/sim.hpp"
- *
- * struct Config{...};
- *
- * int main(){
- *   if (not cli::sim::init())
- *     return -1;
- *
- *   cli::Cli my_cli = cli::sim::create_cli(Config{}, commands...);
- *
- *   my_cli.print();
- *
- *   while (cli::sim::get_input_and_process(my_cli)) {
- *   }
- *
- *   return 0;
- * }
- * ```
- *
- * The executable can then be run on a PC. Ctrl-C exits the cli.
- *
- * @note [cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) is
- * required for the simulation to work.
+ * See [here](docs.md#simulation) for more info.
  */
 
 #ifndef CLI_SIM_HPP
@@ -60,6 +36,7 @@ namespace cli::sim {
   /**
    * @brief The init function for the sim.
    *
+   * @ingroup Simulation
    * @return true if init succeded, else false.
    */
   inline bool init() {
@@ -77,13 +54,14 @@ namespace cli::sim {
   }
 
   /**
-   * @brief gets an input and processes it on the cli. Returns false when ctrl-c
+   * @brief gets an input and processes it on the cli. Returns false when ctrl-C
    * is pressed.
    *
-   * @param cli the cli object
+   * @ingroup Simulation
+   * @param engine the engine object
    */
-  template<typename Cli>
-  bool get_input_and_process(Cli &cli) {
+  template<typename Engine>
+  bool get_input_and_process(Engine &engine) {
     try {
       // 1. gather input and call on_char().
       Term::Event event = Term::read_event();
@@ -97,44 +75,44 @@ namespace cli::sim {
             case Term::Key::Ctrl_J:
               // clear screen
               for (auto c : cli::View{"\x1b[2J"})
-                cli.on_char(c);
+                engine.on_char(c);
               break;
             case Term::Key::Ctrl_K:
               // clear to end of line
               for (auto c : cli::View{"\x1b[0K"})
-                cli.on_char(c);
+                engine.on_char(c);
               break;
             case Term::Key::Ctrl_L:
               // clear entire line
               for (auto c : cli::View{"\x1b[2K"})
-                cli.on_char(c);
+                engine.on_char(c);
               break;
             case Term::Key::Ctrl_U:
               // clear to begin of line
               for (auto c : cli::View{"\x1b[1K"})
-                cli.on_char(c);
+                engine.on_char(c);
               break;
             case Term::Key::Enter:
-              cli.on_char('\n'); // TODO: respect Cli's delimiter
+              engine.on_char('\n'); // TODO: respect Cli's delimiter
               break;
             case Term::Key::ArrowDown:
               for (auto c : cli::View{"\x1b[B"})
-                cli.on_char(c);
+                engine.on_char(c);
               break;
             case Term::Key::ArrowUp:
               for (auto c : cli::View{"\x1b[A"})
-                cli.on_char(c);
+                engine.on_char(c);
               break;
             case Term::Key::ArrowRight:
               for (auto c : cli::View{"\x1b[C"})
-                cli.on_char(c);
+                engine.on_char(c);
               break;
             case Term::Key::ArrowLeft:
               for (auto c : cli::View{"\x1b[D"})
-                cli.on_char(c);
+                engine.on_char(c);
               break;
             default:
-              cli.on_char(key.value);
+              engine.on_char(key.value);
           }
         } break;
         default:
@@ -142,7 +120,7 @@ namespace cli::sim {
       }
 
       // call process()
-      cli::Error err = cli.process();
+      cli::Error err = engine.process();
 
       // ignore errors
       (void)err;
@@ -157,19 +135,17 @@ namespace cli::sim {
   }
 
   /**
-   * @brief creates the cli object from the config and commands
+   * @brief creates the engine object from the config and commands
    *
+   * @ingroup Simulation
    * @param config the cli::Config
    * @param commands the commands
    */
   template<cli::concepts::Config Config, cli::concepts::Command... Commands>
-  constexpr auto create_cli(Config config,
-                            Commands &&...commands) /* -> cli::Cli */ {
+  constexpr auto create(Config config,
+                        Commands &&...commands) /* -> cli::Cli */ {
     static_assert(std::is_same_v<char, typename Config::char_type>,
                   "char_type must be char. Others are unsupported for now.");
-
-    static_assert(is_multiline_display_v<decltype(cli::AnsiDisplay{
-                    &::cli::sim::dtl::write})>);
 
     return cli::Engine{Config{},
                        cli::AnsiDisplay{&::cli::sim::dtl::write},

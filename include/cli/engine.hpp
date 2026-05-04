@@ -57,7 +57,7 @@ namespace cli {
     }
 
     /**
-     * This method passes c onto its @ref cli::concept::Input "input".
+     * This method passes c onto its @ref cli::concepts::Input "input".
      * @param c the received character
      */
     constexpr Error on_char(char_type c) { return input_.on_char(c); }

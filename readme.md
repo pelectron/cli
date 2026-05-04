@@ -61,7 +61,7 @@ gooify n = 10, mode = extreme  # calls gooify(Mode::extreme, 10), the parenthese
 ```
 
 In your main application, you will create an Engine object, and populate it
-with the parameters and functions, and calls the engine's `on_char()` and
+with the parameters and functions, and call the engine's `on_char()` and
 `process()` methods.
 
 `on_char` must either be called in your character reception ISR, or in the main

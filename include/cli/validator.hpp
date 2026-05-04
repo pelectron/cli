@@ -4,20 +4,12 @@
  * @brief This file contains the Validator concept and the default
  * implementation.
  *
- * @defgroup Validation
+ * @defgroup Validation Validation
  *
  * A validator is a callable that takes a value as its sole argument and
  * returns a bool.
  *
- * If the value is valid, true must be returned, else false.
- *
- * Example:
- * ```
- * // a foo must be in the range [0,100]
- * cli::Error validate_foo(int foo){
- *   return foo >= 0 and foo <= 100;
- * }
- * ```
+ * For more details, see [here](docs.md#validation).
  */
 
 #ifndef CLI_VALIDATE_HPP
@@ -54,7 +46,7 @@ namespace cli::validate {
    * Example:
    * ```
    * // a foo must be in the range [0,100]
-   * cli::Error validate_foo(int foo){
+   * bool validate_foo(int foo){
    *   return foo >= 0 and foo <= 100;
    * }
    * ```
@@ -77,7 +69,7 @@ namespace cli::validate {
    * Example:
    * ```
    * // a foo must be in the range [0,100]
-   * cli::Error validate_foo(int foo){
+   * bool validate_foo(int foo){
    *   return foo >= 0 and foo <= 100;
    * }
    * ```

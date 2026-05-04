@@ -72,7 +72,7 @@ struct Config : cli::default_config {
 
 // clang-format off
 // the cli object itself
-static cli::Engine cli_ = cli::sim::create_cli(
+static cli::Engine cli_ = cli::sim::create(
   Config{},
   param<int>("foo"_sc, 
             "foo description"_sc, 

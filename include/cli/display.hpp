@@ -1,9 +1,10 @@
 /**
  * @file cli/display.hpp
  * @brief This file contains the AnsiDisplay class.
- * @defgroup display Display
  *
- * CLI uses the @ref cli::concept::Display "Display Concept" to output
+ * @defgroup Display Display
+ *
+ * CLI uses the @ref cli::concepts::Display "Display Concept" to output
  * characters to a screen.
  *
  * There are two types of Displays:
@@ -18,7 +19,7 @@
  * movement.
  *
  * For a detailed description of the Display concept, see
- * [the markdown documentation](docs.md).
+ * [here](docs.md#display).
  */
 
 #ifndef CLI_DISPLAY_HPP
@@ -128,9 +129,19 @@ namespace cli {
 
   } // namespace dtl
 
+  /**
+   * evaluates to the character type used by O
+   *
+   * @tparam O the output type
+   */
   template<concepts::Output O>
   using get_output_char_type_t = typename dtl::get_output_char_type<O>::type;
 
+  /**
+   * is true if D is a multiline display, else false.
+   *
+   * @tparam D the display type
+   */
   template<typename D>
   inline constexpr bool is_multiline_display_v =
     dtl::is_multiline_display<D>::value;
@@ -139,7 +150,8 @@ namespace cli {
    * @brief The AnsiDisplay represents an ANSI compliant display. It uses an
    * Output to write characters and supports cursor movement.
    *
-   * This class satisfies the @ref DisplayWithCursor concept.
+   * This class satisfies the @ref cli::concepts::DisplayWithCursor
+   * "Display With Cursor" concept.
    *
    * @ingroup Display
    * @tparam Out the type to output characters.
@@ -174,7 +186,7 @@ namespace cli {
     /**
      * writes a string to the display
      *
-     * @param c the character
+     * @param s the string
      */
     constexpr Error write(View<const char_type> s) {
       if constexpr (concepts::StringOutput<Out, char_type>) {
@@ -193,8 +205,8 @@ namespace cli {
      *
      * @param n the number of characters to delete
      */
-    constexpr Error backspace(uint32_t n) {
-      for (uint32_t i = 0; i < n; ++i)
+    constexpr Error backspace(std::size_t n) {
+      for (std::size_t i = 0; i < n; ++i)
         if (auto e = write(string_constant<char_type, '\b', ' ', '\b'>{});
             e != Error::none)
           return e;

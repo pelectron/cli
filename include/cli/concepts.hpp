@@ -57,7 +57,7 @@ namespace cli {
     /**
      * @brief This concept denotes a Display without cursor.
      *
-     * @ingroup Output
+     * @ingroup Display
      * @tparam D
      * @tparam CharT
      */
@@ -75,7 +75,7 @@ namespace cli {
     /**
      * @brief
      *
-     * @ingroup Output
+     * @ingroup Display
      * @tparam D
      * @tparam CharT
      */
@@ -92,7 +92,7 @@ namespace cli {
      *
      * This can be a display with cursor or a display without cursor.
      *
-     * @ingroup Output
+     * @ingroup Display
      * @tparam D
      * @tparam CharT
      */
@@ -118,7 +118,7 @@ namespace cli {
      * static_assert(cli::CharOutput<decltype(&char_output), char>);
      * ```
      *
-     * @ingroup Output
+     * @ingroup Display
      * @tparam S the Output type
      * @tparam CharT the character type
      */
@@ -149,7 +149,7 @@ namespace cli {
      * static_assert(cli::StringOutput<decltype(&my_string_output), char>);
      * ```
      *
-     * @ingroup Output
+     * @ingroup Display
      * @tparam S the Output type
      * @tparam CharT the character type of the Output
      */
@@ -164,7 +164,7 @@ namespace cli {
      * output stream. A BasicOutput must satisfy the CharOutput or the
      * StringOutput concept, or both.
      *
-     * @ingroup Output
+     * @ingroup Display
      * @tparam S the Output type
      * @tparam char_type the character type
      */
@@ -175,7 +175,7 @@ namespace cli {
      * The Output concept denotes a StringOutput or a CharOutput. It is
      * used by AnsiDisplay to write characters.
      *
-     * @ingroup Output
+     * @ingroup Display
      * @tparam S
      */
     template<class O>
@@ -187,51 +187,40 @@ namespace cli {
      * The Config is used by cli to configure its relevant parts. It is a type
      * trait like structure.
      *
+     * For a detailed explanation, see [here](docs.md#config).
+     *
      * @sa cli::default_config
      *
-     * @tparam T
+     * @ingroup config
+     * @tparam T the type to check
      */
     template<typename T>
-    concept Config = requires(typename std::remove_cvref_t<T>::char_type) {
+    concept Config = requires(typename T::char_type) {
       /** the character that separates commands, for example '.' */
       {
-        std::remove_cvref_t<T>::access_separator
+        T::access_separator
       } -> std::convertible_to<typename std::remove_cvref_t<T>::char_type>;
 
       /** if true, the cli uses autocomplete */
-      { std::remove_cvref_t<T>::use_autocomplete } -> std::convertible_to<bool>;
+      { T::use_autocomplete } -> std::convertible_to<bool>;
 
       /** if true, the cli recognizes cursor movement. If true, your display
        * must support this. */
-      { std::remove_cvref_t<T>::use_cursor } -> std::convertible_to<bool>;
-
-      /** if true, the cli uses a volatile input buffer. This should be true if
-       * Engine::on_char is called in an ISR
-       */
-      // {
-      //   std::remove_cvref_t<T>::use_volatile_input_buffer
-      // } -> std::convertible_to<bool>;
+      { T::use_cursor } -> std::convertible_to<bool>;
 
       /** if true, then a history of commands is available through the up and
        * down cursors */
-      { std::remove_cvref_t<T>::use_history } -> std::convertible_to<bool>;
+      { T::use_history } -> std::convertible_to<bool>;
 
-      /** if use_history is true, this will specify how many commands can be
-       * recalled in the history */
-      // {
-      //   std::remove_cvref_t<T>::history_depth
-      // } -> std::convertible_to<std::size_t>;
+      { T::max_line_length } -> std::convertible_to<std::size_t>;
 
       {
-        std::remove_cvref_t<T>::max_line_length
-      } -> std::convertible_to<std::size_t>;
-
-      {
-        std::remove_cvref_t<T>::name
+        T::name
       } -> std::convertible_to<
         View<const typename std::remove_cvref_t<T>::char_type>>;
+
       {
-        std::remove_cvref_t<T>::description
+        T::description
       } -> std::convertible_to<
         View<const typename std::remove_cvref_t<T>::char_type>>;
     };

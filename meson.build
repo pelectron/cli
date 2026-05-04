@@ -20,9 +20,7 @@ build_examples.disable_if(meson.is_cross_build(), error_message: 'can\'t build e
 simulation.disable_if(meson.is_cross_build(), error_message: 'can\'t have simulation with embedded targets')
 cli_term.disable_if(meson.is_cross_build(), error_message: 'cli-term can\'t be built for embedded targets')
 
-deps = [
-  dependency('gcem', required: true),
-]
+deps = []
 
 if(not simulation.disabled())
   deps += dependency('cpp-terminal', required: true)
@@ -33,7 +31,7 @@ cli_dep = declare_dependency(
   dependencies: deps
 )
 
-meson.override_dependency('cli',cli_dep)
+meson.override_dependency('cli', cli_dep)
 
 must_fail_to_compile = files(
   'tests/fails/param_t.cpp'

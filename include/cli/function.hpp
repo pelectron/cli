@@ -352,154 +352,58 @@ namespace cli::funcs {
     }
   } // namespace dtl
 
+  /**
+   * @defgroup Arguments Arguments
+   * @ingroup Functions
+   *
+   * Arguments are the elements that describe c++ function arguments.
+   *
+   * There are two kinds of function arguments:
+   *
+   * - required: these parameters must be specified, else it is an error.
+   * - optional: these parameters can be left out because they have a default
+   * value.
+   *
+   * To create arguments, use the cli::arg overload set.
+   *
+   * See [here](docs.md#arguments) for more details.
+   */
+
+  /**
+   * @defgroup optional-args Optional Arguments
+   * @ingroup Arguments
+   *
+   * Optional arguments do not have to be specified when calling function
+   * commands because they have a default value.
+   *
+   * For more details, see [here](docs.md#optional-arguments).
+   *
+   * @{
+   */
+
   // clang-format off
   /**
-  * @defgroup Arguments
-  * @ingroup Functions
+  * creates an optional argument of type T.
   *
-  * Arguments are the elements that describe c++ function arguments.
-  * These argument specifications are then used by Functions to parse the
-  * input into the specified values and validate them.
-  *
-  * There are two kinds of function arguments:
-  *
-  * - required: these parameters must be specified, else it is an error.
-  * - optional: these parameters can be left out because they have a default
-  * value.
-  *
-  * Arguments are fully specified by their:
-  *
-  * - name: the human readable name
-  * - description: a string that is used by the help functionality
-  * - type: the value type of the argument
-  * - parser: used to parse a value of the arguments type
-  * - validator: used to validate the parsed value
-  * - optionally, a default value
-  *
-  * cli::funcs::arg is the templated overload set to use for creating arguments. 
-  * There are two main templates forms, one for required and one for optional arguments.
-  *
-  * The base form for an optional arguments is written below:
-  *
+  * Intended usage:
   * ```
-  *  template <class T, // the arguments type, must be explicitly specified
-  *            auto DefaultValue, // the default value, must be explicitly specified
-  *            SC Name, // must be specified 
-  *            SC Description, // either specified or left out 
-  *            parse::Parser Parse, // either specified or deduced
-  *            validate::Validator Validate // either specified or deduced
-  *            >
-  *  constexpr auto arg( Name name, // the name
-  *                      Description description, // the description
-  *                      Parse &&parse, // the parser
-  *                      Validate &&validate // the validator
-  *                      );
+  *  using cli::operator""_sc;
+  *  constexpr int DefaultValue = 1;
+  *  constexpr auto arg = 
+  *    cli::funcs::arg<double, DefaultValue>("x"_sc, 
+  *                                  "the target x position"_sc, 
+  *                                  cli::parse::Parse<double>{}, 
+  *                                  cli::validate::DefaultValidate<double>{});
   * ```
-  * 
-  * The base form for a required arguments is:
-  *
-  * ```
-  *  template <class T, // the arguments type, must be explicitly specified
-  *            SC Name, //must be specified 
-  *            SC Description, // either specified or left out 
-  *            parse::Parser Parse, // either specified or deduced
-  *            validate::Validator Validate // either specified or deduced
-  *            >
-  *  constexpr auto arg( Name name, // the name
-  *                      Description description, // the description
-  *                      Parse &&parse, // the parser
-  *                      Validate &&validate // the validator
-  *                      );
-  * ```
-  *
+
+  * @tparam T the arguments type
+  * @tparam DefaultValue the default value of this argument
+  * @param name the humanreadable name of the argument as a string_constant
+  * @param description a string_constant that is used by the help functionality
+  * @param parse the parser for the argument
+  * @param validate the validator for the argument
+  * @return a FunctionArg
   */
-
-/**
- * @defgroup optional-args Optional Arguments
- * @ingroup Arguments
- *
- * Optional arguments do not have to be specified when calling function commands 
- * because they have a default value.
- *
- * For the following section:
- * - name and description are cli::string_constants.
- * - parse is a parser for T. See also cli::parse::Parser.
- * - validate is a validator for T. See also cli::validate::Validator.
- *
- * These overloads are available for Ts that can't be passed as template 
- * arguments, for example float, but can be constructed from another type.
- *
- * ```
- * arg<T, DefaultValue>(name, description, parse, validate);
- *
- * // default validator for T is used
- * arg<T, DefaultValue>(name, description, parse);
- *
- * // default parser for T is used
- * arg<T, DefaultValue>(name, description, validate);
- *
- * // default parser and validator are used.
- * arg<T, DefaultValue>(name, description);
- *
- * // default parser and validator are used. No descriptio/help will be available for that argument.
- * arg<T, DefaultValue>(name);
- * ```
- *
- * A concrete example:
- * ```
- * int DefaultValue = 1;
- * cli::arg<double, DefaultValue>("x"_sc, 
- *                               "the target x position"_sc, 
- *                               cli::parse::Parse<double, char>{}, 
- *                               cli::validate::DefaultValidate<double, char>{});
- * ```
- * 
- * For Ts that can be passed as template arguments, an additional set of overloads is available.
- *
- * ```
- * // the value type is deduced from parse.
- * arg<DefaultValue>(name, description, parse, validate);
- *
- * // the value type is deduced from parse. The deefault validator for T is used.
- * arg<DefaultValue>(name, description, parse);
- *
- * // the value type is deduced from DefaultValue. The default parser for T is used.
- * arg<DefaultValue>(name, description, validate);
- *
- * // the value type is deduced from DefaultValue. The default parser and validator are used.
- * arg<DefaultValue>(name, description);
- *
- * // the value type is deduced from DefaultValue. The default parser and validator are used. 
- * // No descriptio/help will be available for that argument.
- * arg<DefaultValue>(name);
- * ```
- *
- * @{
- */
-
-// clang-format off
-/**
- * creates an optional argument of type T.
- *
- * Intended usage:
- * ```
- *  using cli::operator""_sc;
- *  constexpr int DefaultValue = 1;
- *  constexpr auto arg = 
- *    cli::funcs::arg<double, DefaultValue>("x"_sc, 
- *                                  "the target x position"_sc, 
- *                                  cli::parse::Parse<double>{}, 
- *                                  cli::validate::DefaultValidate<double>{});
- * ```
-
- * @tparam T the arguments type
- * @tparam DefaultValue the default value of this argument
- * @param name the humanreadable name of the argument as a string_constant
- * @param description a string_constant that is used by the help functionality
- * @param parse the parser for the argument
- * @param validate the validator for the argument
- * @return a FunctionArg
- */
   // clang-format on
   template<class T,
            auto DefaultValue,
@@ -520,26 +424,26 @@ namespace cli::funcs {
   }
 
   // clang-format off
-/**
- * creates an optional argument of type T. The default validator is used.
- *
- * Intended usage:
- * ```
- *  using cli::operator""_sc;
- *  constexpr int DefaultValue = 1;
- *  constexpr auto arg = 
- *    cli::funcs::arg<double, DefaultValue>("x"_sc, 
- *                                  "the target x position"_sc, 
- *                                  cli::parse::Parse<double>{});
- * ```
+  /**
+  * creates an optional argument of type T. The default validator is used.
+  *
+  * Intended usage:
+  * ```
+  *  using cli::operator""_sc;
+  *  constexpr int DefaultValue = 1;
+  *  constexpr auto arg = 
+  *    cli::funcs::arg<double, DefaultValue>("x"_sc, 
+  *                                  "the target x position"_sc, 
+  *                                  cli::parse::Parse<double>{});
+  * ```
 
- * @tparam T the arguments type
- * @tparam DefaultValue the default value of this argument
- * @param name the humanreadable name of the argument as a string_constant
- * @param description a string_constant that is used by the help functionality
- * @param parse the parser for the argument
- * @return a FunctionArg
- */
+  * @tparam T the arguments type
+  * @tparam DefaultValue the default value of this argument
+  * @param name the humanreadable name of the argument as a string_constant
+  * @param description a string_constant that is used by the help functionality
+  * @param parse the parser for the argument
+  * @return a FunctionArg
+  */
   // clang-format on
   template<class T,
            auto DefaultValue,
@@ -558,26 +462,26 @@ namespace cli::funcs {
   }
 
   // clang-format off
-/**
- * creates an optional argument of type T. The default parser is used.
- *
- * Intended usage:
- * ```
- *  using cli::operator""_sc;
- *  constexpr int DefaultValue = 1;
- *  constexpr auto arg = 
- *    cli::funcs::arg<double, DefaultValue>("x"_sc, 
- *                                  "the target x position"_sc, 
- *                                  cli::validate::DefaultValidate<double>{});
- * ```
+  /**
+  * creates an optional argument of type T. The default parser is used.
+  *
+  * Intended usage:
+  * ```
+  *  using cli::operator""_sc;
+  *  constexpr int DefaultValue = 1;
+  *  constexpr auto arg = 
+  *    cli::funcs::arg<double, DefaultValue>("x"_sc, 
+  *                                  "the target x position"_sc, 
+  *                                  cli::validate::DefaultValidate<double>{});
+  * ```
 
- * @tparam T the arguments type
- * @tparam DefaultValue the default value of this argument
- * @param name the humanreadable name of the argument as a string_constant
- * @param description a string_constant that is used by the help functionality
- * @param validate the validator for the argument
- * @return a FunctionArg
- */
+  * @tparam T the arguments type
+  * @tparam DefaultValue the default value of this argument
+  * @param name the humanreadable name of the argument as a string_constant
+  * @param description a string_constant that is used by the help functionality
+  * @param validate the validator for the argument
+  * @return a FunctionArg
+  */
   // clang-format on
   template<class T,
            auto DefaultValue,
@@ -596,24 +500,24 @@ namespace cli::funcs {
   }
 
   // clang-format off
-/**
- * creates an optional argument of type T. The default parser and
- * validator are used.
- *
- * Intended usage:
- * ```
- *  using cli::operator""_sc;
- *  constexpr int DefaultValue = 1;
- *  constexpr auto arg = 
- *    cli::funcs::arg<double, DefaultValue>("x"_sc, "the target x position"_sc);
- * ```
+  /**
+  * creates an optional argument of type T. The default parser and
+  * validator are used.
+  *
+  * Intended usage:
+  * ```
+  *  using cli::operator""_sc;
+  *  constexpr int DefaultValue = 1;
+  *  constexpr auto arg = 
+  *    cli::funcs::arg<double, DefaultValue>("x"_sc, "the target x position"_sc);
+  * ```
 
- * @tparam T the arguments type
- * @tparam DefaultValue the default value of this argument
- * @param name the humanreadable name of the argument as a string_constant
- * @param description a string_constant that is used by the help functionality
- * @return a FunctionArg
- */
+  * @tparam T the arguments type
+  * @tparam DefaultValue the default value of this argument
+  * @param name the humanreadable name of the argument as a string_constant
+  * @param description a string_constant that is used by the help functionality
+  * @return a FunctionArg
+  */
   // clang-format on
   template<class T, auto DefaultValue, SC Name, SC Description>
   constexpr auto arg(Name name, Description description) {
@@ -628,23 +532,23 @@ namespace cli::funcs {
   }
 
   // clang-format off
-/**
- * creates an optional argument of type T. The default parser and
- * validator are used.
- *
- * Intended usage:
- * ```
- *  using cli::operator""_sc;
- *  constexpr int DefaultValue = 1;
- *  constexpr auto arg = 
- *    cli::funcs::arg<double, DefaultValue>("x"_sc);
- * ```
+  /**
+  * creates an optional argument of type T. The default parser and
+  * validator are used.
+  *
+  * Intended usage:
+  * ```
+  *  using cli::operator""_sc;
+  *  constexpr int DefaultValue = 1;
+  *  constexpr auto arg = 
+  *    cli::funcs::arg<double, DefaultValue>("x"_sc);
+  * ```
 
- * @tparam T the arguments type
- * @tparam DefaultValue the default value of this argument
- * @param name the humanreadable name of the argument as a string_constant
- * @return a FunctionArg
- */
+  * @tparam T the arguments type
+  * @tparam DefaultValue the default value of this argument
+  * @param name the humanreadable name of the argument as a string_constant
+  * @return a FunctionArg
+  */
   // clang-format on
   template<class T, auto DefaultValue, SC Name>
   constexpr auto arg(Name name) {
@@ -843,19 +747,7 @@ namespace cli::funcs {
    * Required arguments have to be specified when calling function commands
    * because they don't have a default value.
    *
-   * For the following section:
-   * - name and description are cli::string_constants.
-   * - parse is a parser for T. See also cli::parse::Parser.
-   * - validate is a validator for T. See also cli::validate::Validator.
-   *
-   * These overload are available:
-   *
-   * ```
-   * arg<T>(name, description, parse, validate);
-   * arg<T>(name, description, parse);
-   * arg<T>(name, description, validate);
-   * arg<T>(name, description);
-   * ```
+   * See [here](docs.md#required-arguments) for more details.
    *
    * @{
    */
@@ -979,25 +871,40 @@ namespace cli::funcs {
       validate::DefaultValidate<T>{}};
   }
 
+  /**
+   * creates a required argument of type T. The default parser and validator are
+   * used.
+   *
+   * Intended usage:
+   * ```
+   *  using cli::operator""_sc;
+   *  cli::funcs::arg<int>("x"_sc);
+   * ```
+   * @tparam T the arguments type
+   * @param name the humanreadable name of the argument as a string_constant
+   * @return a FunctionArg
+   */
+  template<class T, SC Name>
+  constexpr auto arg(Name name) {
+    (void)name;
+    return FunctionArgWithoutDefault{
+      Name{},
+      NoDescription<typename Name::char_type>{},
+      identity<T>{},
+      parse::Parse<T, typename Name::char_type>{},
+      validate::DefaultValidate<T>{}};
+  }
+
   /// @}
 
   /**
    * @defgroup deduced-args Deduced Arguments
    * @ingroup required-args
-   * Deduced arguments are arguments that have their type deduced. The default
-   * parser and validator are always used for these type of arguments. The
-   * benefit of deduced arguments is the shorter notation.
+   * Deduced arguments are required arguments that have their type deduced. The
+   * default parser and validator are always used for these type of arguments.
+   * The benefit of deduced arguments is the shorter notation.
    *
-   * For the following section, name and description are cli::string_constants.
-   *
-   * These overloads are available:
-   *
-   * ```
-   * arg(name, description);
-   * arg(name);
-   * ```
-   *
-   * There is also the literal operator _arg, which is equivalent to arg(name).
+   * For more details, see [here](docs.md#deduced-arguments).
    *
    * @{
    */
@@ -1268,7 +1175,7 @@ namespace cli::funcs {
   Function(Name, Description, Type, F &&, std::tuple<Args...> &&)
     -> Function<Name, Description, Type, std::decay_t<F>, Args...>;
   /**
-   * @defgroup Functions
+   * @defgroup Functions Functions
    * @ingroup Commands
    *
    * Functions are commands that can be called with arguments.
@@ -1281,33 +1188,10 @@ namespace cli::funcs {
    * - arguments: Elements that describe the callable's arguments. See @ref
    * Arguments.
    *
-   * The following overloads are available for free functions and functors:
+   * Functions are created with the cli::func overload set.
    *
-   * ```
-   * // the base form
-   * func(name, description, f, arguments...);
-   *
-   * // a function wihtout description
-   * func(name, f, arguments...);
-   *
-   * // the functions name will be the type of f. I.e. if f's type is called
-   * // "Functor", the function's name will be "Functor".
-   * func(f, description, arguments...);
-   *
-   * // same as the previous overload without a description.
-   * func(f, arguments...);
-   * ```
-   *
-   * For member functions, the following overloads are available, where ``t``
-   * has the member function pointed to by ``mem_fun_ptr``.
-   *
-   * ```
-   * func(name, description, t, mem_fun_ptr, arguments...);
-   * func(name, t, mem_fun_ptr, arguments...);
-   * ```
-   *
-   * There are additional overloads for member functions, see @ref
-   * member-functions.
+   * For more details and a nice overview of all available overloads, see
+   * [here](docs.md#functions).
    * @{
    */
 
@@ -1801,23 +1685,8 @@ namespace cli::funcs {
    * Member function commands are partial commands for member functions. They
    * are called partial because they can't be used standalone, e.g. their parent
    * command must be an object that the member function can be called on.
-   * There are four overloads:
    *
-   * ```
-   * func(name, description, mem_fun_ptr, args...);
-   * func(name, mem_fun_ptr, args...);
-   * func<mem_fun_ptr>(description, args...);
-   * func<mem_fun_ptr>(args...);
-   * ```
-   *
-   * where
-   * - name is a cli::string_constant that defines the member function command
-   * name
-   * - description is a cli::string_constant that describes the member function.
-   * - mem_fun_ptr is a pointer to a member function
-   * - args are the arguments of the member functions. See also @ref Arguments.
-   *
-   *
+   * See [here](docs.md#member-functions) for more details.
    * @{
    */
 

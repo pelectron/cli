@@ -2,7 +2,9 @@
  * @file
  * @brief This file contains the utilities to format values into strings.
  *
- * @defgroup Formatting
+ * @defgroup Formatting Formatting
+ *
+ * Formatting is performed by Formatters.
  *
  * A Formatter takes a cli::View<CharT> as its first argument and a ``T`` as its
  * second argument, and returns a cli::format::FormatResult. The first argument
@@ -50,25 +52,7 @@
  * }
  * ```
  *
- * Default implementations of formatters can be found in the cli::format
- * namespace. There are default formatters for:
- * - bool
- * - characters
- * - enumerations
- * - integers
- * - fixpoint numbers
- * - sequences, i.e. arrays/lists/vectors
- * - strings
- * - aggregates, i.e. simple structs
- * - TODO: floating point numbers
- *
- * To see how to enable formatting for your custom type, see @ref Parsing.
- * Enumerations, sequences, strings, and aggregates/structs need to opt in the
- * same way as described in @ref Parsing.
- *
- * To enable your type to be formattable when it is a member of a struct, then
- * you must specialize cli::format::Format and implement its call
- * operator.
+ * See [here](docs.md#formatting) for more details.
  */
 
 #ifndef CLI_FORMAT_HPP
