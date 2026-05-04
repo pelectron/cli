@@ -7,6 +7,17 @@ and call functions on the embedded device.
 In addition, `CLI` also provides the command line executable `cli-term` to
 connect to systems running `CLI` over serial port or ethernet.
 
+## Contents
+
+- [Short Example](#a-short-example)
+- [How To Build](#how-to-build)
+  - [Dependencies](#dependencies)
+  - [Meson](#meson)
+  - [Other Build Systems](#other-build-systems)
+  - [Examples](#examples)
+- [Simulation](#simulation)
+- [Documentation](#documentation)
+
 ## A Short Example
 
 A short example to visualize what CLI is trying to do:
@@ -112,14 +123,13 @@ If you use meson, refer to [this section](#meson).
 
 ### Dependencies
 
-When using CLI as a library, you must have
-[gcem](https://github.com/kthohr/gcem) installed.
-
 When using the simulation components, you will need
 [cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal).
 
 When building the `cli-term` executable, you must also have
 [asio](https://think-async.com/Asio/) installed.
+
+For testing, [catch2](https://github.com/catchorg/Catch2) is used.
 
 If you use meson, these dependencies will available even if you don't have them
 installed.
@@ -152,13 +162,15 @@ This will generate `cli-term` in the `build` directory.
 
 ### Other Build Systems
 
-If you use another build system, you will also need
-[gcem](https://github.com/kthohr/gcem). Just add CLI's and gcem's
-`include` folder to your build system's include directories and you are set.
+If you use another build system, just add CLI's `include` folder to your build
+system's include directories and you are set.
 
-To build `cli-term`, you must also have [asio](https://think-async.com/Asio/)
-and [cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available.
-Then you can compile `source/cli-term.cpp`.
+To use the simulation component, you must have
+[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available.
+
+To build `cli-term`, you must have [asio](https://think-async.com/Asio/) and
+[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available. Then
+you can compile `source/cli-term.cpp` into `cli-term`.
 
 ### Examples
 
@@ -175,7 +187,7 @@ This will create the `cli` executable in the `build` directory.
 ## Simulation
 
 To simulate your own command line interfaces on the PC set the `sim` project
-option to auto or enabled.
+option to enabled.
 
 Then you can include `cli/sim.hpp` and use your cli on the PC in a terminal:
 
@@ -216,7 +228,12 @@ If you don't use meson but want the simulation capability, you will need
 
 ## Documentation
 
-This project is documented using doxygen and in [markdown](./docs.md). Either
+This project is documented using doxygen.
+
+To get a good overview of the main components and a quick reference, use
+[accompanying markdown documentation (docs.md)](./docs.md).
+
+and an accomp [markdown](./docs.md). Either
 use the provided `Doxyfile` and manually invoke doxygen or build the
 documentation with meson by setting the `docs` project option to true.
 

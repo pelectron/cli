@@ -17,28 +17,28 @@ namespace cli {
    * @tparam Cfg the cli configuration
    * @tparam Commands the commands
    */
-  template<concepts::Config Cfg, concepts::Command... Commands>
+  template<class Engine, concepts::Command... Commands>
   class CommandTree {
   public:
-    using config = Cfg;
-    using char_type = typename config::char_type;
+    using config_type = typename Engine::config_type;
+    using char_type = typename config_type::char_type;
     using command_node = CommandNode<char_type>;
 
-    template<concepts::Config Cfg_, concepts::Command... Cmds>
-    constexpr CommandTree(Cfg_ &&, Cmds &&...cmds)
-      : commands_{create_help(cmds_[0]), std::forward<Cmds>(cmds)...} {
+    template<concepts::Command... Cmds>
+    constexpr CommandTree(Engine &e, Cmds &&...cmds)
+      : commands_{create_help(e), std::forward<Cmds>(cmds)...} {
       init_commands();
     }
 
-    template<concepts::Config Cfg_, concepts::Command... Cmds>
-    constexpr CommandTree(Cfg_ &&, const std::tuple<Cmds...> &cmds)
-      : commands_{init_tuple(std::move(cmds))} {
+    template<concepts::Command... Cmds>
+    constexpr CommandTree(Engine &e, const std::tuple<Cmds...> &cmds)
+      : commands_{init_tuple(e, std::move(cmds))} {
       init_commands();
     }
 
-    template<concepts::Config Cfg_, concepts::Command... Cmds>
-    constexpr CommandTree(Cfg_ &&, std::tuple<Cmds...> &&cmds)
-      : commands_{init_tuple(cmds)} {
+    template<concepts::Command... Cmds>
+    constexpr CommandTree(Engine &e, std::tuple<Cmds...> &&cmds)
+      : commands_{init_tuple(e, cmds)} {
       init_commands();
     }
 
@@ -62,7 +62,7 @@ namespace cli {
         return nullptr;
 
       const command_node *node = root();
-      auto end = cmd_path.find_first_of(config::access_separator);
+      auto end = cmd_path.find_first_of(config_type::access_separator);
       while (end != View<const char_type>::npos) {
         auto s = cmd_path.substr(0, end);
         bool found = false;
@@ -70,7 +70,7 @@ namespace cli {
           if (sub.name == s) {
             node = &sub;
             cmd_path = cmd_path.substr(end + 1);
-            end = cmd_path.find_last_of(config::access_separator);
+            end = cmd_path.find_last_of(config_type::access_separator);
             found = true;
             break;
           }
@@ -89,30 +89,30 @@ namespace cli {
     }
 
   private:
-    using Help = HelpCommand<char_type, config::access_separator>;
+    using Help = HelpCommand<Engine>;
 
     std::array<command_node, (num_cmds_v<Commands> + ...) + 2> cmds_{};
     std::tuple<Help, Commands...> commands_{};
 
-    static constexpr Help create_help(const CommandNode<char_type> &root) {
-      return create_help_cmd<char_type, config::access_separator>(root);
+    static constexpr Help create_help(Engine &e) {
+      return create_help_cmd<Engine>(e);
     }
 
     template<concepts::Command... Cmds>
     constexpr std::tuple<Help, Commands...>
-    init_tuple(const std::tuple<Cmds...> &t) {
-      return [&t, this]<std::size_t... Is>(
+    init_tuple(Engine &e, const std::tuple<Cmds...> &t) {
+      return [&t, &e, this]<std::size_t... Is>(
                std::index_sequence<Is...>) -> std::tuple<Help, Commands...> {
-        return {create_help(cmds_[0]), std::get<Is>(t)...};
+        return {create_help(e), std::get<Is>(t)...};
       }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 
     template<concepts::Command... Cmds>
     constexpr std::tuple<Help, Commands...>
-    init_tuple(std::tuple<Cmds...> &&t) {
-      return [&t, this]<std::size_t... Is>(
+    init_tuple(Engine &e, std::tuple<Cmds...> &&t) {
+      return [&t, &e, this]<std::size_t... Is>(
                std::index_sequence<Is...>) -> std::tuple<Help, Commands...> {
-        return {create_help(cmds_[0]), std::move(std::get<Is>(t))...};
+        return {create_help(e), std::move(std::get<Is>(t))...};
       }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 
@@ -144,8 +144,8 @@ namespace cli {
 
     constexpr void init_commands() {
       auto &root = cmds_[0];
-      root.name = config::name;
-      root.description = config::description;
+      root.name = config_type::name;
+      root.description = config_type::description;
       std::size_t index = 0;
       for_each([this, &index, &root](
                  auto &cmd) { this->init_cmd(++index, root, cmd); },

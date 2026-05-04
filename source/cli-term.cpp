@@ -275,6 +275,16 @@ static std::string to_utf8(char16_t cp) {
   return (len != (size_t)-1) ? std::string(buf, len) : "";
 }
 
+static std::string mappings() {
+  // clang-format off
+  return  "\nMappings:\n"
+          "  Ctrl+K clears line from cursor to the end\n"
+          "  Ctrl+L clears the current line\n"
+          "  Ctrl+L clears line from cursor to the start\n"
+          "  Ctrl+J clears the screen\n";
+  // clang-format on
+}
+
 class ConnectionI : public std::enable_shared_from_this<ConnectionI> {
   uint8_t write_buf[16]{};
   const Settings settings;
@@ -300,14 +310,23 @@ class ConnectionI : public std::enable_shared_from_this<ConnectionI> {
       case Term::Key::Ctrl_K:
         put_char('\x1b');
         put_char('[');
+        put_char('0');
+        put_char('K');
+        break;
+      case Term::Key::Ctrl_L:
+        put_char('\x1b');
+        put_char('[');
         put_char('2');
         put_char('K');
         break;
+      case Term::Key::Ctrl_U:
+        put_char('\x1b');
+        put_char('[');
+        put_char('1');
+        put_char('K');
+        break;
       case Term::Key::Ctrl_H:
-        Term::cout << "\nHelp:\n"
-                      "Ctrl+K clears the current line\n"
-                      "Ctrl+J clears the screen\n"
-                   << std::flush;
+        Term::cout << mappings() << std::flush;
         return;
       case Term::Key::Enter:
         switch (settings.delim) {
@@ -651,10 +670,7 @@ int main(int argc, const char **argv) {
 
   print_settings(settings);
 
-  Term::cout
-    << "Mappings:\n  Ctrl+H: display the mappings\n  Ctrl+J: clears the "
-       "screen\n  Ctrl+K:clear the current line\n"
-    << std::flush;
+  Term::cout << mappings() << std::flush;
   asio::io_context ctx;
 
   try {

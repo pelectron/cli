@@ -1,12 +1,12 @@
-# CLI library documentation
+# CLI Library Documentation
 
-`CLI` consists of the following components:
+`CLI` consists of the following main components:
 
 - [`cli::Engine`](#engine)
 - [`cli::concepts::Config`](#config): configuration for the `cli::Engine`
-- [`cli::concepts::Input`](#input-concept) and [`cli::Input`](#input): used to
-  receive characters
-- [`cli::concepts::Display`](#display-concept) and
+- [`cli::concepts::Input`](#input) and [`cli::Input`](#input-class-template):
+  used to receive characters
+- [`cli::concepts::Display`](#display) and
   [`cli::AnsiDisplay`](#ansidisplay): used to display characters
 - [`cli::concept::Command`](#commands): the commands, which are either
   [Parameters](#parameters) or [Functions](#functions)
@@ -14,20 +14,59 @@
 - [Parsing](#parsing)
 - [Formatting](#formatting)
 
+## Contents
+
+- [Engine](#engine)
+  - [Engine Example](#engine-example)
+- [Config](#config)
+  - [Optional Entries](#optional-entries)
+  - [Config Example](#config-example)
+- [Input](#input)
+  - [Input Class Template](#input-class-template)
+  - [Input Example](#input-example)
+- [Display](#display)
+  - [Displays Without Cursor](#display-without-cursor)
+    [Example Of A Display Without Cursor](#example-of-a-display-with-cursor)
+  - [Displays With Cursor](#display-with-cursor)
+    - [Example Of A Display With Cursor](#example-of-a-display-with-cursor)
+  - [AnsiDisplay](#ansidisplay)
+    - [Output](#output)
+    - [Output Example](#output-example)
+- [Commands](#commands)
+  - [Parameters](#parameters)
+    - [Parameters Without Object Declarations](#parameters-without-object-declarations)
+    - [Parameters With Object/Variable Declarations](#parameters-with-objectvariable-declarations)
+    - [Parameters With Const Object/Variable Declarations](#parameters-with-const-objectvariable-declarations)
+    - [Member Data Parameters](#member-data-parameters)
+  - [Functions](#functions)
+    - [Arguments](#arguments)
+      - [Optional Arguments](#optional-arguments)
+      - [Required Arguments](#required-arguments)
+      - [Deduced Arguments](#deduced-arguments)
+- [String Constant](#string-constant)
+- [Formatting](#formatting)
+  - [Custom Formatting](#custom-formatting)
+- [Parsing](#parsing)
+  - [Enum Parsing](#enum-parsing)
+  - [Sequence Parsing](#sequence-parsing)
+  - [String Parsing](#string-parsing)
+  - [Fixpoint Parsing](#fixpoint-parsing)
+  - [Struct Parsing](#struct-parsing)
+  - [Custom Parsing](#custom-parsing)
+
 ## Engine
 
-The Engine class is composed of a [`config`](#config), an
-[`input`](#input-concept), a [`display`](#display-concept), and
-[`commands`](#commands).
+The Engine class is composed of a [`config`](#config), an [`input`](#input), a
+[`display`](#display), and [`commands`](#commands).
 
 In your main application, you will create an Engine object, and populate it
 with the parameters and functions, and calls the engine's `on_char()` and
 `process()` methods.
 
-`on_char` must either be called in your character reception ISR (see
-[input concept](#input-concept) for details), or in the main thread before
-process. It preprocesses the character input and puts the data into an internal
-event buffer.
+`on_char` must either be called in your character reception ISR (see [input
+concept](#input) for details), or in the main thread before process. It
+preprocesses the character input and puts the data into an internal event
+buffer.
 
 `process()` is the method takes the data from the event buffer and actually
 processes the input.
@@ -110,7 +149,7 @@ and typedefs to satisfy the `Config` concept:
   character is used to delimit individual sub commands.
 - `use_autocomplete`: of type `bool`. If true, the engine uses autocomplete.
 - `use_cursor`: of type `bool`. If true, the engine recognizes cursor movement.
-  If true, your [display](#display-concept) must support cursor movement.
+  If true, your [display](#display) must support cursor movement.
 - `use_history`: of type `bool`. Specifies if the engine implements a command
   history. If true, then the configuration must also specify a member
   `history_depth` of type `std::size_t`. `history_depth` specifies how many
@@ -125,7 +164,7 @@ left out because `CLI` uses a default value if they are not specified. Entries
 with name `X` of a configuration type `C` can be retrieved with
 `cli::config::X_v<C>` (for members) and `cli::config::X_t<C>` (for typedefs).
 
-- `input_type`: a typedef satisfying the [input concept](#input-concept).
+- `input_type`: a typedef satisfying the [input concept](#input).
   Defaults to [`cli::Input`](#input). You must leave this entry out if you want
   to use the default.
 - `input_delimiter`: of type `cli::Delimiter`. Specifies the character
@@ -138,6 +177,9 @@ with name `X` of a configuration type `C` can be retrieved with
   false.
 - `output_size`: of type `std::size_t`. Specifies how big the buffer for
   outputting characters is. The default is `max_line_length`.
+- `empty_help_prints_commands`: of type `bool`. If true, then the help command
+  will print all commands when it is given no argument. Else it will print "no
+  such command". Defaults to false.
 
 ### Config Example
 
@@ -167,7 +209,7 @@ struct my_config{
 static_assert(cli::concepts::Config<my_config>);
 ```
 
-## Input Concept
+## Input
 
 The input concept formalizes the interface that the [`Engine`](#engine) uses
 for preprocessing character input.
@@ -195,14 +237,14 @@ following must be satisfied:
   event. Must return a `bool`, which indicates that an event has been popped
   (`true`), or that no event was available (`false`).
 
-`CLI` provides a default implementation called [`cli::Input`](#input).
+`CLI` provides a default implementation called [`cli::Input`](#input-class-template).
 
-### Input
+### Input Class Template
 
-The default implementation of the [Input Concept](#input-concept). If you
+The default implementation of the [Input Concept](#input). If you
 want to use a custom input, your [Config](#config) must specify an inner
 typedef called `input_type`. This `input_type` must satisfy the [Input
-Concept](#input-concept).
+Concept](#input).
 
 Note: f you want to call the engine's `on_char` method in an ISR, you must add
 a static constexpr member called `use_volatile_input_buffer` of type `bool` to
@@ -212,7 +254,7 @@ query this configuration value.
 
 ```cpp
 template<cli::concepts::Config Cfg>
-class cli:Input{
+class cli::Input{
 public:
   using char_type = typename Cfg::char_type;
   using event_type = cli::Event<char_type>;
@@ -223,7 +265,24 @@ public:
 }
 ```
 
-## Display Concept
+### Input Example
+
+Below is an example definition for an [Input](#input) for the character type `char`.
+
+```cpp
+#include <cli/event.hpp>
+
+class MyInput{
+public:
+  constexpr cli::Error on_char(char c);
+  constexpr bool pop_event(cli::Event<char>& event);
+  constexpr void reset();
+};
+
+static_assert(cli::concepts::Input<MyInput, char>);
+```
+
+## Display
 
 `CLI` uses the `cli::concepts::Display` concept to specify the interface `CLI`
 uses to output characters to a screen.
@@ -247,7 +306,23 @@ concept cli::concepts::Display;
 ```
 
 A type `D` satisfies the `Display` concept if it either satisfies
-`DisplayWithoutCursor` or `DisplayWithCursor`.
+[`DisplayWithoutCursor`](#display-without-cursor) or
+[`DisplayWithCursor`](#display-with-cursor).
+
+Displays can be further categorized in single-line and multi-line displays.
+Single-line displays only have a single line to display content. Multi-line
+displays have mutliple lines.
+
+For single-line displays, a newline will only be printed when a new command is
+entered, or a command results in an output. Commands result in an output when
+a function command that doesn't return void is executed or when a parameter is
+retrieved.
+
+For multi-line displays, a newline will always be printed when a command is executed.
+
+By default, displays are single-line. To specify that your display is
+multi-line, the display must have a static constexpr member called
+`is_multiline_display` of type `bool` that is set to true.
 
 `CLI` provides a default implementation called [`cli::AnsiDisplay`](#ansidisplay).
 
@@ -267,6 +342,39 @@ variable `string` of type `cli::View<const CharT>`, and a variable `n` of type
   back to the home position.
 - `d.newline()`: writes a new line.
 
+Optionally, you can also specify if a display has multiple lines. If so, a
+newline will be printed when a command is executed. Else a newline is only
+printed when there is a new command has been entered. To specify that your
+display has multiple lines, add a static constexpr member to your display
+called `is_multiline_display` of type `bool` and set it to true.
+
+#### Example Of A Display Without Cursor
+
+Below is an example definition for a char display without cursor.
+
+```cpp
+class MySingleLineDisplay{
+public:
+  cli::Error write(char character);
+  cli::Error write(cli::View<const char> string);
+  cli::Error backspace(std::size_t n);
+  cli::Error clear_line();
+  cli::Error clear_screen();
+  cli::Error newline();
+};
+
+class MyMutlilineDisplay{
+public:
+  static constexpr bool is_multiline_display = true;
+  cli::Error write(char character);
+  cli::Error write(cli::View<const char> string);
+  cli::Error backspace(std::size_t n);
+  cli::Error clear_line();
+  cli::Error clear_screen();
+  cli::Error newline();
+};
+```
+
 ### Display With Cursor
 
 Displays with a cursor support cursor movement. `DisplayWithCursor` is a
@@ -282,17 +390,45 @@ variable `string` of type `cli::View<const CharT>`, and a variable `n` of type
   will overwrite a character if it was already there.
 - `d.write(string)`: writes a string at the current cursor position. This will
   overwrite any characters that were already displayed.
-- `d.backspace(n)`: deletes the last `n` characters from the cursor position.
+- `d.backspace(n)`: deletes the last `n` characters. This method is only called
+  when the cursor is at the end of the line.
 - `d.clear_line()`: deletes all characters in the current line.
 - `d.clear_screen()`: deletes all characters in the screen and moves the input
   back to the home position.
 - `d.newline()`: writes a new line.
-- `d.delete_line_to_end()`: deletes all characters from the cursor position to
-  the end.
-- `d.delete_line_to_begin()`: deletes all characters from the cursor to the
-  start of the line and moves the cursor to the start.
 - `d.cursor_left(n)`: moves the cursor `n` positions to the left.
 - `d.cursor_right(n)`: moves the cursor `n` positions to the right.
+
+#### Example Of A Display With Cursor
+
+Below is an example definition for a char display with cursor.
+
+```cpp
+class MySingleLineDisplay{
+public:
+  cli::Error write(char character);
+  cli::Error write(cli::View<const char> string);
+  cli::Error backspace(std::size_t n);
+  cli::Error clear_line();
+  cli::Error clear_screen();
+  cli::Error newline();
+  cli::Error cursor_left(std::size_t n);
+  cli::Error cursor_right(std::size_t n);
+};
+
+class MyMutlilineDisplay{
+public:
+  static constexpr bool is_multiline_display = true;
+  cli::Error write(char character);
+  cli::Error write(cli::View<const char> string);
+  cli::Error backspace(std::size_t n);
+  cli::Error clear_line();
+  cli::Error clear_screen();
+  cli::Error newline();
+  cli::Error cursor_left(std::size_t n);
+  cli::Error cursor_right(std::size_t n);
+};
+```
 
 ### AnsiDisplay
 
@@ -304,11 +440,11 @@ template<cli::concepts::Output Out>
 class AnsiDisplay;
 ```
 
-`ÀnsiDisplay` uses an [output](#output) to actually write characters.
+`AnsiDisplay` uses an [Output](#output) to actually write characters.
 
-### Output
+#### Output
 
-The output concept denotes a callable that can take a character of type
+The Output concept denotes a callable that can take a character of type
 `CharT`, or a string of type `cli::View<const CharT>`, or both, as an input and
 returns a `cli::Error`.
 
@@ -626,8 +762,8 @@ values and validate them.
 
 There are two kinds of function arguments:
 
-- required: these parameters must be specified, else it is an error.
-- optional: these parameters can be left out because they have a default value.
+- required: these arguments must be specified, else it is an error.
+- optional: these arguments can be left out because they have a default value.
 
 Arguments are fully specified by their:
 

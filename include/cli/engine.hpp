@@ -7,6 +7,7 @@
 #include "cli/history.hpp"
 #include "cli/input.hpp"
 #include "cli/line.hpp"
+#include "cli/util.hpp"
 
 #include <type_traits>
 
@@ -25,17 +26,31 @@ namespace cli {
            concepts::Command... Commands>
   class Engine {
   public:
-    using char_type = typename Cfg::char_type;
-    using Input = get_input_type<Cfg>;
-    static_assert(concepts::Input<Input, char_type>,
+    using config_type = Cfg;
+    using char_type = typename config_type::char_type;
+    using input_type = get_input_type<config_type>;
+
+    static_assert(concepts::Input<input_type, char_type>,
                   "The input_type of your config does not satisfy the Input "
                   "concept. See cli::concepts::Input for the definition.");
+
+    static_assert(
+      config::display_fits_config_v<config_type, Display>,
+      "The Display and config don't fit together. This is the case when "
+      "'use_cursor' is true and the Display doesn't support a cursor. Either "
+      "use a Display with cursor support or set 'use_cursor' to false.");
+
+    static_assert(minimum_line_length_v<Commands...> <=
+                    config_type::max_line_length,
+                  "The maximum line length is smaller than the minimum length "
+                  "required to input the largets command. Increase "
+                  "'max_line_length' to fix this error.");
 
     template<concepts::Config C,
              concepts::Display<typename C::char_type> D,
              concepts::Command... Cmds>
     constexpr Engine(C config, D &&display, Cmds &&...commands)
-      : commands_{C{}, std::forward<Cmds>(commands)...},
+      : commands_{*this, std::forward<Cmds>(commands)...},
         display_{std::forward<D>(display)},
         line_{*commands_.root(), display_} {
       (void)config;
@@ -74,12 +89,15 @@ namespace cli {
       line_.clear_screen();
     }
 
-    constexpr void print() { print(*commands_.root(), 0); }
+    constexpr void print() {
+      print(*commands_.root(), 0);
+      display_.newline();
+    }
 
   private:
-    Error process_char(char_type c) { return line_.on_char(c); }
+    constexpr Error process_char(char_type c) { return line_.on_char(c); }
 
-    Error process_control(const Control &ctrl) {
+    constexpr Error process_control(const Control &ctrl) {
       switch (ctrl.type) {
         case Control::backspace:
           return line_.on_backspace(ctrl.param);
@@ -114,6 +132,8 @@ namespace cli {
     constexpr Error on_cursor_down(uint32_t n) {
       if constexpr (Cfg::use_cursor) {
         View str = history_.cursor_down(n);
+        if (line_.view().size() == 0)
+          display_.newline();
         return line_.set_data(str);
       } else
         return Error::none;
@@ -122,6 +142,8 @@ namespace cli {
     constexpr Error on_cursor_up(uint32_t n) {
       if constexpr (Cfg::use_cursor) {
         View str = history_.cursor_up(n);
+        if (line_.view().size() == 0)
+          display_.newline();
         return line_.set_data(str);
       } else
         return Error::none;
@@ -135,6 +157,7 @@ namespace cli {
     }
 
     constexpr void print(const CommandNode<char_type> &c, std::size_t indent) {
+      display_.newline();
       if (indent == 0) {
         display_.write(c.name);
         display_.write(':');
@@ -152,8 +175,6 @@ namespace cli {
         display_.write(' ');
         display_.write(c.description);
       }
-
-      display_.newline();
       if (c.subcommand == nullptr) {
         return;
       }
@@ -165,10 +186,18 @@ namespace cli {
       }
     }
 
-    CLI_NO_UNIQUE_ADDRESS CommandTree<Cfg, Commands...> commands_{};
+    template<typename Engine>
+    friend struct Help;
+
+    const CommandNode<char_type> *root() const { return commands_.root(); }
+
+    using CommandTree_t =
+      CommandTree<Engine<Cfg, Display, Commands...>, Commands...>;
+
+    CLI_NO_UNIQUE_ADDRESS CommandTree_t commands_;
     CLI_NO_UNIQUE_ADDRESS Display display_;
     CLI_NO_UNIQUE_ADDRESS Line<Cfg, Display> line_;
-    CLI_NO_UNIQUE_ADDRESS Input input_{};
+    CLI_NO_UNIQUE_ADDRESS input_type input_{};
     CLI_NO_UNIQUE_ADDRESS History<Cfg> history_{};
     char_type buffer_[config::output_size_v<Cfg>]{};
   };

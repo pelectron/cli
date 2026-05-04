@@ -39,14 +39,13 @@
 
 #include "cli.hpp"
 
-#include "cpp-terminal/exception.hpp"
-#include "cpp-terminal/input.hpp"
-#include "cpp-terminal/iostream.hpp"
-#include "cpp-terminal/key.hpp"
-#include "cpp-terminal/options.hpp"
-#include "cpp-terminal/terminal.hpp"
-#include "cpp-terminal/tty.hpp"
-
+#include <cpp-terminal/exception.hpp>
+#include <cpp-terminal/input.hpp>
+#include <cpp-terminal/iostream.hpp>
+#include <cpp-terminal/key.hpp>
+#include <cpp-terminal/options.hpp>
+#include <cpp-terminal/terminal.hpp>
+#include <cpp-terminal/tty.hpp>
 #include <string_view>
 
 namespace cli::sim {
@@ -65,10 +64,9 @@ namespace cli::sim {
    */
   inline bool init() {
     // check if the terminal is capable of handling input
-    Term::terminal.setOptions(Term::Option::NoClearScreen,
-                              Term::Option::NoSignalKeys,
-                              Term::Option::Cursor,
-                              Term::Option::Raw);
+    Term::terminal.setOptions(
+      Term::Option::NoSignalKeys, Term::Option::Cursor, Term::Option::Raw);
+
     if (!Term::is_stdin_a_tty()) {
       Term::cerr << "The terminal is not attached to a TTY and "
                     "therefore can't catch user input. Exiting..."
@@ -92,26 +90,53 @@ namespace cli::sim {
       switch (event.type()) {
         case Term::Event::Type::Key: {
           Term::Key key(event);
-          if (key == Term::Key::Ctrl_C)
-            exit(0);
-          else if (key == Term::Key::Enter)
-            cli.on_char('\n'); // TODO: respect Cli's delimiter
-          else if (key == Term::Key::ArrowDown)
-            for (auto c : cli::View{"\x1b[B"})
-              cli.on_char(c);
-          else if (key == Term::Key::ArrowUp)
-            for (auto c : cli::View{"\x1b[A"})
-              cli.on_char(c);
-          else if (key == Term::Key::ArrowRight)
-            for (auto c : cli::View{"\x1b[C"})
-              cli.on_char(c);
-          else if (key == Term::Key::ArrowLeft)
-            for (auto c : cli::View{"\x1b[D"})
-              cli.on_char(c);
-          else
-            cli.on_char(key.value);
-          break;
-        }
+
+          switch (key.value) {
+            case Term::Key::Ctrl_C:
+              exit(0);
+            case Term::Key::Ctrl_J:
+              // clear screen
+              for (auto c : cli::View{"\x1b[2J"})
+                cli.on_char(c);
+              break;
+            case Term::Key::Ctrl_K:
+              // clear to end of line
+              for (auto c : cli::View{"\x1b[0K"})
+                cli.on_char(c);
+              break;
+            case Term::Key::Ctrl_L:
+              // clear entire line
+              for (auto c : cli::View{"\x1b[2K"})
+                cli.on_char(c);
+              break;
+            case Term::Key::Ctrl_U:
+              // clear to begin of line
+              for (auto c : cli::View{"\x1b[1K"})
+                cli.on_char(c);
+              break;
+            case Term::Key::Enter:
+              cli.on_char('\n'); // TODO: respect Cli's delimiter
+              break;
+            case Term::Key::ArrowDown:
+              for (auto c : cli::View{"\x1b[B"})
+                cli.on_char(c);
+              break;
+            case Term::Key::ArrowUp:
+              for (auto c : cli::View{"\x1b[A"})
+                cli.on_char(c);
+              break;
+            case Term::Key::ArrowRight:
+              for (auto c : cli::View{"\x1b[C"})
+                cli.on_char(c);
+              break;
+            case Term::Key::ArrowLeft:
+              for (auto c : cli::View{"\x1b[D"})
+                cli.on_char(c);
+              break;
+            default:
+              cli.on_char(key.value);
+          }
+        } break;
         default:
           break;
       }
@@ -142,6 +167,10 @@ namespace cli::sim {
                             Commands &&...commands) /* -> cli::Cli */ {
     static_assert(std::is_same_v<char, typename Config::char_type>,
                   "char_type must be char. Others are unsupported for now.");
+
+    static_assert(is_multiline_display_v<decltype(cli::AnsiDisplay{
+                    &::cli::sim::dtl::write})>);
+
     return cli::Engine{Config{},
                        cli::AnsiDisplay{&::cli::sim::dtl::write},
                        std::forward<Commands>(commands)...};

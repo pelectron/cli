@@ -3,15 +3,35 @@
 
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
+#include "cli/display.hpp"
 #include "cli/enums.hpp"
 #include "cli/string.hpp"
+#include "cli/util.hpp"
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 
 namespace cli {
 
   namespace dtl {
+    template<bool MutliLineDisplay>
+    struct CommandEntered {
+      bool value;
+      constexpr operator bool() { return value; }
+      constexpr CommandEntered &operator=(bool v) {
+        value = v;
+        return *this;
+      }
+    };
+
+    template<>
+    struct CommandEntered<true> {
+      constexpr CommandEntered(bool) {}
+      constexpr operator bool() { return false; }
+      constexpr CommandEntered &operator=(bool) { return *this; }
+    };
+
     template<typename CharT, typename Line, concepts::Display<CharT> Display>
     constexpr Error print_error(Line &line, Display &display, Error e) {
       Error err = display.newline();
@@ -25,12 +45,287 @@ namespace cli {
       line.reset();
       return e;
     }
+
+    template<class Display>
+    constexpr Error
+    cursor_left(auto &cursor_, auto &size_, Display &display_, std::size_t n) {
+      if (cursor_ == 0)
+        return Error::none;
+      if (n >= cursor_)
+        n = cursor_;
+      cursor_ -= n;
+      return display_.cursor_left(n);
+    }
+
+    template<class Display>
+    constexpr Error
+    cursor_right(auto &cursor_, auto &size_, Display &display_, std::size_t n) {
+      if (cursor_ == size_)
+        return Error::none;
+      if (n + cursor_ > size_)
+        n = size_ - cursor_;
+      cursor_ += n;
+      return display_.cursor_right(n);
+    }
+
+    template<std::size_t MaxLineLength, class CharT, class Display>
+    constexpr Error insert_write(CharT *data_,
+                                 auto &cursor_,
+                                 auto &size_,
+                                 Display &display_,
+                                 View<const CharT> s) {
+      if (s.size() == 0)
+        return Error::none;
+
+      if (s.size() + size_ > MaxLineLength)
+        return Error::buffer_overflow;
+
+      if (cursor_ == size_ or size_ == 0) {
+        for (const CharT &ch : s)
+          data_[size_++] = ch;
+        cursor_ = size_;
+        return display_.write(s);
+      }
+
+      // copy data to the back
+      for (auto i = size_ - 1; i >= cursor_ and i < size_; --i) {
+        data_[i + s.size()] = data_[i];
+      }
+
+      // copy s into data_
+      for (std::size_t i = 0; i < s.size(); ++i) {
+        data_[cursor_ + i] = s[i];
+      }
+
+      // update size and cursor
+      const std::size_t old_cursor = cursor_;
+      size_ += s.size();
+      cursor_ += s.size();
+
+      // write new data
+      Error e = display_.write({data_ + old_cursor, data_ + size_});
+      if (e != Error::none)
+        return e;
+
+      // adjust cursor
+      return display_.cursor_left(size_ - cursor_);
+    }
+
+    template<class Cfg, class CharT, class Display>
+    constexpr Error on_char(CharT *data_,
+                            auto &cursor_,
+                            auto &size_,
+                            Display &display_,
+                            auto &command_entered_,
+                            CharT c) {
+      if (size_ == Cfg::max_line_length)
+        return Error::buffer_overflow;
+
+      if (size_ == 0 and c == Cfg::access_separator) {
+        return Error::none;
+      }
+
+      if (size_ == 0 and command_entered_) {
+        const Error e = display_.newline();
+        if (e != Error::none)
+          return e;
+      }
+
+      return insert_write<Cfg::max_line_length>(
+        data_, cursor_, size_, display_, {&c, 1});
+    }
+
+    template<class CharT, class Display>
+    constexpr Error backspace(CharT *data_,
+                              auto &cursor_,
+                              auto &size_,
+                              Display &display_,
+                              std::size_t n) {
+      if (cursor_ == 0)
+        return Error::none;
+      else if (cursor_ == size_) {
+        if (n >= size_) {
+          size_ = 0;
+          cursor_ = 0;
+          return display_.clear_line();
+        } else {
+          size_ -= n;
+          cursor_ -= n;
+          return display_.backspace(n);
+        }
+      } else if (n >= cursor_) {
+        for (auto i = cursor_; i < size_; ++i) {
+          data_[i - cursor_] = data_[i];
+        }
+        size_ -= cursor_;
+        cursor_ = 0;
+
+        Error e = display_.clear_line();
+        if (e != Error::none)
+          return e;
+
+        e = display_.write({data_, size_});
+        if (e != Error::none)
+          return e;
+        return display_.cursor_left(size_);
+      } else {
+        n = dtl::min(cursor_, n);
+        for (auto i = cursor_ - n; i < size_ - n; ++i) {
+          data_[i] = data_[i + n];
+        }
+        cursor_ -= n;
+        size_ -= n;
+
+        if (Error e = display_.clear_line(); e != Error::none)
+          return e;
+
+        if (Error e = display_.write({data_, size_}); e != Error::none)
+          return e;
+
+        return display_.cursor_left(size_ - cursor_);
+      }
+    }
+
+    template<class CharT, class Display>
+    constexpr Error
+    delete_char(CharT *data_, auto &cursor_, auto &size_, Display &display_) {
+      if (cursor_ == size_)
+        return Error::none;
+
+      // move cursor to the end
+      if (Error e = display_.cursor_right(size_ - cursor_); e != Error::none)
+        return e;
+
+      // delete characters
+      if (Error e = display_.backspace(size_ - cursor_); e != Error::none)
+        return e;
+
+      if (cursor_ == size_ - 1) {
+        --size_;
+        return Error::none;
+      }
+
+      // write the new characters
+      if (Error e = display_.write({data_ + cursor_ + 1, data_ + size_});
+          e != Error::none)
+        return e;
+
+      // move cursor to old position
+      if (Error e = display_.cursor_left(size_ - cursor_ - 1); e != Error::none)
+        return e;
+
+      // copy data
+      for (auto i = cursor_; (i + 1) < size_; ++i) {
+        data_[i] = data_[i + 1];
+      }
+      --size_;
+      return Error::none;
+    }
+
+    template<class Display>
+    constexpr Error
+    clear_line_to_end(auto &cursor_, auto &size_, Display &display_) {
+      if (cursor_ == size_) {
+        return Error::none;
+      }
+
+      if (Error e = display_.cursor_right(size_ - cursor_); e != Error::none)
+        return e;
+
+      if (Error e = display_.backspace(size_ - cursor_); e != Error::none) {
+        cursor_ = size_;
+        return e;
+      }
+
+      size_ = cursor_;
+      return Error::none;
+    }
+
+    template<class CharT, class Display>
+    constexpr Error clear_line_to_begin(CharT *data_,
+                                        auto &cursor_,
+                                        auto &size_,
+                                        Display &display_) {
+      if (cursor_ == 0 or cursor_ + 1 >= size_) {
+        cursor_ = 0;
+        size_ = 0;
+        return display_.clear_line();
+      }
+
+      if (Error e = display_.clear_line(); e != Error::none)
+        return e;
+
+      for (std::size_t i = cursor_ + 1; i < size_; ++i)
+        data_[i - cursor_ - 1] = data_[i];
+
+      size_ = size_ - cursor_ - 1;
+      cursor_ = 0;
+
+      if (Error e = display_.write({data_, size_}); e != Error::none) {
+        size_ = 0;
+        return e;
+      }
+
+      if (Error e = display_.cursor_left(size_); e != Error::none) {
+        cursor_ = size_;
+        return e;
+      }
+
+      return Error::none;
+    }
+
+    template<class Cfg, typename Line, class CharT, class Display>
+    Error execute(Line &line,
+                  CharT *data_,
+                  auto &size_,
+                  auto &root_,
+                  Display &display_,
+                  auto &command_entered_,
+                  View<CharT> &out) {
+      command_entered_ = true;
+      // parse the input
+      SplitResult res =
+        split_line({data_, size_}, &root_, Cfg::access_separator);
+      if (res.command == nullptr)
+        return dtl::print_error<CharT>(line, display_, Error::invalid_cmd);
+
+      // execute the command
+      bool should_print_newline = false;
+      Error e = res.command->execute(res.args, out, should_print_newline);
+      if (e != Error::none)
+        return dtl::print_error<CharT>(line, display_, e);
+
+      if (should_print_newline or is_multiline_display_v<Display>) {
+        e = display_.newline();
+        if (e != Error::none)
+          return e;
+      }
+
+      if (out.size() != 0) {
+        // print the result
+        e = display_.write(out);
+        if (e != Error::none)
+          return dtl::print_error<CharT>(line, display_, e);
+
+        if constexpr (is_multiline_display_v<Display>) {
+          e = display_.newline();
+          if (e != Error::none)
+            return e;
+        }
+      }
+
+      // reset line data
+      size_ = 0;
+      return Error::none;
+    }
   } // namespace dtl
 
   /**
    * @brief The Line class is used to handle autocomplete, cursor movement,
    * storing received characters, and displaying the characters.
    *
+   * There are four specializations for each combination of use_cursor and
+   * use_autocomplete.
    * @tparam Cfg
    */
   template<typename Cfg, concepts::Display<typename Cfg::char_type> Display>
@@ -41,8 +336,13 @@ namespace cli {
     requires((not Cfg::use_cursor) and (not Cfg::use_autocomplete))
   class Line<Cfg, Display> {
     using CharT = typename Cfg::char_type;
+    using Index = smallest_type_for_value_t<Cfg::max_line_length>;
+    using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
+
     CharT data_[Cfg::max_line_length]{};
-    std::size_t size_{};
+    Index size_{};
+    CLI_NO_UNIQUE_ADDRESS
+    CmdEntered command_entered_{false};
     const CommandNode<CharT> &root_;
     Display &display_;
 
@@ -58,7 +358,7 @@ namespace cli {
         return Error::none;
       }
 
-      if (size_ == 0) {
+      if (size_ == 0 and command_entered_) {
         const Error e = display_.newline();
         if (e != Error::none)
           return e;
@@ -85,10 +385,13 @@ namespace cli {
         return Error::buffer_overflow;
 
       Error e = display_.clear_line();
-      if (e != Error::none or s.size() == 0)
+      if (e != Error::none)
         return e;
 
       size_ = 0;
+      if (s.size() == 0)
+        return Error::none;
+
       for (const auto &ch : s) {
         data_[size_++] = ch;
       }
@@ -119,33 +422,14 @@ namespace cli {
     constexpr View<const CharT> view() const { return {data_, size_}; }
 
     constexpr Error execute(View<CharT> &out) {
-      // parse the input
-      SplitResult res = split_line(view(), &root_, Cfg::access_separator);
-      if (res.command == nullptr)
-        return dtl::print_error<CharT>(*this, display_, Error::invalid_cmd);
-
-      // execute the command
-      bool should_print_newline = false;
-      Error e = res.command->execute(res.args, out, should_print_newline);
-      if (e != Error::none)
-        return dtl::print_error<CharT>(*this, display_, e);
-
-      if (should_print_newline) {
-        e = display_.newline();
-        if (e != Error::none or size_ == 0)
-          return e;
-      }
-      // print the result
-      e = display_.write(out);
-      if (e != Error::none)
-        return dtl::print_error<CharT>(*this, display_, e);
-
-      // reset line data
-      size_ = 0;
-      return Error::none;
+      return dtl::execute<Cfg>(
+        *this, data_, size_, root_, display_, command_entered_, out);
     }
 
-    constexpr void reset() { size_ = 0; }
+    constexpr void reset() {
+      command_entered_ = false;
+      size_ = 0;
+    }
   };
 
   template<typename Cfg,
@@ -153,10 +437,16 @@ namespace cli {
     requires((not Cfg::use_cursor) and Cfg::use_autocomplete)
   class Line<Cfg, Display> {
     using CharT = typename Cfg::char_type;
+    using Index = smallest_type_for_value_t<Cfg::max_line_length>;
+    using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
+    static constexpr Index max_index = std::numeric_limits<Index>::max();
+
     CharT data_[Cfg::max_line_length]{};
-    std::size_t size_{0};
-    std::size_t start_of_args_{View<const CharT>::npos};
-    std::size_t last_access_separator_ = View<const CharT>::npos;
+    Index size_{0};
+    Index start_of_args_{max_index};
+    Index last_access_separator_ = max_index;
+    CLI_NO_UNIQUE_ADDRESS
+    CmdEntered command_entered_{false};
     const CommandNode<CharT> *command_{};
     const CommandNode<CharT> &root_;
     Display &display_;
@@ -173,7 +463,7 @@ namespace cli {
         return Error::none;
       }
 
-      if (size_ == 0) {
+      if (size_ == 0 and command_entered_) {
         const Error e = display_.newline();
         if (e != Error::none)
           return e;
@@ -243,10 +533,11 @@ namespace cli {
     }
 
     constexpr void reset() {
+      command_entered_ = false;
       size_ = 0;
       command_ = &root_;
-      start_of_args_ = View<const CharT>::npos;
-      last_access_separator_ = View<const CharT>::npos;
+      start_of_args_ = max_index;
+      last_access_separator_ = max_index;
     }
 
     constexpr Error clear() {
@@ -263,12 +554,13 @@ namespace cli {
         return display_.backspace(n);
       }
 
-      for (std::size_t i = start_of_args_ - 1; i >= size_; --i) {
+      for (Index i = start_of_args_ - 1; i >= size_; --i) {
         if (data_[i] == Cfg::access_separator) {
           command_ = command_->parent;
         }
       }
-      start_of_args_ = View<const CharT>::npos;
+
+      start_of_args_ = max_index;
       last_access_separator_ = view().find_last_of(Cfg::access_separator);
       return display_.backspace(n);
     }
@@ -360,7 +652,7 @@ namespace cli {
       if (not found)
         return Error::invalid_cmd;
 
-      start_of_args_ = arg_start;
+      start_of_args_ = static_cast<Index>(arg_start);
       last_access_separator_ =
         s.substr(0, arg_start).find_last_of(Cfg::access_separator);
       size_ = 0;
@@ -373,25 +665,26 @@ namespace cli {
 
     constexpr Error on_delete_char() { return Error::none; }
 
-    constexpr Error on_cursor_left(uint32_t n) { return Error::none; }
+    constexpr Error on_cursor_left(uint32_t) { return Error::none; }
 
-    constexpr Error on_cursor_right(uint32_t n) { return Error::none; }
+    constexpr Error on_cursor_right(uint32_t) { return Error::none; }
 
-    constexpr Error on_clear_line_to_end(uint32_t n) { return Error::none; }
+    constexpr Error on_clear_line_to_end(uint32_t) { return Error::none; }
 
     constexpr Error on_clear_line_to_begin() { return clear(); }
 
     constexpr Error on_clear_screen() {
       size_ = 0;
       command_ = &root_;
-      start_of_args_ = View<const CharT>::npos;
-      last_access_separator_ = View<const CharT>::npos;
+      start_of_args_ = max_index;
+      last_access_separator_ = max_index;
       return display_.clear_screen();
     }
 
     constexpr View<const CharT> view() const { return {data_, size_}; }
 
     constexpr Error execute(View<CharT> &out) {
+      command_entered_ = true;
       // execute the command
       bool should_print_newline = false;
       Error e = command_->execute(
@@ -412,8 +705,8 @@ namespace cli {
 
       // reset line data
       size_ = 0;
-      start_of_args_ = View<const CharT>::npos;
-      last_access_separator_ = View<const CharT>::npos;
+      start_of_args_ = max_index;
+      last_access_separator_ = max_index;
       command_ = &root_;
       return Error::none;
     }
@@ -424,9 +717,14 @@ namespace cli {
     requires(Cfg::use_cursor and not Cfg::use_autocomplete)
   class Line<Cfg, Display> {
     using CharT = typename Cfg::char_type;
+    using Index = smallest_type_for_value_t<Cfg::max_line_length>;
+    using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
+
     CharT data_[Cfg::max_line_length]{};
-    std::size_t size_{};
-    std::size_t cursor_{};
+    Index size_{};
+    Index cursor_{};
+    CLI_NO_UNIQUE_ADDRESS
+    CmdEntered command_entered_{false};
     const CommandNode<CharT> &root_;
     Display &display_;
 
@@ -435,95 +733,15 @@ namespace cli {
       : root_(root), display_(display) {}
 
     constexpr Error on_char(CharT c) {
-      if (size_ == Cfg::max_line_length)
-        return Error::buffer_overflow;
-
-      if (size_ == 0 and c == Cfg::access_separator) {
-        return Error::none;
-      }
-
-      if (size_ == 0) {
-        const Error e = display_.newline();
-        if (e != Error::none)
-          return e;
-      }
-
-      if (cursor_ == size_) {
-        data_[size_++] = c;
-        ++cursor_;
-        return display_.write(c);
-      }
-
-      for (std::size_t i = size_ - 1; i < size_ and i >= cursor_; --i) {
-        data_[i + 1] = data_[i];
-      }
-
-      data_[cursor_++] = c;
-      ++size_;
-
-      Error e = display_.clear_line_to_end();
-      if (e != Error::none)
-        return e;
-
-      e = display_.write({data_ + cursor_ - 1, data_ + size_});
-      if (e != Error::none)
-        return e;
-
-      return display_.cursor_left(size_ - cursor_);
+      return dtl::on_char<Cfg>(
+        data_, cursor_, size_, display_, command_entered_, c);
     }
 
     constexpr Error on_backspace(std::size_t n = 1) {
-      if (cursor_ == 0)
-        return Error::none;
-      else if (cursor_ == size_) {
-        if (n >= size_) {
-          size_ = 0;
-          cursor_ = 0;
-          return display_.clear_line();
-        } else {
-          size_ -= n;
-          cursor_ -= n;
-          return display_.backspace(n);
-        }
-      } else if (n >= cursor_) {
-        for (std::size_t i = cursor_; i < size_; ++i) {
-          data_[i - cursor_] = data_[i];
-        }
-        size_ -= cursor_;
-        cursor_ = 0;
-
-        Error e = display_.clear_line();
-        if (e != Error::none)
-          return e;
-
-        e = display_.write({data_, size_});
-        if (e != Error::none)
-          return e;
-        return display_.cursor_left(size_);
-      } else {
-        for (std::size_t i = cursor_ - n; i < size_ - n; ++i) {
-          data_[i] = data_[i + n];
-        }
-        cursor_ -= n;
-        size_ -= n;
-
-        Error e = display_.cursor_left(n);
-        if (e != Error::none)
-          return e;
-
-        e = display_.clear_line_to_end();
-        if (e != Error::none)
-          return e;
-
-        e = display_.write({data_ + cursor_, data_ + size_});
-        if (e != Error::none)
-          return e;
-
-        return display_.cursor_left(size_ - cursor_);
-      }
+      return dtl::backspace(data_, cursor_, size_, display_, n);
     }
 
-    constexpr View<const CharT> on_autocomplete() { return {}; }
+    constexpr Error on_autocomplete() { return Error::none; }
 
     constexpr Error set_data(View<const CharT> s) {
       if (s.size() > Cfg::max_line_length)
@@ -541,6 +759,7 @@ namespace cli {
     }
 
     constexpr void reset() {
+      command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
     }
@@ -551,49 +770,23 @@ namespace cli {
     }
 
     constexpr Error on_delete_char() {
-      if (cursor_ == size_)
-        return Error::none;
-
-      for (std::size_t i = cursor_; (i + 1) < size_; ++i) {
-        data_[i] = data_[i + 1];
-      }
-
-      --size_;
-      Error e = display_.clear_line_to_end();
-      if (e != Error::none)
-        return e;
-
-      e = display_.write({data_ + cursor_, size_ - cursor_});
-      if (e != Error::none)
-        return e;
-
-      return display_.cursor_left(size_ - cursor_);
+      return dtl::delete_char(data_, cursor_, size_, display_);
     }
 
     constexpr Error on_cursor_left(uint32_t n) {
-      if (cursor_ == 0)
-        return Error::none;
-      if (n >= cursor_)
-        n = cursor_;
-      cursor_ -= n;
-      return display_.cursor_left(n);
+      return dtl::cursor_left(cursor_, size_, display_, n);
     }
 
     constexpr Error on_cursor_right(uint32_t n) {
-      if (cursor_ == size_)
-        return Error::none;
-      if (n + cursor_ > size_)
-        n = size_ - cursor_;
-      cursor_ += n;
-      return display_.cursor_left(n);
+      return dtl::cursor_right(cursor_, size_, display_, n);
     }
 
     constexpr Error on_clear_line_to_end() {
-      return display_.clear_line_to_end();
+      return dtl::clear_line_to_end(cursor_, size_, display_);
     }
 
     constexpr Error on_clear_line_to_begin() {
-      return display_.clear_line_to_begin();
+      return dtl::clear_line_to_begin(data_, cursor_, size_, display_);
     }
 
     constexpr Error on_clear_screen() {
@@ -605,30 +798,11 @@ namespace cli {
     constexpr View<const CharT> view() const { return {data_, size_}; }
 
     constexpr Error execute(View<CharT> &out) {
-      // parse the input
-      SplitResult res = split_line(view(), &root_, Cfg::access_separator);
-      if (res.command == nullptr)
-        return dtl::print_error<CharT>(*this, display_, Error::invalid_cmd);
-
-      // execute the command
-      bool should_print_newline = false;
-      Error e = res.command->execute(res.args, out, should_print_newline);
-      if (e != Error::none)
-        return dtl::print_error<CharT>(*this, display_, e);
-
-      if (should_print_newline) {
-        e = display_.newline();
-        if (e != Error::none or size_ == 0)
-          return e;
+      Error e = dtl::execute<Cfg>(
+        *this, data_, size_, root_, display_, command_entered_, out);
+      if (e != Error::none) {
+        return e;
       }
-
-      // print the result
-      e = display_.write(out);
-      if (e != Error::none)
-        return dtl::print_error<CharT>(*this, display_, e);
-
-      // reset line data
-      size_ = 0;
       cursor_ = 0;
       return Error::none;
     }
@@ -639,120 +813,32 @@ namespace cli {
     requires(Cfg::use_cursor and Cfg::use_autocomplete)
   class Line<Cfg, Display> {
     using CharT = typename Cfg::char_type;
+    using Index = smallest_type_for_value_t<Cfg::max_line_length>;
+    using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
     CharT data_[Cfg::max_line_length]{};
-    std::size_t size_{};
-    std::size_t cursor_{};
-    const CommandNode<CharT> &root;
+    Index size_{};
+    Index cursor_{};
+    CLI_NO_UNIQUE_ADDRESS
+    CmdEntered command_entered_{false};
+    const CommandNode<CharT> &root_;
     Display &display_;
 
   public:
     constexpr Line(const CommandNode<CharT> &root, Display &display)
-      : root(root), display_(display) {}
+      : root_(root), display_(display) {}
 
     constexpr Error on_char(CharT c) {
-      if (size_ == Cfg::max_line_length)
-        return Error::buffer_overflow;
-
-      if (size_ == 0 and c == Cfg::access_separator) {
-        return Error::none;
-      }
-
-      if (size_ == 0) {
-        const Error e = display_.newline();
-        if (e != Error::none)
-          return e;
-      }
-
-      return write({&c, 1});
+      return dtl::on_char<Cfg>(
+        data_, cursor_, size_, display_, command_entered_, c);
     }
 
     constexpr Error on_backspace(std::size_t n = 1) {
-      if (cursor_ == 0)
-        return Error::none;
-      else if (cursor_ == size_) {
-        if (n >= size_) {
-          size_ = 0;
-          cursor_ = 0;
-          return display_.clear_line();
-        } else {
-          size_ -= n;
-          cursor_ -= n;
-          return display_.backspace(n);
-        }
-      } else if (n >= cursor_) {
-        for (std::size_t i = cursor_; i < size_; ++i) {
-          data_[i - cursor_] = data_[i];
-        }
-        size_ -= cursor_;
-        cursor_ = 0;
-
-        Error e = display_.clear_line();
-        if (e != Error::none)
-          return e;
-
-        e = display_.write({data_, size_});
-        if (e != Error::none)
-          return e;
-        return display_.cursor_left(size_);
-      } else {
-        for (std::size_t i = cursor_ - n; i < size_ - n; ++i) {
-          data_[i] = data_[i + n];
-        }
-        cursor_ -= n;
-        size_ -= n;
-
-        Error e = display_.cursor_left(n);
-        if (e != Error::none)
-          return e;
-
-        e = display_.clear_line_to_end();
-        if (e != Error::none)
-          return e;
-
-        e = display_.write({data_ + cursor_, data_ + size_});
-        if (e != Error::none)
-          return e;
-
-        return display_.cursor_left(size_ - cursor_);
-      }
+      return dtl::backspace(data_, cursor_, size_, display_, n);
     }
 
     constexpr Error write(View<const CharT> s) {
-      if (s.size() == 0)
-        return Error::none;
-
-      if (s.size() + size_ > Cfg::max_line_length)
-        return Error::buffer_overflow;
-
-      if (cursor_ == size_ or size_ == 0) {
-        for (const CharT &ch : s)
-          data_[size_++] = ch;
-        cursor_ = size_;
-        return display_.write(s);
-      }
-
-      // copy data to the back
-      for (std::size_t i = size_ - 1; i >= cursor_ and i < size_; --i) {
-        data_[i + s.size()] = data_[i];
-      }
-
-      // copy s into data_
-      for (std::size_t i = 0; i < s.size(); ++i) {
-        data_[cursor_ + i] = s[i];
-      }
-
-      // update size and cursor
-      const std::size_t old_cursor = cursor_;
-      size_ += s.size();
-      cursor_ += s.size();
-
-      // write new data
-      Error e = display_.write({data_ + old_cursor, data_ + size_});
-      if (e != Error::none)
-        return e;
-
-      // adjust cursor
-      return display_.cursor_left(size_ - cursor_);
+      return dtl::insert_write<Cfg::max_line_length>(
+        data_, cursor_, size_, display_, s);
     }
 
     constexpr View<const CharT> get_cursor_name() {
@@ -795,11 +881,11 @@ namespace cli {
     }
 
     constexpr Error on_autocomplete() {
-      if (not root.subcommand)
+      if (not root_.subcommand)
         return Error::none;
 
       if (size_ == 0)
-        return write(root.subcommand->name);
+        return write(root_.subcommand->name);
 
       const std::size_t start_of_args = view().find_first_of(
         View<const CharT>{string_constant<CharT, ' ', '=', '('>{}});
@@ -811,7 +897,7 @@ namespace cli {
       const View cmd_name = view().substr(0, start_of_args);
 
       if (cmd_name.size() == 0)
-        return write(root.subcommand->name);
+        return write(root_.subcommand->name);
 
       // the following cases:
       // - cursor is at the end of cmd_name -> normal autocomplete
@@ -849,7 +935,7 @@ namespace cli {
                             : last_access_separator + 1);
 
         if (cmdlet.size() == 0) {
-          for (const CommandNode<CharT> &cmd : root) {
+          for (const CommandNode<CharT> &cmd : root_) {
             if (cmd.name == name) {
               if (cmd.subcommand == nullptr)
                 return Error::none;
@@ -864,7 +950,7 @@ namespace cli {
         }
 
         const CommandNode<CharT> *cmd =
-          get_command(name, &root, Cfg::access_separator);
+          get_command(name, &root_, Cfg::access_separator);
 
         if (cmd == nullptr)
           return Error::none;
@@ -899,7 +985,7 @@ namespace cli {
         View cursor_name = get_full_cursor_name();
         View name = cmd_name.substr(0, cursor_ - 1);
         const CommandNode<CharT> *cmd =
-          get_command(name, &root, Cfg::access_separator);
+          get_command(name, &root_, Cfg::access_separator);
 
         if (cmd == nullptr)
           return Error::none;
@@ -927,7 +1013,7 @@ namespace cli {
 
         return write(node->name.substr(cursor_name.size()));
       } else if (cursor_is_on_access_separator) {
-        const CommandNode<CharT> *parent = &root;
+        const CommandNode<CharT> *parent = &root_;
         std::size_t begin = 0;
         std::size_t end = cmd_name.find_first_of(Cfg::access_separator);
         while (end < cursor_) {
@@ -978,7 +1064,7 @@ namespace cli {
 
         return write(node->name.substr(cmdlet.size()));
       } else {
-        const CommandNode<CharT> *parent = &root;
+        const CommandNode<CharT> *parent = &root_;
         std::size_t begin = 0;
         std::size_t end = cmd_name.find_first_of(Cfg::access_separator);
         while (end < cursor_) {
@@ -1034,95 +1120,52 @@ namespace cli {
     }
 
     constexpr void reset() {
+      command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
     }
 
     constexpr Error clear() {
+      command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
       return display_.clear_line();
     }
 
     constexpr Error on_delete_char() {
-      if (cursor_ == size_)
-        return Error::none;
-
-      for (std::size_t i = cursor_; (i + 1) < size_; ++i) {
-        data_[i] = data_[i + 1];
-      }
-
-      --size_;
-      Error e = display_.clear_line_to_end();
-      if (e != Error::none)
-        return e;
-
-      e = display_.write({data_ + cursor_, size_ - cursor_});
-      if (e != Error::none)
-        return e;
-
-      return display_.cursor_left(size_ - cursor_);
+      return dtl::delete_char(data_, cursor_, size_, display_);
     }
 
     constexpr Error on_cursor_left(uint32_t n) {
-      if (cursor_ == 0)
-        return Error::none;
-      if (n >= cursor_)
-        n = cursor_;
-      cursor_ -= n;
-      return display_.cursor_left(n);
+      return dtl::cursor_left(cursor_, size_, display_, n);
     }
 
     constexpr Error on_cursor_right(uint32_t n) {
-      if (cursor_ == size_)
-        return Error::none;
-      if (n + cursor_ > size_)
-        n = size_ - cursor_;
-      cursor_ += n;
-      return display_.cursor_right(n);
+      return dtl::cursor_right(cursor_, size_, display_, n);
     }
 
     constexpr Error on_clear_line_to_end() {
-      return display_.clear_line_to_end();
+      return dtl::clear_line_to_end(cursor_, size_, display_);
     }
 
     constexpr Error on_clear_line_to_begin() {
-      return display_.clear_line_to_begin();
+      return dtl::clear_line_to_begin(data_, cursor_, size_, display_);
     }
 
     constexpr Error on_clear_screen() {
-      size_ = 0;
-      cursor_ = 0;
+      clear();
       return display_.clear_screen();
     }
 
     constexpr View<const CharT> view() const { return {data_, size_}; }
 
     constexpr Error execute(View<CharT> &out) {
-      // parse the input
-      SplitResult res = split_line(view(), &root, Cfg::access_separator);
-      if (res.command == nullptr)
-        return dtl::print_error<CharT>(*this, display_, Error::invalid_cmd);
-
-      // execute the command
-      bool should_print_newline = false;
-      Error e = res.command->execute(res.args, out, should_print_newline);
-      if (e != Error::none)
-        return dtl::print_error<CharT>(*this, display_, e);
-
-      if (should_print_newline) {
-        Error e = display_.newline();
-        if (e != Error::none or size_ == 0)
-          return e;
+      Error e = dtl::execute<Cfg>(
+        *this, data_, size_, root_, display_, command_entered_, out);
+      if (e != Error::none) {
+        return e;
       }
-
-      // print the result
-      e = display_.write(out);
-      if (e != Error::none)
-        return dtl::print_error<CharT>(*this, display_, e);
-
-      // reset line data
-      reset();
+      cursor_ = 0;
       return Error::none;
     }
   };

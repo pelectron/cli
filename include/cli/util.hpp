@@ -102,11 +102,13 @@ namespace cli {
 
   template<class T, class L>
   struct num_cmds;
+
   template<class T, template<class...> class L, class... SubCmds>
   struct num_cmds<T, L<SubCmds...>> {
     static constexpr std::size_t value =
       1 + (num_cmds<SubCmds, typename SubCmds::sub_command_list>::value + ...);
   };
+
   template<class T, template<class...> class L>
   struct num_cmds<T, L<>> {
     static constexpr std::size_t value = 1;
@@ -147,9 +149,77 @@ namespace cli {
     static constexpr std::size_t value = T::name.size();
   };
 
-  template<concepts::Command C>
+  namespace dtl {
+    template<typename T, typename... Ts>
+    constexpr T max(T t, Ts... ts) {
+      if constexpr (sizeof...(Ts) == 0)
+        return t;
+      else {
+        const auto m = max(ts...);
+        if (t > m)
+          return t;
+        else
+          return m;
+      }
+    };
+
+    template<std::unsigned_integral T, std::unsigned_integral U>
+    std::common_type_t<T, U> min(T t, U u) {
+      if (t < u)
+        return t;
+      return u;
+    }
+
+    template<std::signed_integral T, std::unsigned_integral U>
+    std::common_type_t<T, U> min(T t, U u) {
+      if (t < 0 or t < u)
+        return t;
+      return u;
+    }
+
+    template<std::unsigned_integral T, std::signed_integral U>
+    std::common_type_t<T, U> min(T t, U u) {
+      if (u < 0 or u < t)
+        return u;
+      return t;
+    }
+
+    template<std::signed_integral T, std::signed_integral U>
+    std::common_type_t<T, U> min(T t, U u) {
+      if (t < u)
+        return t;
+      return u;
+    }
+  } // namespace dtl
+
+  template<class T, class L>
+  struct minimum_line_length;
+
+  template<class T, template<class...> class L>
+  struct minimum_line_length<T, L<>> {
+    static constexpr std::size_t value = T::name.size();
+  };
+
+  template<class T, template<class...> class L, class... SubCmds>
+  struct minimum_line_length<T, L<SubCmds...>> {
+    static constexpr std::size_t value =
+      T::name.size() + 1 +
+      dtl::max(
+        minimum_line_length<SubCmds,
+                            typename SubCmds::sub_command_list>::value...);
+  };
+
+  template<concepts::Command... Cmds>
+  inline constexpr std::size_t minimum_line_length_v =
+    dtl::max(num_cmds<Cmds, typename Cmds::sub_command_list>::value...);
+
+  // template<concepts::Command C>
+  // inline constexpr std::size_t max_name_length_v =
+  //   max_name_length<C, typename C::sub_command_list>::value;
+
+  template<concepts::Command... C>
   inline constexpr std::size_t max_name_length_v =
-    max_name_length<C, typename C::sub_command_list>::value;
+    dtl::max(max_name_length<C, typename C::sub_command_list>::value...);
 
   // template <class D, SC C, SC Desc, SC H, Command... SubC>
   // constexpr auto count_cmds(const CommandBase<D, C, Desc, H, SubC...> &c) {

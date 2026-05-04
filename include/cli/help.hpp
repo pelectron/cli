@@ -10,13 +10,12 @@ namespace cli {
 
   /**
    * The help function
-   *
-   * @tparam CharT the character type
-   * @tparam AccessSeparator the access separator
    */
-  template<class CharT, CharT AccessSeparator>
+  template<typename Engine>
   struct Help {
-    using char_type = CharT;
+    using config_type = typename Engine::config_type;
+    using char_type = typename config_type::char_type;
+
     using error_message = string_constant<char_type,
                                           'n',
                                           'o',
@@ -42,11 +41,16 @@ namespace cli {
     constexpr View<const char_type>
     operator()(View<const char_type> cmd) const {
       if (cmd.size() == 0) {
-        return error_message{};
+        if constexpr (not config::empty_help_prints_commands_v<config_type>) {
+          return error_message{};
+        } else {
+          engine.print();
+          return {};
+        }
       }
 
-      const CommandNode<char_type> *node = &root;
-      auto end = cmd.find_first_of(AccessSeparator);
+      const CommandNode<char_type> *node = engine.root();
+      auto end = cmd.find_first_of(config_type::access_separator);
       while (end != CharView::npos) {
         auto s = cmd.substr(0, end);
         bool found = false;
@@ -54,7 +58,7 @@ namespace cli {
           if (sub.name == s) {
             node = &sub;
             cmd = cmd.substr(end + 1);
-            end = cmd.find_last_of(AccessSeparator);
+            end = cmd.find_last_of(config_type::access_separator);
             found = true;
             break;
           }
@@ -73,22 +77,28 @@ namespace cli {
 
       return error_message{};
     }
-
-    const CommandNode<char_type> &root;
+    Engine &engine;
   };
 
-  template<class CharT, CharT AccessSeparator>
-  constexpr auto create_help_cmd(const CommandNode<CharT> &root) {
+  template<class Engine>
+  constexpr auto create_help_cmd(Engine &engine) {
     return funcs::func(
-      string_constant<CharT, 'h', 'e', 'l', 'p'>{},
-      cli::Help<CharT, AccessSeparator>{root},
-      funcs::arg<cli::View<const CharT>, string_constant<CharT>{}>(
-        string_constant<CharT, 'c', 'o', 'm', 'm', 'a', 'n', 'd'>{}));
+      string_constant<typename Engine::char_type, 'h', 'e', 'l', 'p'>{},
+      cli::Help<Engine>{engine},
+      funcs::arg<cli::View<const typename Engine::char_type>,
+                 string_constant<typename Engine::char_type>{}>(
+        string_constant<typename Engine::char_type,
+                        'c',
+                        'o',
+                        'm',
+                        'm',
+                        'a',
+                        'n',
+                        'd'>{}));
   }
 
-  template<class CharT, CharT AccessSeparator>
-  using HelpCommand = decltype(create_help_cmd<CharT, AccessSeparator>(
-    std::declval<const CommandNode<CharT> &>()));
-
+  template<class Engine>
+  using HelpCommand =
+    decltype(create_help_cmd<Engine>(std::declval<Engine &>()));
 } // namespace cli
 #endif

@@ -5,6 +5,7 @@
  * PC and played around with.
  */
 
+#include "cli/config.hpp"
 #include "cli/sim.hpp"
 
 // the parameters and functions used in this example
@@ -65,10 +66,14 @@ using cli::arg;
 using cli::func;
 using cli::param;
 
+struct Config : cli::default_config {
+  static constexpr bool multiline_display = false;
+};
+
 // clang-format off
 // the cli object itself
 static cli::Engine cli_ = cli::sim::create_cli(
-  cli::default_config{},
+  Config{},
   param<int>("foo"_sc, 
             "foo description"_sc, 
             &foo_getter, 

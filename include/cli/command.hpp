@@ -268,7 +268,7 @@ namespace cli {
     friend constexpr void for_each(F &&f,
                                    const CommandBase<D, C, Desc, H, SubC...> &t,
                                    Args &&...args);
-    template<concepts::Config, concepts::Command...>
+    template<class Engine, concepts::Command...>
     friend class CommandTree;
 
     std::tuple<SubCommands...> subcommands{};
@@ -285,7 +285,7 @@ namespace cli {
    */
   template<class Derived, SC CmdName, SC Description, SC Type>
   class CommandBase<Derived, CmdName, Description, Type> {
-    template<concepts::Config, concepts::Command...>
+    template<class Engine, concepts::Command...>
     friend class CommandTree;
 
   public:

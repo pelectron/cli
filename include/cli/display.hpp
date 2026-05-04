@@ -26,6 +26,7 @@
 #include "cli/format.hpp"
 #include "cli/string.hpp"
 #include <cstdint>
+#include <type_traits>
 
 namespace cli {
 
@@ -111,10 +112,26 @@ namespace cli {
     struct get_output_char_type<T> {
       using type = char32_t;
     };
+
+    template<typename D, typename = void>
+    struct is_multiline_display : std::false_type {};
+
+    template<typename D>
+    struct is_multiline_display<
+      D,
+      std::enable_if_t<
+        std::convertible_to<decltype(D::is_multiline_display), bool>>> {
+      static constexpr bool value = D::is_multiline_display;
+    };
+
   } // namespace dtl
 
   template<concepts::Output O>
   using get_output_char_type_t = typename dtl::get_output_char_type<O>::type;
+
+  template<typename D>
+  inline constexpr bool is_multiline_display_v =
+    dtl::is_multiline_display<D>::value;
 
   /**
    * @brief The AnsiDisplay represents an ANSI compliant display. It uses an
@@ -129,6 +146,7 @@ namespace cli {
   class AnsiDisplay {
   public:
     using char_type = get_output_char_type_t<Out>;
+    static constexpr bool is_multiline_display = true;
 
     template<concepts::Output O>
     constexpr explicit AnsiDisplay(O &&output)
@@ -203,28 +221,6 @@ namespace cli {
     /// writes a new line
     constexpr Error newline() { return write('\n'); }
 
-    /// deletes the character under the cursor
-    constexpr Error delete_char() { return write(0x7F); }
-
-    /// clears the line from the cursor to the end of the line
-    constexpr Error clear_line_to_end() {
-      return write(string_constant<char_type, '\x1B', '[', '0', 'K'>{});
-    }
-
-    /// deletes the characters from the cursor to the beginning of the line and
-    /// moves the cursor to the beginning of the line.
-    constexpr Error clear_line_to_begin() {
-      return write(string_constant<char_type,
-                                   '\x1B',
-                                   '[',
-                                   '1',
-                                   'K',
-                                   '\x1B',
-                                   '[',
-                                   '1',
-                                   'G'>{});
-    }
-
     /**
      * moves the cursor n positions to the left.
      *
@@ -283,7 +279,7 @@ namespace cli {
     Out out_;
   };
 
-  template<concepts::Output Out>
+  template<typename Out>
   AnsiDisplay(Out &&) -> AnsiDisplay<std::decay_t<Out>>;
 
 } // namespace cli

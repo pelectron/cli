@@ -135,6 +135,9 @@ namespace cli {
      * @param cmd the command
      */
     constexpr void push(Str cmd) {
+      if (cmd.size() == 0)
+        return;
+
       copy_into(buffer[head_], cmd);
       current_ = head_;
       if (size_ == 0) {

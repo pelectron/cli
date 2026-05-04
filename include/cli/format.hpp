@@ -84,7 +84,6 @@
 #include <bit>
 #include <cassert>
 #include <cstdint>
-#include <gcem.hpp>
 #include <type_traits>
 
 namespace cli::format {
@@ -218,6 +217,18 @@ namespace cli::format {
   template<typename CharT>
   struct Format<View<CharT>, CharT> {
     constexpr FormatResult operator()(View<CharT> buf, View<CharT> s) const {
+      if (s.size() > buf.size())
+        return Error::buffer_overflow;
+      for (std::size_t i = 0; i < s.size(); ++i)
+        buf[i] = s[i];
+      return s.size();
+    }
+  };
+
+  template<typename CharT>
+  struct Format<View<const CharT>, CharT> {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      View<const CharT> s) const {
       if (s.size() > buf.size())
         return Error::buffer_overflow;
       for (std::size_t i = 0; i < s.size(); ++i)
@@ -862,7 +873,7 @@ namespace cli::format {
         r = 10 * r;
       return r;
     }();
-    static constexpr auto billion = gcem::pow(10u, 9u);
+    static constexpr auto billion = 1'000'000'000;
 
   public:
     constexpr FormatResult operator()(View<CharT> buf, T fp) const {

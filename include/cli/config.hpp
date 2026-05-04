@@ -73,6 +73,40 @@ namespace cli {
       using type = typename C::input_type;
     };
 
+    template<concepts::Config C, typename = void>
+    struct empty_help_prints_commands : std::false_type {};
+
+    template<concepts::Config C>
+    struct empty_help_prints_commands<
+      C,
+      std::enable_if_t<
+        std::is_convertible_v<decltype(C::empty_help_prints_commands), bool>>> {
+      static constexpr bool value = C::empty_help_prints_commands;
+    };
+
+    template<concepts::Config C, typename = void>
+    struct multiline_display : std::false_type {};
+
+    template<concepts::Config C>
+    struct multiline_display<
+      C,
+      std::enable_if_t<
+        std::is_convertible_v<decltype(C::multiline_display), bool>>> {
+      static constexpr bool value = C::multiline_display;
+    };
+
+    template<concepts::Config C, typename Display>
+    struct display_fits_config : std::false_type {};
+
+    template<concepts::Config C, typename Display>
+      requires concepts::Display<Display, typename C::char_type>
+    struct display_fits_config<C, Display> {
+      static constexpr bool value =
+        C::use_cursor
+          ? concepts::DisplayWithCursor<Display, typename C::char_type>
+          : true;
+    };
+
     template<concepts::Config C>
     inline constexpr bool use_volatile_input_buffer_v =
       use_volatile_input_buffer<C, void>::value;
@@ -95,26 +129,40 @@ namespace cli {
       { C::history_depth } -> std::convertible_to<std::size_t>;
     } and (C::history_depth > 0);
 
+    template<concepts::Config C>
+    inline constexpr bool empty_help_prints_commands_v =
+      empty_help_prints_commands<C, void>::value;
+
+    template<concepts::Config C>
+    inline constexpr bool multiline_display_v =
+      multiline_display<C, void>::value;
+
+    template<concepts::Config C, typename Display>
+    inline constexpr bool display_fits_config_v =
+      display_fits_config<C, Display>::value;
   } // namespace config
 
   struct default_config {
     using char_type = char;
-    static constexpr View<const char> name = "cli";
-    static constexpr View<const char> description = "a command line interface";
+    static constexpr View<const char_type> name = "cli";
+    static constexpr View<const char_type> description =
+      "a command line interface";
     static constexpr char_type access_separator = '.';
-    static constexpr auto command_terminator{"\n"_sc};
-    static constexpr bool commands_start_with_separators = false;
-    static constexpr std::size_t tx_size = 128;
-    static constexpr std::size_t rx_size = 32;
     static constexpr bool use_autocomplete = true;
     static constexpr bool use_cursor = true;
-    static constexpr bool use_volatile_input_buffer = false;
     static constexpr bool use_history = true;
     static constexpr std::size_t history_depth = 16;
-    static constexpr std::size_t max_line_length = 80;
+    static constexpr std::size_t max_line_length = 256;
     static constexpr Delimiter input_delimiter = Delimiter::lf;
-    static constexpr Delimiter output_delimiter = Delimiter::lf;
+    static constexpr std::size_t input_size = 16;
+    static constexpr bool use_volatile_input_buffer = false;
+    static constexpr std::size_t output_size = 256;
+    static constexpr bool empty_help_prints_commands = true;
+    static constexpr bool multiline_display = true;
   };
+
+  static_assert(concepts::Config<default_config>);
+  static_assert(config::multiline_display_v<default_config>);
 } // namespace cli
 
 #endif

@@ -84,9 +84,6 @@ namespace cli {
     concept DisplayWithCursor =
       DisplayWithoutCursor<D, CharT> and
       requires(D d, CharT character, View<const CharT> string, std::size_t n) {
-        { d.delete_char() } -> std::same_as<cli::Error>;
-        { d.clear_line_to_end() } -> std::same_as<cli::Error>;
-        { d.clear_line_to_begin() } -> std::same_as<cli::Error>;
         { d.cursor_left(n) } -> std::same_as<cli::Error>;
         { d.cursor_right(n) } -> std::same_as<cli::Error>;
       };
@@ -215,9 +212,6 @@ namespace cli {
       // {
       //   std::remove_cvref_t<T>::use_volatile_input_buffer
       // } -> std::convertible_to<bool>;
-
-      /** the output buffer size */
-      { std::remove_cvref_t<T>::tx_size } -> std::convertible_to<std::size_t>;
 
       /** if true, then a history of commands is available through the up and
        * down cursors */

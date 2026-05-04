@@ -18,7 +18,6 @@ struct Display {
   }
 
   cli::Error write(cli::View<const char> s) {
-    const std::size_t size = data.size();
     for (const char &ch : s) {
       data.insert(data.begin() + cursor, ch);
       ++cursor;
@@ -162,6 +161,10 @@ TEST_CASE("Display") {
 
 struct NoCursor_NoAutocomplete {
   using char_type = char;
+  static constexpr cli::View<const char_type> name = "cli";
+  static constexpr cli::View<const char_type> description =
+    "a command line interface";
+  static constexpr bool use_history = false;
   static constexpr char access_separator = '.';
   static constexpr bool use_cursor = false;
   static constexpr bool use_autocomplete = false;
@@ -170,6 +173,10 @@ struct NoCursor_NoAutocomplete {
 
 struct NoCursor_Autocomplete {
   using char_type = char;
+  static constexpr cli::View<const char_type> name = "cli";
+  static constexpr cli::View<const char_type> description =
+    "a command line interface";
+  static constexpr bool use_history = false;
   static constexpr char access_separator = '.';
   static constexpr bool use_cursor = false;
   static constexpr bool use_autocomplete = true;
@@ -178,6 +185,10 @@ struct NoCursor_Autocomplete {
 
 struct Cursor_NoAutocomplete {
   using char_type = char;
+  static constexpr cli::View<const char_type> name = "cli";
+  static constexpr cli::View<const char_type> description =
+    "a command line interface";
+  static constexpr bool use_history = false;
   static constexpr char access_separator = '.';
   static constexpr bool use_cursor = true;
   static constexpr bool use_autocomplete = false;
@@ -186,11 +197,20 @@ struct Cursor_NoAutocomplete {
 
 struct Cursor_Autocomplete {
   using char_type = char;
+  static constexpr cli::View<const char_type> name = "cli";
+  static constexpr cli::View<const char_type> description =
+    "a command line interface";
+  static constexpr bool use_history = false;
   static constexpr char access_separator = '.';
   static constexpr bool use_cursor = true;
   static constexpr bool use_autocomplete = true;
   static constexpr std::size_t max_line_length = 32;
 };
+
+static_assert(cli::concepts::Config<NoCursor_NoAutocomplete>);
+static_assert(cli::concepts::Config<NoCursor_Autocomplete>);
+static_assert(cli::concepts::Config<Cursor_NoAutocomplete>);
+static_assert(cli::concepts::Config<Cursor_Autocomplete>);
 
 static_assert(cli::concepts::DisplayWithoutCursor<Display, char>);
 static_assert(cli::concepts::DisplayWithCursor<Display, char>);
