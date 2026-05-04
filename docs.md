@@ -2,15 +2,15 @@
 
 `CLI` consists of the following main components:
 
-- [`cli::Engine`](#engine)
-- [`cli::concepts::Config`](#config): configuration for the `cli::Engine`
-- [`cli::concepts::Input`](#input) and [`cli::Input`](#input-class-template):
+- [cli::Engine](#engine)
+- [cli::concepts::Config](#config): configuration for the `cli::Engine`
+- [cli::concepts::Input](#input) and [cli::Input](#input-class-template):
   used to receive characters
-- [`cli::concepts::Display`](#display) and
-  [`cli::AnsiDisplay`](#ansidisplay): used to display characters
-- [`cli::concept::Command`](#commands): the commands, which are either
+- [cli::concepts::Display](#display) and
+  [cli::AnsiDisplay](#ansidisplay): used to display characters
+- [cli::concept::Command](#commands): the commands, which are either
   [Parameters](#parameters) or [Functions](#functions)
-- [`cli::string_constant`](#string-constant): a compile time string
+- [cli::string_constant](#string-constant): a compile time string
 - [Parsing](#parsing)
 - [Formatting](#formatting)
 
@@ -56,8 +56,8 @@
 
 ## Engine
 
-The Engine class is composed of a [`config`](#config), an [`input`](#input), a
-[`display`](#display), and [`commands`](#commands).
+The Engine class is composed of a [config](#config), an [input](#input), a
+[display](#display), and [commands](#commands).
 
 In your main application, you will create an Engine object, and populate it
 with the parameters and functions, and calls the engine's `on_char()` and
@@ -132,7 +132,7 @@ int main(){
 
 ## Config
 
-The [`Engine`](#engine) uses a configuration. A configuration is a traits-like
+The [Engine](#engine) uses a configuration. A configuration is a traits-like
 structure that sets core aspects of the engine. There is a concept called
 `cli::concepts::Config` that formalizes the configuration.
 
@@ -165,7 +165,7 @@ with name `X` of a configuration type `C` can be retrieved with
 `cli::config::X_v<C>` (for members) and `cli::config::X_t<C>` (for typedefs).
 
 - `input_type`: a typedef satisfying the [input concept](#input).
-  Defaults to [`cli::Input`](#input). You must leave this entry out if you want
+  Defaults to [cli::Input](#input). You must leave this entry out if you want
   to use the default.
 - `input_delimiter`: of type `cli::Delimiter`. Specifies the character
   sequence for the enter key. The default is `cli::Delimiter::lf`.
@@ -188,8 +188,8 @@ with name `X` of a configuration type `C` can be retrieved with
 
 struct my_config{
   using char_type = char;
-  static constexpr View<const char> name = "cli";
-  static constexpr View<const char> description = "a command line interface";
+  static constexpr cli::View<const char> name = "cli";
+  static constexpr cli::View<const char> description = "a command line interface";
   static constexpr char_type access_separator = '.';
   static constexpr bool use_autocomplete = false;
   static constexpr bool use_cursor = false;
@@ -211,7 +211,7 @@ static_assert(cli::concepts::Config<my_config>);
 
 ## Input
 
-The input concept formalizes the interface that the [`Engine`](#engine) uses
+The input concept formalizes the interface that the [Engine](#engine) uses
 for preprocessing character input.
 
 An Input preprocesses the character input received with `on_char` into a
@@ -237,7 +237,7 @@ following must be satisfied:
   event. Must return a `bool`, which indicates that an event has been popped
   (`true`), or that no event was available (`false`).
 
-`CLI` provides a default implementation called [`cli::Input`](#input-class-template).
+`CLI` provides a default implementation called [cli::Input](#input-class-template).
 
 ### Input Class Template
 
@@ -248,7 +248,7 @@ Concept](#input).
 
 Note: f you want to call the engine's `on_char` method in an ISR, you must add
 a static constexpr member called `use_volatile_input_buffer` of type `bool` to
-your [`Config`](#config) and set it to true. If you want your own input type to
+your [Config](#config) and set it to true. If you want your own input type to
 respect that setting, you can use `cli::config::use_volatile_input_buffer_v` to
 query this configuration value.
 
@@ -306,8 +306,8 @@ concept cli::concepts::Display;
 ```
 
 A type `D` satisfies the `Display` concept if it either satisfies
-[`DisplayWithoutCursor`](#display-without-cursor) or
-[`DisplayWithCursor`](#display-with-cursor).
+[DisplayWithoutCursor](#display-without-cursor) or
+[DisplayWithCursor](#display-with-cursor).
 
 Displays can be further categorized in single-line and multi-line displays.
 Single-line displays only have a single line to display content. Multi-line
@@ -324,7 +324,7 @@ By default, displays are single-line. To specify that your display is
 multi-line, the display must have a static constexpr member called
 `is_multiline_display` of type `bool` that is set to true.
 
-`CLI` provides a default implementation called [`cli::AnsiDisplay`](#ansidisplay).
+`CLI` provides a default implementation called [cli::AnsiDisplay](#ansidisplay).
 
 ### Display Without Cursor
 
@@ -513,7 +513,7 @@ static_assert(cli::concepts::Output<MyOutput>);
 
 ```
 
-An [`cli::AnsiDisplay`](#ansidisplay) can then be constructed with the output.
+A [cli::AnsiDisplay](#ansidisplay) can then be constructed with the output.
 
 ```cpp
 cli::AnsiDisplay display{&string_output};

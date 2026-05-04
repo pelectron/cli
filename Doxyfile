@@ -402,7 +402,7 @@ MARKDOWN_ID_STYLE      = GITHUB
 # AUTOLINK_IGNORE_WORDS tag are excluded from automatic linking.
 # The default value is: YES.
 
-AUTOLINK_SUPPORT       = YES
+AUTOLINK_SUPPORT       = NO
 
 # This tag specifies a list of words that, when matching the start of a word in
 # the documentation, will suppress auto links generation, if it is enabled via
@@ -1030,7 +1030,9 @@ INPUT                  = include \
                          readme.md \
                          examples/cli.cpp \
                          examples/led.cpp \
-                         source/cli-term.cpp
+                         source/cli-term.cpp \
+                         readme.md \
+                         docs.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
@@ -2407,7 +2409,7 @@ MAN_LINKS              = NO
 # captures the structure of the code including all documentation.
 # The default value is: NO.
 
-GENERATE_XML           = YES
+GENERATE_XML           = NO
 
 # The XML_OUTPUT tag is used to specify where the XML pages will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of
