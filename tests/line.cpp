@@ -299,6 +299,15 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.on_char('.') == cli::Error::none);
     REQUIRE(line.view().size() == 0);
   }
+  SECTION("on_char in args") {
+    line.set_data("c2.c3 args");
+    REQUIRE(line.on_char('1') == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3 args1");
+  }
+  SECTION("on_char and full line") {
+    line.set_data("c1 01234567890123456789012345678");
+    REQUIRE(line.on_char('x') == cli::Error::buffer_overflow);
+  }
   SECTION("autocomplete with empty line") {
     REQUIRE(line.on_autocomplete() == cli::Error::none);
     REQUIRE(line.view() == "c1");
@@ -941,8 +950,7 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
         REQUIRE(line.view() == "c4long.c5long");
         REQUIRE(d.data == "c4long.c5long");
         REQUIRE(d.cursor == 6);
-      }
-      SECTION("not on separator in middle") {
+
         line.set_data("c4.c5long");
         line.on_cursor_left(8);
         line.on_autocomplete();
@@ -951,6 +959,13 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
         REQUIRE(d.cursor == 6);
 
         line.set_data("c4.c5long");
+        line.on_cursor_left(9);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long");
+        REQUIRE(d.data == "c4long.c5long");
+        REQUIRE(d.cursor == 6);
+
+        line.set_data("c4l.c5long");
         line.on_cursor_left(9);
         line.on_autocomplete();
         REQUIRE(line.view() == "c4long.c5long");
