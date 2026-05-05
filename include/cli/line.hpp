@@ -856,8 +856,7 @@ namespace cli {
     }
 
     constexpr Error on_autocomplete() {
-      if (not root_.subcommand)
-        return Error::none;
+      assert(root_.subcommand);
 
       if (size_ == 0)
         return write(root_.subcommand->name);

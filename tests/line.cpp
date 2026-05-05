@@ -4,6 +4,7 @@
 #include "cli/string.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <string>
 #include <vector>
 
 struct Display {
@@ -58,6 +59,7 @@ struct Display {
   cli::Error newline() {
     past.push_back(std::move(data));
     cursor = 0;
+    data.clear();
     return cli::Error::none;
   }
 
@@ -90,6 +92,10 @@ struct Display {
     cursor += n;
     return cli::Error::none;
   }
+};
+
+struct MultilineDisplay : Display {
+  static constexpr bool is_multiline_display = true;
 };
 
 TEST_CASE("Display") {
@@ -224,11 +230,76 @@ static_assert(cli::concepts::Display<Display, char>);
 
 #define DEFINE_COMMANDS()                                                      \
   cli::CommandNode<char> root;                                                 \
-  cli::CommandNode<char> c1{.name = "c1", .description = {}};                  \
-  cli::CommandNode<char> c2{.name = "c2", .description = {}};                  \
-  cli::CommandNode<char> c3{.name = "c3", .description = {}};                  \
-  cli::CommandNode<char> c4{.name = "c4long", .description = {}};              \
-  cli::CommandNode<char> c5{.name = "c5long", .description = {}};              \
+  cli::CommandNode<char> c1{.name = "c1",                                      \
+                            .description = {},                                 \
+                            .this_ = &root,                                    \
+                            .exec_ = +[](void *,                               \
+                                         cli::View<const char>,                \
+                                         cli::View<char> &buf,                 \
+                                         bool &) -> cli::Error {               \
+                              buf = {};                                        \
+                              return cli::Error::none;                         \
+                            }};                                                \
+  cli::CommandNode<char> c2{.name = "c2",                                      \
+                            .description = {},                                 \
+                            .this_ = &root,                                    \
+                            .exec_ =                                           \
+                              +[](void *,                                      \
+                                  cli::View<const char>,                       \
+                                  cli::View<char> &buf,                        \
+                                  bool &should_print_newline) -> cli::Error {  \
+                              buf = {};                                        \
+                              should_print_newline = true;                     \
+                              return cli::Error::none;                         \
+                            }};                                                \
+  cli::CommandNode<char> c3{.name = "c3",                                      \
+                            .description = {},                                 \
+                            .this_ = &root,                                    \
+                            .exec_ =                                           \
+                              +[](void *,                                      \
+                                  cli::View<const char>,                       \
+                                  cli::View<char> &buf,                        \
+                                  bool &should_print_newline) -> cli::Error {  \
+                              should_print_newline = true;                     \
+                              buf[0] = 't';                                    \
+                              buf[1] = 'h';                                    \
+                              buf[2] = 'e';                                    \
+                              buf[3] = ' ';                                    \
+                              buf[4] = 'a';                                    \
+                              buf[5] = 'n';                                    \
+                              buf[6] = 's';                                    \
+                              buf[7] = 'w';                                    \
+                              buf[8] = 'e';                                    \
+                              buf[9] = 'r';                                    \
+                              buf = buf.substr(0, 10);                         \
+                              return cli::Error::none;                         \
+                            }};                                                \
+  cli::CommandNode<char> c4{.name = "c4long",                                  \
+                            .description = {},                                 \
+                            .this_ = &root,                                    \
+                            .exec_ = +[](void *,                               \
+                                         cli::View<const char>,                \
+                                         cli::View<char> &buf,                 \
+                                         bool &) -> cli::Error {               \
+                              buf[0] = 't';                                    \
+                              buf[1] = 'h';                                    \
+                              buf[2] = 'e';                                    \
+                              buf[3] = ' ';                                    \
+                              buf[4] = 'a';                                    \
+                              buf[5] = 'n';                                    \
+                              buf[6] = 's';                                    \
+                              buf[7] = 'w';                                    \
+                              buf[8] = 'e';                                    \
+                              buf[9] = 'r';                                    \
+                              buf = buf.substr(0, 10);                         \
+                              return cli::Error::none;                         \
+                            }};                                                \
+  cli::CommandNode<char> c5{                                                   \
+    .name = "c5long",                                                          \
+    .description = {},                                                         \
+    .this_ = &root,                                                            \
+    .exec_ = +[](void *, cli::View<const char>, cli::View<char> &, bool &)     \
+      -> cli::Error { return cli::Error::cant_set_param; }};                   \
   root.add_sub(c1);                                                            \
   root.add_sub(c2);                                                            \
   c2.add_sub(c3);                                                              \
@@ -275,7 +346,107 @@ TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
     line.clear();
     REQUIRE(line.view().size() == 0);
   }
-  // TODO: execute
+
+  SECTION("execute with single line display") {
+    char buffer[16]{};
+    cli::View<char> out{buffer, 16};
+
+    SECTION("invalid command") {
+      line.set_data("c5long");
+      REQUIRE(line.execute(out) == cli::Error::invalid_cmd);
+      REQUIRE(d.data == "invalid_cmd");
+      REQUIRE(d.past == std::vector<std::string>{"c5long"});
+    }
+
+    SECTION("no error from execute") {
+      SECTION("should_print_newline=false, buf is empty") {
+        line.set_data("c1");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data == "c1");
+        REQUIRE(d.past.empty());
+      }
+
+      SECTION("should_print_newline=true, buf is empty") {
+        line.set_data("c2");
+        line.execute(out);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{{"c2"}});
+      }
+
+      SECTION("should_print_newline=true, buf is not empty") {
+        line.set_data("c2.c3");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data == "the answer");
+        REQUIRE(d.past == std::vector<std::string>{"c2.c3"});
+      }
+
+      SECTION("should_print_newline=false, buf is not empty") {
+        line.set_data("c4long");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data == "c4longthe answer");
+        REQUIRE(d.past.empty());
+      }
+    }
+
+    SECTION("error from execute") {
+      line.set_data("c4long.c5long");
+      REQUIRE(line.execute(out) == cli::Error::cant_set_param);
+      REQUIRE(d.data == "cant_set_param");
+      REQUIRE(d.past == std::vector<std::string>{"c4long.c5long"});
+    }
+  }
+
+  SECTION("execute with multiline display") {
+    MultilineDisplay d;
+    cli::Line<NoCursor_NoAutocomplete, MultilineDisplay> line(root, d);
+    char buffer[16]{};
+    cli::View<char> out{buffer, 16};
+
+    SECTION("invalid command") {
+      line.set_data("c5long");
+      REQUIRE(line.execute(out) == cli::Error::invalid_cmd);
+      REQUIRE(d.data.empty());
+      REQUIRE(d.past == std::vector<std::string>{"c5long", "invalid_cmd"});
+    }
+
+    SECTION("no error from execute") {
+      SECTION("should_print_newline=false, buf is empty") {
+        line.set_data("c1");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{"c1"});
+      }
+
+      SECTION("should_print_newline=true, buf is empty") {
+        line.set_data("c2");
+        line.execute(out);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{{"c2"}});
+      }
+
+      SECTION("should_print_newline=true, buf is not empty") {
+        line.set_data("c2.c3");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{"c2.c3", "the answer"});
+      }
+
+      SECTION("should_print_newline=false, buf is not empty") {
+        line.set_data("c4long");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{"c4long", "the answer"});
+      }
+    }
+
+    SECTION("error from execute") {
+      line.set_data("c4long.c5long");
+      REQUIRE(line.execute(out) == cli::Error::cant_set_param);
+      REQUIRE(d.data.empty());
+      REQUIRE(d.past ==
+              std::vector<std::string>{"c4long.c5long", "cant_set_param"});
+    }
+  }
 }
 
 TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
@@ -421,6 +592,93 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.on_autocomplete() == cli::Error::none);
     REQUIRE(line.view() == "c2.c3 args");
     REQUIRE(d.data == "c2.c3 args");
+  }
+
+  SECTION("execute with single line display") {
+    char buffer[16]{};
+    cli::View<char> out{buffer, 16};
+
+    SECTION("no error from execute") {
+      SECTION("should_print_newline=false, buf is empty") {
+        line.set_data("c1");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data == "c1");
+        REQUIRE(d.past.empty());
+      }
+
+      SECTION("should_print_newline=true, buf is empty") {
+        line.set_data("c2");
+        line.execute(out);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{{"c2"}});
+      }
+
+      SECTION("should_print_newline=true, buf is not empty") {
+        line.set_data("c2.c3");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data == "the answer");
+        REQUIRE(d.past == std::vector<std::string>{"c2.c3"});
+      }
+
+      SECTION("should_print_newline=false, buf is not empty") {
+        line.set_data("c4long");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data == "c4longthe answer");
+        REQUIRE(d.past.empty());
+      }
+    }
+
+    SECTION("error from execute") {
+      line.set_data("c4long.c5long");
+      REQUIRE(line.execute(out) == cli::Error::cant_set_param);
+      REQUIRE(d.data == "cant_set_param");
+      REQUIRE(d.past == std::vector<std::string>{"c4long.c5long"});
+    }
+  }
+
+  SECTION("execute with multiline display") {
+    MultilineDisplay d;
+    cli::Line<NoCursor_Autocomplete, MultilineDisplay> line(root, d);
+    char buffer[16]{};
+    cli::View<char> out{buffer, 16};
+
+    SECTION("no error from execute") {
+      SECTION("should_print_newline=false, buf is empty") {
+        line.set_data("c1");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{"c1"});
+      }
+
+      SECTION("should_print_newline=true, buf is empty") {
+        line.set_data("c2");
+        line.execute(out);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{{"c2"}});
+      }
+
+      SECTION("should_print_newline=true, buf is not empty") {
+        line.set_data("c2.c3");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{"c2.c3", "the answer"});
+      }
+
+      SECTION("should_print_newline=false, buf is not empty") {
+        line.set_data("c4long");
+        REQUIRE(line.execute(out) == cli::Error::none);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{"c4long", "the answer"});
+      }
+    }
+
+    SECTION("error from execute") {
+      line.set_data("c4long.c5long");
+      REQUIRE(line.execute(out) == cli::Error::cant_set_param);
+      REQUIRE(d.data.empty());
+      REQUIRE(d.past ==
+              std::vector<std::string>{"c4long.c5long", "cant_set_param"});
+    }
   }
 }
 
@@ -1038,6 +1296,52 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
     REQUIRE(line.on_autocomplete() == cli::Error::none);
     REQUIRE(line.view() == "c2.c3 args");
     REQUIRE(d.data == "c2.c3 args");
+  }
+  SECTION("autocomplete bogus") {
+    SECTION("at the end") {
+      line.set_data("bogus");
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "bogus");
+      REQUIRE(d.data == "bogus");
+    }
+    SECTION("at the end with args") {
+      line.set_data("bogus args");
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "bogus args");
+      REQUIRE(d.data == "bogus args");
+    }
+    SECTION("in the middle") {
+      line.set_data("bogus");
+      line.on_cursor_left(2);
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "bogus");
+      REQUIRE(d.data == "bogus");
+      REQUIRE(d.cursor == 3);
+    }
+    SECTION("in the middle with args") {
+      line.set_data("bogus args");
+      line.on_cursor_left(7);
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "bogus args");
+      REQUIRE(d.data == "bogus args");
+      REQUIRE(d.cursor == 3);
+    }
+    SECTION("at the beginning") {
+      line.set_data("bogus");
+      line.on_cursor_left(5);
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "bogus");
+      REQUIRE(d.data == "bogus");
+      REQUIRE(d.cursor == 0);
+    }
+    SECTION("at the beginning with args") {
+      line.set_data("bogus args");
+      line.on_cursor_left(10);
+      REQUIRE(line.on_autocomplete() == cli::Error::none);
+      REQUIRE(line.view() == "bogus args");
+      REQUIRE(d.data == "bogus args");
+      REQUIRE(d.cursor == 0);
+    }
   }
 }
 

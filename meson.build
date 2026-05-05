@@ -97,6 +97,7 @@ if(not build_tests.disabled())
     'tests/parse_format/int.cpp',
     'tests/parse_format/sequence.cpp',
     'tests/parse_format/struct.cpp',
+    'tests/command.cpp',
     'tests/history.cpp',
     'tests/line.cpp',
     'tests/param.cpp',
