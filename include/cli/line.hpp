@@ -1180,6 +1180,9 @@ namespace cli {
 
           return write(cmd.name.substr(cmdlet.size()));
         }
+      }
+
+      for (const CommandNode<CharT> &cmd : *parent) {
         if (cmd.name.starts_with(cursor_let)) {
           // only the part up to the cursor matches -> just write the rest of
           // the name

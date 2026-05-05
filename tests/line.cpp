@@ -246,6 +246,15 @@ TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
   REQUIRE(line.on_char('c') == cli::Error::none);
   REQUIRE(line.on_char('2') == cli::Error::none);
   REQUIRE(line.view() == "c1.c2");
+  SECTION("on_char line is full") {
+    line.set_data("01234567890123456789012345678901");
+    REQUIRE(line.on_char('x') == cli::Error::buffer_overflow);
+  }
+  SECTION("on_char empty and access_separator") {
+    line.clear();
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+  }
   SECTION("backspace(1)") {
     line.on_backspace(1);
     REQUIRE(line.view() == "c1.c");
@@ -284,6 +293,11 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.on_char('.') == cli::Error::none);
     REQUIRE(line.view() == "c1");
     REQUIRE(d.data == "c1");
+  }
+  SECTION("on_char empty and access_separator") {
+    line.clear();
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
   }
   SECTION("autocomplete with empty line") {
     REQUIRE(line.on_autocomplete() == cli::Error::none);
@@ -393,7 +407,12 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.view() == "c2.c3");
     REQUIRE(d.data == "c2.c3");
   }
-  line.clear();
+  SECTION("autocomplete in args") {
+    line.set_data("c2.c3 args");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3 args");
+    REQUIRE(d.data == "c2.c3 args");
+  }
 }
 
 TEST_CASE("cli::Line<Cursor, NoAutocomplete>") {
@@ -439,6 +458,15 @@ TEST_CASE("cli::Line<Cursor, NoAutocomplete>") {
     REQUIRE(line.on_cursor_left(1) == cli::Error::none);
     REQUIRE(line.on_cursor_left(5) == cli::Error::none);
     REQUIRE(d.data == "xc1.cba2");
+  }
+  SECTION("on_char line is full") {
+    line.set_data("01234567890123456789012345678901");
+    REQUIRE(line.on_char('x') == cli::Error::buffer_overflow);
+  }
+  SECTION("on_char empty and access_separator") {
+    line.clear();
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
   }
   SECTION("backspace at the end") {
     line.set_data("c1.c2");
@@ -627,6 +655,15 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
     REQUIRE(line.on_cursor_left(1) == cli::Error::none);
     REQUIRE(line.on_cursor_left(5) == cli::Error::none);
     REQUIRE(d.data == "xc1.cba2");
+  }
+  SECTION("on_char line is full") {
+    line.set_data("01234567890123456789012345678901");
+    REQUIRE(line.on_char('x') == cli::Error::buffer_overflow);
+  }
+  SECTION("on_char empty and access_separator") {
+    line.clear();
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
   }
   SECTION("backspace at the end") {
     line.set_data("c1.c2");
@@ -905,6 +942,21 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
         REQUIRE(d.data == "c4long.c5long");
         REQUIRE(d.cursor == 6);
       }
+      SECTION("not on separator in middle") {
+        line.set_data("c4.c5long");
+        line.on_cursor_left(8);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long");
+        REQUIRE(d.data == "c4long.c5long");
+        REQUIRE(d.cursor == 6);
+
+        line.set_data("c4.c5long");
+        line.on_cursor_left(9);
+        line.on_autocomplete();
+        REQUIRE(line.view() == "c4long.c5long");
+        REQUIRE(d.data == "c4long.c5long");
+        REQUIRE(d.cursor == 6);
+      }
     }
     SECTION("with args") {
       SECTION("no subcommands") {
@@ -965,6 +1017,12 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
         REQUIRE(d.cursor == 13);
       }
     }
+  }
+  SECTION("autocomplete in args") {
+    line.set_data("c2.c3 args");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+    REQUIRE(line.view() == "c2.c3 args");
+    REQUIRE(d.data == "c2.c3 args");
   }
 }
 
