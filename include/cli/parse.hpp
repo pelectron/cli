@@ -1046,7 +1046,7 @@ namespace cli::parse {
      * @param buf the buffer to parse from
      * @return ParseResult<T, CharT>
      */
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> buf) const {
+    constexpr ParseResult<T, CharT> operator()(View<const CharT>) const {
       static_assert(always_false<T>, "No default parser for T available!");
     }
   };

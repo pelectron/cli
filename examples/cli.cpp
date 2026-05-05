@@ -38,15 +38,15 @@ cli::Error foo_setter(int i) {
 bool validate_foo(int i) { return i >= 0 and i <= 200; }
 
 static constinit struct S {
-  cli::Error free2(int x) { return {}; }
-} s;
+  cli::Error free2(int /*x*/) { return {}; }
+} s_;
 
 struct MyFunctor {
-  cli::Error operator()(int x, char c) { return {}; }
+  cli::Error operator()(int /*x*/, char /*c*/) { return {}; }
 };
 
 struct MyFunctor2 {
-  cli::Error operator()(int f) { return {}; }
+  cli::Error operator()(int /*f*/) { return {}; }
 };
 
 static constinit struct Settings {
@@ -66,9 +66,7 @@ using cli::arg;
 using cli::func;
 using cli::param;
 
-struct Config : cli::default_config {
-  static constexpr bool multiline_display = false;
-};
+struct Config : cli::default_config {};
 
 // clang-format off
 // the cli object itself
@@ -85,14 +83,14 @@ static cli::Engine cli_ = cli::sim::create(
   func("free1"_sc, &free1, cli::arg("param"_sc)),
   // lambdas without templated call operator
   func("lambda"_sc, 
-      [](int i, char c) {},
+      [](int /*i*/, char /*c*/) {},
       "i"_arg, 
       "c"_arg),
   // and any other functor without templated call operator
   func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
   func(MyFunctor2{}, "f"_arg),
   // member functions
-  func("free2"_sc, s, &S::free2, "x"_arg),
+  func("free2"_sc, s_, &S::free2, "x"_arg),
 // @}
 // global objects
   param("enable"_sc,"enables stuff"_sc, enable),

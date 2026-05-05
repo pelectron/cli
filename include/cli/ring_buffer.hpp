@@ -94,11 +94,10 @@ namespace cli {
      * returned.
      */
     constexpr bool push_back(value_type &&t) {
-      auto s = size_;
-      if (s == capacity_)
+      if (size_ == capacity_)
         return false;
       *head = std::move(t);
-      size_ = s + 1;
+      ++size_;
       head = incr(head);
       return true;
     }
@@ -109,9 +108,8 @@ namespace cli {
      * @param n the number of elements to remove
      */
     constexpr void remove_last(std::size_t n) {
-      auto s = size_;
-      if (n > s)
-        n = s;
+      if (n > size_)
+        n = size_;
 
       if (head - arr_ >= n) {
         head -= n;
@@ -128,11 +126,10 @@ namespace cli {
      * @return true if a value could be popped, else false.
      */
     constexpr bool pop(value_type &t) {
-      auto s = size_;
-      if (s == 0)
+      if (size_ == 0)
         return false;
       t = *tail;
-      size_ = s - 1;
+      --size_;
       tail = incr(tail);
       return true;
     }

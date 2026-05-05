@@ -230,7 +230,7 @@ namespace cli::funcs {
     }
 
     template<Callable F, std::size_t I, SC N, SC D>
-    constexpr auto deduce_arg(const UndeducedArg<N, D> &arg) {
+    constexpr auto deduce_arg(const UndeducedArg<N, D> &) {
       using args = typename function_traits<F>::arguments;
       using type = std::remove_cvref_t<type_list::type_at_t<I, args>>;
       if constexpr (std::is_same_v<D, string_constant<typename N::char_type>> or
@@ -1083,7 +1083,7 @@ namespace cli::funcs {
     }
 
   private:
-    F func_{};
+    CLI_NO_UNIQUE_ADDRESS F func_{};
     std::tuple<Args...> args_{};
   };
 
@@ -1152,7 +1152,7 @@ namespace cli::funcs {
     }
 
   private:
-    F func_{};
+    CLI_NO_UNIQUE_ADDRESS F func_{};
   };
 
   // template <SC Name, SC Description, SC Help, Callable F>
@@ -1241,13 +1241,13 @@ namespace cli::funcs {
         sizeof...(Args),
       "All arguments of f must be named");
     if constexpr (sizeof...(Args) > 0) {
-      auto deduced = dtl::deduce_args<F>(std::forward<Args>(args)...);
+      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
       return Function{
         Name{},
         Description{},
-        dtl::pretty_signature_name<typename Name::char_type, F>(deduced),
+        dtl::pretty_signature_name<typename Name::char_type, F>(deduced_),
         std::forward<F>(f),
-        deduced};
+        deduced_};
     } else {
       return Function{Name{},
                       Description{},
@@ -1295,13 +1295,13 @@ namespace cli::funcs {
         sizeof...(Args),
       "All arguments of f must be named");
     if constexpr (sizeof...(Args) > 0) {
-      auto deduced = dtl::deduce_args<F>(std::forward<Args>(args)...);
+      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
       return Function{
         Name{},
         NoDescription<typename Name::char_type>{},
-        dtl::pretty_signature_name<typename Name::char_type, F>(deduced),
+        dtl::pretty_signature_name<typename Name::char_type, F>(deduced_),
         std::forward<F>(f),
-        deduced};
+        deduced_};
     } else {
       return Function{Name{},
                       NoDescription<typename Name::char_type>{},
@@ -1341,13 +1341,14 @@ namespace cli::funcs {
         sizeof...(Args),
       "All arguments of f must be named");
     if constexpr (sizeof...(Args) > 0) {
-      auto deduced = dtl::deduce_args<F>(std::forward<Args>(args)...);
+      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
       return Function{
         ctti::name<std::decay_t<F>>(),
         Description{},
-        dtl::pretty_signature_name<typename Description::char_type, F>(deduced),
+        dtl::pretty_signature_name<typename Description::char_type, F>(
+          deduced_),
         std::forward<F>(f),
-        deduced};
+        deduced_};
     } else {
       return Function{
         ctti::name<std::decay_t<F>>(),
@@ -1383,12 +1384,12 @@ namespace cli::funcs {
         sizeof...(Args),
       "All arguments of f must be named");
     if constexpr (sizeof...(Args) > 0) {
-      auto deduced = dtl::deduce_args<F>(std::forward<Args>(args)...);
+      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
       return Function{ctti::name<std::decay_t<F>>(),
                       NoDescription<char>{},
-                      dtl::pretty_signature_name<char, F>(deduced),
+                      dtl::pretty_signature_name<char, F>(deduced_),
                       std::forward<F>(f),
-                      deduced};
+                      deduced_};
     } else {
       return Function{ctti::name<std::decay_t<F>>(),
                       NoDescription<char>{},
@@ -1444,15 +1445,15 @@ namespace cli::funcs {
 
     using Binder = MemFunBinder<T, MemberFunctionPointer>;
     if constexpr (sizeof...(Args) > 0) {
-      auto deduced =
+      auto deduced_ =
         dtl::deduce_args<MemberFunctionPointer>(std::forward<Args>(args)...);
       return Function{
         Name{},
         Description{},
         dtl::pretty_signature_name<typename Name::char_type,
-                                   MemberFunctionPointer>(deduced),
+                                   MemberFunctionPointer>(deduced_),
         Binder{t, mem_fun},
-        deduced
+        deduced_
       };
     } else {
       return Function{
@@ -1512,15 +1513,15 @@ namespace cli::funcs {
 
     using Binder = MemFunBinder<const T, MemberFunctionPointer>;
     if constexpr (sizeof...(Args) > 0) {
-      auto deduced =
+      auto deduced_ =
         dtl::deduce_args<MemberFunctionPointer>(std::forward<Args>(args)...);
       return Function{
         Name{},
         Description{},
         dtl::pretty_signature_name<typename Name::char_type,
-                                   MemberFunctionPointer>(deduced),
+                                   MemberFunctionPointer>(deduced_),
         Binder{t, mem_fun},
-        deduced
+        deduced_
       };
     } else {
       return Function{
@@ -1862,6 +1863,7 @@ namespace cli::funcs {
   template<auto MemberFunctionPointer, SC Description, class... Args>
     requires std::is_member_function_pointer_v<decltype(MemberFunctionPointer)>
   [[nodiscard]] constexpr auto func(Description description, Args &&...args) {
+    (void)description;
     if constexpr (sizeof...(Args) > 0) {
       constexpr auto deduced_args =
         dtl::deduce_args<decltype(MemberFunctionPointer)>(

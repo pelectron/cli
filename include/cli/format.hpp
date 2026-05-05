@@ -170,7 +170,7 @@ namespace cli::format {
      * @param t the value to format
      * @return FormatResult
      */
-    constexpr FormatResult operator()(View<CharT> buf, const T &t) const {
+    constexpr FormatResult operator()(View<CharT>, const T &) const {
       static_assert(always_false<T>, "There is no Format defined for T!");
       return 0;
     }
@@ -178,15 +178,14 @@ namespace cli::format {
 
   template<typename CharT>
   struct NullFormat {
-    constexpr FormatResult operator()(View<CharT> buf,
-                                      const cli::dummy &) const {
+    constexpr FormatResult operator()(View<CharT>, const cli::dummy &) const {
       return 0;
     }
   };
 
   template<typename T, typename CharT>
   struct NoFormat {
-    constexpr FormatResult operator()(View<CharT> buf, const T &) const {
+    constexpr FormatResult operator()(View<CharT>, const T &) const {
       // TODO: add no_format_available to Error.
       return Error::unimplemented;
     }
@@ -198,7 +197,7 @@ namespace cli::format {
    */
   template<typename CharT>
   struct Format<void, CharT> {
-    constexpr FormatResult operator()(View<CharT> buf) const { return 0; }
+    constexpr FormatResult operator()(View<CharT>) const { return 0; }
   };
 
   template<typename CharT>
@@ -421,12 +420,12 @@ namespace cli::format {
 
           T pow10 = max_pow_10;
           for (; pow10 > 0; pow10 /= 10)
-            if (u_value >= pow10)
+            if (u_value >= static_cast<UnsignedT>(pow10))
               break;
           for (; pow10 > 0; pow10 /= 10) {
             const auto digit = u_value / pow10;
             buffer[size++] = static_cast<char>(digit + '0');
-            u_value = u_value - digit * pow10;
+            u_value = static_cast<UnsignedT>(u_value - digit * pow10);
           }
 
           if (buf.size() < size)
@@ -462,7 +461,7 @@ namespace cli::format {
           for (; pow10 > 0; pow10 /= 10) {
             const auto digit = value / pow10;
             buffer[size++] = static_cast<char>(digit + u'0');
-            value = value - digit * pow10;
+            value = static_cast<T>(value - digit * pow10);
           }
 
           if (buf.size() < size)
@@ -482,6 +481,7 @@ namespace cli::format {
           buf[2] = '0';
           return 3;
         }
+
         UnsignedT u_value = static_cast<UnsignedT>(value);
         constexpr std::size_t max_size = 2 + sizeof(UnsignedT) * 2;
         char buffer[max_size]{'0', 'x', 0};
@@ -1209,8 +1209,8 @@ namespace cli::format {
           } else {
             first = true;
           }
-          for (std::size_t i = 0; i < name.size(); ++i, ++written) {
-            buf[i] = name[i];
+          for (std::size_t j = 0; j < name.size(); ++j, ++written) {
+            buf[j] = name[j];
           }
           buf = buf.substr(name.size());
           first = false;

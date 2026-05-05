@@ -112,7 +112,7 @@ namespace cli::sim {
                 engine.on_char(c);
               break;
             default:
-              engine.on_char(key.value);
+              engine.on_char(static_cast<char>(key.value));
           }
         } break;
         default:
@@ -135,15 +135,15 @@ namespace cli::sim {
   }
 
   /**
-   * @brief creates the engine object from the config and commands
+   * @brief creates and returns the engine object from the config and commands
    *
    * @ingroup Simulation
    * @param config the cli::Config
    * @param commands the commands
+   * @return cli::Engine
    */
   template<cli::concepts::Config Config, cli::concepts::Command... Commands>
-  constexpr auto create(Config config,
-                        Commands &&...commands) /* -> cli::Cli */ {
+  constexpr auto create(Config, Commands &&...commands) /* -> cli::Engine */ {
     static_assert(std::is_same_v<char, typename Config::char_type>,
                   "char_type must be char. Others are unsupported for now.");
 

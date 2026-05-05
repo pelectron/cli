@@ -1,6 +1,7 @@
 #include "cli/line.hpp"
 #include "cli/concepts.hpp"
 #include "cli/enums.hpp"
+#include "cli/string.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <vector>
@@ -519,6 +520,52 @@ TEST_CASE("cli::Line<Cursor, NoAutocomplete>") {
     REQUIRE(d.data.empty());
     REQUIRE(d.cursor == 0);
   }
+  SECTION("clear_line_to_end at end") {
+    line.set_data("c1.c2");
+    REQUIRE(line.on_clear_line_to_end() == cli::Error::none);
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 5);
+  }
+  SECTION("clear_line_to_end in middle") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(2);
+    REQUIRE(line.on_clear_line_to_end() == cli::Error::none);
+    // REQUIRE(line.view() == "c1.");
+    REQUIRE(d.data == "c1.");
+    REQUIRE(d.cursor == 3);
+  }
+  SECTION("clear_line_to_end in beginning") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(5);
+    REQUIRE(line.on_clear_line_to_end() == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("clear_line_to_begin at the end") {
+    line.set_data("c1.c2");
+    REQUIRE(line.on_clear_line_to_begin() == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("clear_line_to_begin in the middle") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(2);
+    REQUIRE(line.on_clear_line_to_begin() == cli::Error::none);
+    REQUIRE(line.view() == "c2");
+    REQUIRE(d.data == "c2");
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("clear_line_to_begin at the beginning") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(5);
+    REQUIRE(line.on_clear_line_to_begin() == cli::Error::none);
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 0);
+  }
 }
 
 TEST_CASE("cli::Line<Cursor, Autocomplete>") {
@@ -643,6 +690,52 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
       line.on_delete_char();
     REQUIRE(line.view().size() == 0);
     REQUIRE(d.data.empty());
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("clear_line_to_end at end") {
+    line.set_data("c1.c2");
+    REQUIRE(line.on_clear_line_to_end() == cli::Error::none);
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
+    REQUIRE(d.cursor == 5);
+  }
+  SECTION("clear_line_to_end in middle") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(2);
+    REQUIRE(line.on_clear_line_to_end() == cli::Error::none);
+    REQUIRE(line.view() == "c1.");
+    REQUIRE(d.data == "c1.");
+    REQUIRE(d.cursor == 3);
+  }
+  SECTION("clear_line_to_end in beginning") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(5);
+    REQUIRE(line.on_clear_line_to_end() == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("clear_line_to_begin at the end") {
+    line.set_data("c1.c2");
+    REQUIRE(line.on_clear_line_to_begin() == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+    REQUIRE(d.data.empty());
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("clear_line_to_begin in the middle") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(2);
+    REQUIRE(line.on_clear_line_to_begin() == cli::Error::none);
+    REQUIRE(line.view() == "c2");
+    REQUIRE(d.data == "c2");
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("clear_line_to_begin at the beginning") {
+    line.set_data("c1.c2");
+    line.on_cursor_left(5);
+    REQUIRE(line.on_clear_line_to_begin() == cli::Error::none);
+    REQUIRE(line.view() == "c1.c2");
+    REQUIRE(d.data == "c1.c2");
     REQUIRE(d.cursor == 0);
   }
   SECTION("autocomplete at end") {
@@ -839,6 +932,115 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
         REQUIRE(d.data == "c4long.c5long args");
         REQUIRE(d.cursor == 13);
       }
+    }
+  }
+}
+
+TEST_CASE("cli::Line::set_data") {
+  DEFINE_COMMANDS();
+  Display d1;
+  Display d2;
+  Display d3;
+  Display d4;
+  cli::Line<NoCursor_NoAutocomplete, Display> l1(root, d1);
+  cli::Line<NoCursor_Autocomplete, Display> l2(root, d2);
+  cli::Line<Cursor_NoAutocomplete, Display> l3(root, d3);
+  cli::Line<Cursor_Autocomplete, Display> l4(root, d4);
+  SECTION("string is too_big") {
+    cli::View<const char> too_big = "01234567890123445678901234567890123456789";
+    SECTION("empty line") {
+      REQUIRE(l1.set_data(too_big) == cli::Error::buffer_overflow);
+      REQUIRE(d1.data.empty());
+      REQUIRE(d1.cursor == 0);
+
+      REQUIRE(l2.set_data(too_big) == cli::Error::buffer_overflow);
+      REQUIRE(d2.data.empty());
+      REQUIRE(d2.cursor == 0);
+
+      REQUIRE(l3.set_data(too_big) == cli::Error::buffer_overflow);
+      REQUIRE(d3.data.empty());
+      REQUIRE(d3.cursor == 0);
+
+      REQUIRE(l4.set_data(too_big) == cli::Error::buffer_overflow);
+      REQUIRE(d4.data.empty());
+      REQUIRE(d4.cursor == 0);
+    }
+    SECTION("aleady has data") {
+      SECTION("no cursor and no autocomplete") {
+        l1.set_data("c1.c2");
+        REQUIRE(l1.set_data(too_big) == cli::Error::buffer_overflow);
+        REQUIRE(l1.view() == "c1.c2");
+        REQUIRE(d1.data == "c1.c2");
+        REQUIRE(d1.data.size() == d1.cursor);
+      }
+      SECTION("no cursor and autocomplete") {
+        l2.set_data("c2.c3");
+        REQUIRE(l2.set_data(too_big) == cli::Error::buffer_overflow);
+        REQUIRE(l2.view() == "c2.c3");
+        REQUIRE(d2.data == "c2.c3");
+        REQUIRE(d2.data.size() == d2.cursor);
+      }
+      SECTION("cursor and no autocomplete") {
+        l3.set_data("c1.c2");
+        REQUIRE(l3.set_data(too_big) == cli::Error::buffer_overflow);
+        REQUIRE(l3.view() == "c1.c2");
+        REQUIRE(d3.data == "c1.c2");
+        REQUIRE(d3.data.size() == d3.cursor);
+      }
+      SECTION("cursor and autocomplete") {
+        l4.set_data("c1.c2");
+        REQUIRE(l4.set_data(too_big) == cli::Error::buffer_overflow);
+        REQUIRE(l4.view() == "c1.c2");
+        REQUIRE(d4.data == "c1.c2");
+        REQUIRE(d4.data.size() == d4.cursor);
+      }
+    }
+  }
+  SECTION("string is empty") {
+    cli::View<const char> empty;
+    REQUIRE(l1.set_data(empty) == cli::Error::none);
+    REQUIRE(l1.view().size() == 0);
+    REQUIRE(d1.data.empty());
+    REQUIRE(d1.cursor == 0);
+
+    REQUIRE(l2.set_data(empty) == cli::Error::none);
+    REQUIRE(l2.view().size() == 0);
+    REQUIRE(d2.data.empty());
+    REQUIRE(d2.cursor == 0);
+
+    REQUIRE(l3.set_data(empty) == cli::Error::none);
+    REQUIRE(l3.view().size() == 0);
+    REQUIRE(d3.data.empty());
+    REQUIRE(d3.cursor == 0);
+
+    REQUIRE(l4.set_data(empty) == cli::Error::none);
+    REQUIRE(l4.view().size() == 0);
+    REQUIRE(d4.data.empty());
+    REQUIRE(d4.cursor == 0);
+  }
+
+  SECTION("invalid command") {
+    cli::View<const char> invalid = "c1.invalid";
+    SECTION("no cursor and no autocomplete doesn't check validity") {
+      REQUIRE(l1.set_data(invalid) == cli::Error::none);
+      REQUIRE(d1.data == "c1.invalid");
+      REQUIRE(d1.data.size() == d1.cursor);
+    }
+    SECTION("no cursor and autocomplete checks validity") {
+      REQUIRE(l2.set_data(invalid) == cli::Error::invalid_cmd);
+      REQUIRE(l2.view().size() == 0);
+      REQUIRE(d2.data.empty());
+      REQUIRE(d2.cursor == 0);
+    }
+    SECTION("cursor and no autocomplete doesn't check validity") {
+      REQUIRE(l3.set_data(invalid) == cli::Error::none);
+      REQUIRE(d3.data == "c1.invalid");
+      REQUIRE(d3.data.size() == d3.cursor);
+    }
+    SECTION("cursor and autocomplete doesn't check validity") {
+      REQUIRE(l4.set_data(invalid) == cli::Error::none);
+      REQUIRE(d4.data == "c1.invalid");
+      REQUIRE(d4.data.size() == d4.cursor);
     }
   }
 }
