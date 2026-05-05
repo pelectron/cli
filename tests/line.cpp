@@ -11,6 +11,11 @@ struct Display {
   std::vector<std::string> past;
 
   cli::Error write(char c) {
+    if (cursor == data.size()) {
+      data.push_back(c);
+      ++cursor;
+      return cli::Error::none;
+    }
     data.insert(data.begin() + cursor, c);
     ++cursor;
     data.erase(data.begin() + cursor);
