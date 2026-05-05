@@ -566,6 +566,22 @@ TEST_CASE("cli::Line<Cursor, NoAutocomplete>") {
     REQUIRE(d.data == "c1.c2");
     REQUIRE(d.cursor == 0);
   }
+  SECTION("cursor left") {
+    line.set_data("c2.c3");
+    line.on_cursor_left(1);
+    REQUIRE(d.cursor == 4);
+    line.on_cursor_left(10);
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("cursor right") {
+    line.set_data("c2.c3");
+    line.on_cursor_left(5);
+    REQUIRE(d.cursor == 0);
+    line.on_cursor_right(1);
+    REQUIRE(d.cursor == 1);
+    line.on_cursor_right(10);
+    REQUIRE(d.cursor == 5);
+  }
 }
 
 TEST_CASE("cli::Line<Cursor, Autocomplete>") {
@@ -737,6 +753,22 @@ TEST_CASE("cli::Line<Cursor, Autocomplete>") {
     REQUIRE(line.view() == "c1.c2");
     REQUIRE(d.data == "c1.c2");
     REQUIRE(d.cursor == 0);
+  }
+  SECTION("cursor left") {
+    line.set_data("c2.c3");
+    line.on_cursor_left(1);
+    REQUIRE(d.cursor == 4);
+    line.on_cursor_left(10);
+    REQUIRE(d.cursor == 0);
+  }
+  SECTION("cursor right") {
+    line.set_data("c2.c3");
+    line.on_cursor_left(5);
+    REQUIRE(d.cursor == 0);
+    line.on_cursor_right(1);
+    REQUIRE(d.cursor == 1);
+    line.on_cursor_right(10);
+    REQUIRE(d.cursor == 5);
   }
   SECTION("autocomplete at end") {
     SECTION("autocomplete with empty line") {
