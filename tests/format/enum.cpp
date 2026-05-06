@@ -68,7 +68,6 @@ TEST_CASE("format::Enum") {
       TV1(expected_rparen),
       TV1(too_few_characters),
       TV1(invalid_character),
-      TV1(unescaped_string),
       TV1(invalid_value)};
     for (auto &tv : vectors) {
       test(tv);

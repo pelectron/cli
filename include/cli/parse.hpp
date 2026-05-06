@@ -21,6 +21,7 @@
 #include "cli/ctti.hpp"
 #include "cli/enums.hpp"
 #include "cli/traits.hpp"
+#include "cli/type_list.hpp"
 #include "cli/u64.hpp"
 #include "cli/util.hpp"
 
@@ -105,8 +106,9 @@ namespace cli::parse {
   struct ParseResult {
 
     /// constructs a failed parse with the error reason
-    constexpr ParseResult(Error error)
-      : error{error}, value{}, rest{} {}
+    constexpr ParseResult(Error error, View<const CharT> rest = {})
+      requires(not std::same_as<T, Error>)
+      : error{error}, value{}, rest{rest} {}
 
     /**
      * construct a successful parse result from a value and the rest of the
@@ -116,6 +118,7 @@ namespace cli::parse {
      * @param rest the unparsed rest of the string
      */
     constexpr ParseResult(const T &value, View<const CharT> rest = {})
+      requires(not std::same_as<T, Error>)
       : error{Error::none}, value{value}, rest{rest} {}
 
     /**
@@ -126,6 +129,7 @@ namespace cli::parse {
      * @param rest the unparsed rest of the string
      */
     constexpr ParseResult(T &&value, View<const CharT> rest = {})
+      requires(not std::same_as<T, Error>)
       : error{Error::none}, value{std::move(value)}, rest{rest} {}
 
     /**
@@ -140,8 +144,8 @@ namespace cli::parse {
       : error{Error::none}, value{std::forward<U>(value)}, rest{rest} {}
 
     /// constructs a failed parse with the error reason
-    constexpr ParseResult(from_error_t, Error e)
-      : error{e}, value{}, rest{} {}
+    constexpr ParseResult(from_error_t, Error e, View<const CharT> rest = {})
+      : error{e}, value{}, rest{rest} {}
 
     /// returns true if this is a successful parse result, i.e. if the error is
     /// Error::none.
@@ -240,30 +244,10 @@ namespace cli::parse {
     using unsigned_type = typename traits::unsigned_type;
 
   protected:
-    static constexpr std::size_t max_hex_length() {
-      switch (sizeof(type)) {
-        case 1:
-          return 2;
-        case 2:
-          return 4;
-        case 4:
-          return 8;
-        default:
-          return 8;
-      }
-    }
-    static constexpr std::size_t max_bin_length() {
-      switch (sizeof(type)) {
-        case 1:
-          return 8;
-        case 2:
-          return 16;
-        case 4:
-          return 32;
-        default:
-          return 32;
-      }
-    }
+    static constexpr std::size_t max_hex_length() { return sizeof(T) * 2; }
+
+    static constexpr std::size_t max_bin_length() { return sizeof(T) * 8; }
+
     static constexpr std::size_t max_dec_length() {
       if constexpr (traits::is_signed) {
         switch (sizeof(type)) {
@@ -315,7 +299,7 @@ namespace cli::parse {
           // invalid character encountered, only an error if it is the first
           // character
           if (i == offset)
-            return Error::invalid_character;
+            return {Error::invalid_character, str};
           return {static_cast<type>(v), str.substr(i)};
         }
       }
@@ -340,7 +324,7 @@ namespace cli::parse {
           // invalid character encountered, only an error if it is the first
           // character
           if (i == offset)
-            return Error::invalid_character;
+            return {Error::invalid_character, str};
           return {static_cast<type>(v), str.substr(i)};
         }
       }
@@ -353,7 +337,7 @@ namespace cli::parse {
         if (str[0] == '+') {
           offset = 1;
           if (str.size() == 1)
-            return Error::too_few_characters;
+            return {Error::too_few_characters, str};
         }
 
         unsigned long long v = 0;
@@ -367,7 +351,7 @@ namespace cli::parse {
             // invalid character encountered, only an error if it is the first
             // character
             if (i == offset)
-              return Error::invalid_character;
+              return {Error::invalid_character, str};
             return {static_cast<type>(v), str.substr(i)};
           }
         }
@@ -378,7 +362,7 @@ namespace cli::parse {
         if (str[0] == '+' or negative) {
           offset = 1;
           if (str.size() == 1)
-            return Error::too_few_characters;
+            return {Error::too_few_characters, str};
         }
         unsigned long long v = 0;
         const unsigned long long max_size =
@@ -391,7 +375,7 @@ namespace cli::parse {
             // invalid character encountered, only an error if it is the first
             // character
             if (i == offset)
-              return Error::invalid_character;
+              return {Error::invalid_character, str};
             if (negative) {
               return {static_cast<type>(~v + 1), str.substr(i)};
             } else
@@ -411,27 +395,21 @@ namespace cli::parse {
         return Error::too_few_characters;
 
       if constexpr ((Format & Fmt::hex) == Fmt::hex) {
-        // a hexadecimal number, starts with 0x, 0X, x, X, or #
-        if (str.starts_with("0x") or str.starts_with("0X"))
+        // a hexadecimal number, starts with 0x or 0X
+        if (str.size() > 2 and (str.starts_with("0x") or str.starts_with("0X")))
           return parse_hex(str, 2);
-        if (str.find_first_of("xX#") == 0)
-          return parse_hex(str, 1);
       }
 
       if constexpr ((Format & Fmt::binary) == Fmt::binary) {
-        // a binary number, starts with 0b, 0B, b, or B
-        if (str.starts_with("0b") or str.starts_with("0B"))
+        // a binary number, starts with 0b or 0B
+        if (str.size() > 2 and (str.starts_with("0b") or str.starts_with("0B")))
           return parse_bin(str, 2);
-        if (str.find_first_of("xX#") == 0)
-          return parse_bin(str, 1);
       }
 
       if constexpr ((Format & Fmt::normal) == Fmt::normal) {
         // a decimal number
         return parse_dec(str);
       }
-
-      return Error::invalid_value;
     }
   };
 
@@ -444,13 +422,12 @@ namespace cli::parse {
 
       CharT c = str[0];
       if (c == '\'') {
-        if (str.size() < 3)
-          return Error::too_few_characters;
-        if (str[2] != '\'')
-          return Error::invalid_character;
+        if (str.size() < 3 or str[2] != '\'')
+          return {Error::expected_endquote, str};
         return {static_cast<T>(str[1]), str.substr(3)};
-      } else if (c >= '0' and c <= '9') {
-        Int<T, CharT> parse;
+      } else if (str.size() >= 3 and str[0] == '0' and
+                 (str[1] == 'x' or str[1] == 'X')) {
+        Int<T, CharT, Fmt::hex> parse;
         return parse(str);
       } else {
         return {static_cast<T>(c), str.substr(1)};
@@ -460,18 +437,6 @@ namespace cli::parse {
 
   /**
    * A parser for stringviews.
-   *
-   * '' -> invalid
-   * ' ' -> invalid
-   * '""' -> ''
-   * '\"' -> '\"'
-   * '\"\"' -> '\"\"'
-   * 'hello' -> 'hello'
-   * 'hello world' -> 'hello', rest = ' world'
-   * '"hello world"' -> 'hello world'
-   * 'hello"world' -> 'hello"world'
-   * 'hello\"world' -> 'hello\"world'
-   * '"hello \"world\""' -> 'hello \"world\"'
    */
   template<concepts::StringView T, typename CharT>
   class StringView {
@@ -492,12 +457,12 @@ namespace cli::parse {
                     str.substr(i + 1)}; // +1 to exlude endquote
           }
         }
-        return Error::unescaped_string;
+        return {Error::expected_endquote, str};
       } else {
         for (std::size_t i = 0; i < str.size(); ++i) {
           if (str[i] == ' ') {
             if (i == 0)
-              return Error::invalid_character;
+              return {Error::invalid_character, str};
             const auto value = str.substr(0, i);
             return {T(value.data(), value.size()), str.substr(i)};
           }
@@ -548,12 +513,12 @@ namespace cli::parse {
             ret.push_back(str[i]);
           }
         }
-        return Error::unescaped_string;
+        return {Error::expected_endquote, str};
       } else {
         for (std::size_t i = 0; i < str.size(); ++i) {
           if (str[i] == ' ') {
             if (i == 0) {
-              return cli::Error::invalid_character;
+              return {Error::invalid_character, str};
             }
             return {ret, str.substr(i)};
           } else if (i < (str.size() - 1) and str[i] == '\\' and
@@ -568,6 +533,7 @@ namespace cli::parse {
       }
     }
   };
+
   template<class T>
   class Float {
     static_assert(always_false<T>,
@@ -695,13 +661,13 @@ namespace cli::parse {
           if (auto res = Base::parse_hex(str, 2))
             return {typename traits::raw_value_type(res.value), res.rest};
           else
-            return res.error;
+            return {res.error, res.rest};
         }
         if (str.find_first_of("xX#") == 0) {
           if (auto res = Base::parse_hex(str, 1))
             return {typename traits::raw_value_type(res.value), res.rest};
           else
-            return res.error;
+            return {res.error, res.rest};
         }
       }
       if constexpr ((Format & Fmt::binary) == Fmt::binary) {
@@ -710,14 +676,14 @@ namespace cli::parse {
           if (auto res = Base::parse_bin(str, 2))
             return {typename traits::raw_value_type(res.value), res.rest};
           else
-            return res.error;
+            return {res.error, res.rest};
         }
         if (str.find_first_of("bB") == 0) {
           {
             if (auto res = Base::parse_bin(str, 2))
               return {typename traits::raw_value_type(res.value), res.rest};
             else
-              return res.error;
+              return {res.error, res.rest};
           }
         }
       }
@@ -728,12 +694,12 @@ namespace cli::parse {
             str = str.substr(1);
         } else {
           if (negative)
-            return Error::invalid_character;
+            return {Error::invalid_character, str};
         }
         // decimal format
         const auto int_res = Base::parse_dec(str);
         if (not int_res)
-          return int_res.error;
+          return {int_res.error, int_res.rest};
 
         if (int_res.rest.size() == 0 or int_res.rest[0] != FixPointSeparator)
           return {T(typename traits::raw_value_type(
@@ -741,13 +707,13 @@ namespace cli::parse {
                   int_res.rest};
 
         if (int_res.rest.size() < 2)
-          return Error::too_few_characters;
+          return {Error::too_few_characters, str};
 
         str = int_res.rest.substr(1);
 
         const auto ch = str[0];
         if (ch < '0' or ch > '9')
-          return Error::invalid_character;
+          return {Error::invalid_character, str};
 
         // the fractional part (frac) is in base 10^-N=(2*5)^-N=5^-N*2^-N (N ==
         // string size) we want to convert it to base 2^-num_frac_digits -> frac
@@ -761,13 +727,13 @@ namespace cli::parse {
         u64 value{static_cast<unsigned_t>(ch - '0')};
         u64 pow10{10};
         for (std::size_t i = 1; i < str.size(); ++i) {
-          const auto ch = str[i];
-          if (ch < '0' or ch > '9') {
+          const auto c = str[i];
+          if (c < '0' or c > '9') {
             str = str.substr(i);
             break;
           }
           pow10 = pow10 * 10;
-          value = value * 10 + (ch - '0');
+          value = value * 10 + (c - '0');
         }
 
         u64 frac{value};
@@ -836,7 +802,7 @@ namespace cli::parse {
 
         return ret();
       }
-      return Error::invalid_value;
+      return {Error::invalid_value, str};
     }
   };
 
@@ -846,54 +812,64 @@ namespace cli::parse {
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
       if constexpr (traits::enum_traits<T>::is_flag) {
         T val{};
-        bool read_one = true;
-        while (str.size() != 0) {
+        bool read_one = false;
+        bool has_or = false;
+        View s = str;
+        while (s.size() != 0) {
           bool found_name = false;
           for (const auto &[e, name] : ctti::dtl::enum_name_map<T>) {
-            if (not str.starts_with(name))
+            if (not s.starts_with(name))
               continue;
 
             read_one = true;
             found_name = true;
             val = val | e;
-            str = str.substr(name.size());
-            auto s = skip_ws(str);
+            s = s.substr(name.size());
+            s = skip_ws(s);
             if (s.size() == 0 or s[0] != '|')
-              return {val, str};
-            str = skip_ws(s.substr(1));
+              return {from_value, val, s};
+            has_or = true;
+            s = skip_ws(s.substr(1));
           }
+
+          if (has_or and not found_name)
+            return {from_error, cli::Error::invalid_value, str};
+
           if (not found_name)
             break;
         }
 
         if (read_one)
-          return {val, {}};
+          return {from_value, val, s};
         else {
           if constexpr (not AllowNumbers)
-            return error<CharT, T>(Error::invalid_value);
+            return {from_error, Error::invalid_value, str};
           else {
             auto res = Int<std::underlying_type_t<T>, CharT>{}(str);
-            if (not res)
-              return error<CharT, T>(Error::invalid_value);
-            return {static_cast<T>(res.value), res.rest};
+            if (not res or
+                res.value > ctti::dtl::biggest_enum_value_v<T, CharT> or
+                res.value < ctti::dtl::smallest_enum_value_v<T, CharT>)
+              return {from_error, Error::invalid_value, str};
+            return {from_value, static_cast<T>(res.value), res.rest};
           }
         }
       } else {
         for (const auto &[e, name] : ctti::dtl::enum_name_map<T>) {
           if (str.starts_with(name)) {
-            return {e, str.substr(name.size())};
+            return {from_value, e, str.substr(name.size())};
           }
         }
 
         if constexpr (not AllowNumbers)
-          return error<CharT, T>(Error::invalid_value);
+          return {from_error, Error::invalid_value, str};
         else {
           using Parser = Int<std::underlying_type_t<T>, CharT>;
           auto res = Parser{}(str);
-          if (not res) {
-            return error<CharT, T>(Error::invalid_value);
-          }
-          return {static_cast<T>(res.value), res.rest};
+          if (not res or
+              res.value > ctti::dtl::biggest_enum_value_v<T, CharT> or
+              res.value < ctti::dtl::smallest_enum_value_v<T, CharT>)
+            return {from_error, Error::invalid_value, str};
+          return {from_value, static_cast<T>(res.value), res.rest};
         }
       }
     }
@@ -911,47 +887,47 @@ namespace cli::parse {
   public:
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
       if (str.size() == 0)
-        return Error::too_few_characters;
+        return {Error::too_few_characters, str};
 
       if (str[0] != '[')
-        return Error::invalid_character;
+        return {Error::expected_open_bracket, str};
 
-      str = skip_ws(str.substr(1));
+      View s = skip_ws(str.substr(1));
 
-      if (str.size() == 0)
-        return Error::too_few_characters;
+      if (s.size() == 0)
+        return {Error::expected_closing_bracket, str};
 
-      if (str[0] == ']')
-        return {T{}, str.substr(1)};
+      if (s[0] == ']')
+        return {T{}, s.substr(1)};
 
       T sequence;
 
-      while (str.size() > 0) {
+      while (s.size() > 0) {
 
-        ParseResult res = ElementParser{}(str);
+        ParseResult res = ElementParser{}(s);
 
         if (not res)
-          return res.error;
+          return {res.error, res.rest};
 
-        sequence.push_back(std::move(res.value));
-
-        if (res.rest.size() == 0)
-          return Error::too_few_characters;
-
-        str = skip_ws(res.rest);
-
-        if (str.size() == 0)
-          return Error::too_few_characters;
-
-        if (str[0] == ']')
-          return {sequence, str.substr(1)};
-
-        if (str[0] != Delimiter)
-          return Error::invalid_character;
+        if (sequence.size() < sequence.max_size())
+          sequence.push_back(std::move(res.value));
         else
-          str = skip_ws(str.substr(1));
+          return {Error::too_many_sequence_values, s};
+
+        s = skip_ws(res.rest);
+
+        if (s.size() == 0)
+          return {Error::expected_closing_bracket, str};
+
+        if (s[0] == ']')
+          return {sequence, s.substr(1)};
+
+        if (s[0] != Delimiter)
+          return {Error::expected_delimiter, s};
+        else
+          s = skip_ws(s.substr(1));
       }
-      return Error::too_few_characters;
+      return {Error::expected_closing_bracket, str};
     }
   };
 
@@ -973,55 +949,56 @@ namespace cli::parse {
         return Error::too_few_characters;
 
       if (str[0] != '[')
-        return Error::invalid_character;
+        return {Error::expected_open_bracket, str};
 
-      str = skip_ws(str.substr(1));
+      View s = skip_ws(str.substr(1));
 
-      if (str.size() == 0)
-        return Error::too_few_characters;
+      if (s.size() == 0)
+        return {Error::too_few_sequence_values, s};
 
       T sequence;
       std::size_t size = 0;
 
-      if (str[0] == ']') {
+      if (s[0] == ']') {
         if (size < sequence.size())
-          return Error::too_few_sequence_values;
-        return {T{}, str.substr(1)};
+          return {Error::too_few_sequence_values, str};
+        return {T{}, s.substr(1)};
       }
 
-      while (str.size() > 0) {
+      while (s.size() > 0) {
 
-        ParseResult res = ElementParser{}(str);
+        ParseResult res = ElementParser{}(s);
 
         if (not res)
-          return res.error;
+          return {Error::invalid_sequence_value, s};
 
         if (size >= sequence.size())
-          return Error::too_many_sequence_values;
+          return {Error::too_many_sequence_values, str};
 
         sequence[size] = std::move(res.value);
         ++size;
 
-        if (res.rest.size() == 0)
-          return Error::too_few_characters;
+        s = skip_ws(res.rest);
 
-        str = skip_ws(res.rest);
-
-        if (str.size() == 0)
-          return Error::too_few_characters;
-
-        if (str[0] == ']') {
-          if (size != sequence.size())
-            return Error::too_few_sequence_values;
-          return {sequence, str.substr(1)};
+        if (s.size() == 0) {
+          if (size == sequence.size())
+            return {Error::expected_closing_bracket, str};
+          else
+            return {Error::expected_delimiter, str};
         }
 
-        if (str[0] != Delimiter)
-          return Error::invalid_character;
+        if (s[0] == ']') {
+          if (size != sequence.size())
+            return {Error::too_few_sequence_values, str};
+          return {sequence, s.substr(1)};
+        }
+
+        if (s[0] != Delimiter)
+          return {Error::expected_delimiter, str};
         else
-          str = skip_ws(str.substr(1));
+          s = skip_ws(s.substr(1));
       }
-      return Error::too_few_characters;
+      return {Error::expected_closing_bracket, str};
     }
   };
 
@@ -1092,7 +1069,7 @@ namespace cli::parse {
         if (sv.starts_with(f))
           return {false, sv.substr(f.size())};
 
-      return Error::invalid_character;
+      return {Error::invalid_value, sv};
     }
   };
 
@@ -1253,31 +1230,33 @@ namespace cli::parse {
     constexpr FieldGroup &operator=(FieldGroup &&) = default;
 
     constexpr ParseResult<std::tuple<Fields...>, CharT>
-    operator()(View<const CharT> sv) {
-      if (sv.size() == 0) {
-        if constexpr ((Fields::has_default && ...))
+    operator()(View<const CharT> str) {
+      if (str.size() == 0) {
+        if constexpr ((Fields::has_default and ...))
           return s.fields;
         else
           return Error::too_few_characters;
       }
 
+      View sv = str;
       if constexpr (Prefix == ' ')
         sv = skip_ws(sv);
       else {
         if (sv[0] == Prefix) {
           sv = skip_ws(sv.substr(1));
         } else {
-          return Error::invalid_character;
+          return {Error::expected_group_opening, str};
         }
       }
 
       if (sv.size() == 0)
         return Error::too_few_characters;
+
       for_each(
         [](const auto &f, State &self) {
           using F = std::remove_cvref_t<decltype(f)>;
           constexpr auto index =
-            type_list::index_of_v<F, std::tuple<Fields...>>;
+            type_list::index_of_v<F, type_list::TypeList<Fields...>>;
           if constexpr (F::has_default) {
             /// self.initialized[index] = true;
             self.optional[index] = true;
@@ -1293,22 +1272,22 @@ namespace cli::parse {
         for (const auto &[name, parser] : parsers) {
           if (sv.starts_with(name)) {
             // stripping name
-            auto str = skip_ws(sv.substr(name.size()));
+            auto rest = skip_ws(sv.substr(name.size()));
             // now the assignment character is expected. If it is not present,
             // then this has to be a value
-            if (str.size() == 0 or str[0] != Assignment) {
+            if (rest.size() == 0 or rest[0] != Assignment) {
               // wasn't really the name -> try value
               break;
             }
 
             // consume the assignment character and trailing whitespace
-            str = skip_ws(str.substr(1));
-            if (str.size() == 0) {
+            rest = skip_ws(rest.substr(1));
+            if (rest.size() == 0) {
               reset_state();
-              return Error::too_few_characters;
+              return {Error::expected_value, sv};
             }
 
-            sv = str;
+            sv = rest;
             is_named_member = true;
             break;
           }
@@ -1339,12 +1318,13 @@ namespace cli::parse {
           }
           parser_index = pos_index;
         }
+
         (*(parsers[parser_index].second))(s, sv);
 
         if (s.error != Error::none) {
           auto err = s.error;
           reset_state();
-          return err;
+          return {err, sv};
         }
 
         if (s.consumed == sizeof...(Fields)) {
@@ -1356,11 +1336,11 @@ namespace cli::parse {
           } else {
             if (sv.size() == 0) {
               reset_state();
-              return Error::too_few_characters;
+              return {Error::expected_group_closing, sv};
             }
             if (sv[0] != Postfix) {
               reset_state();
-              return Error::invalid_character;
+              return {Error::expected_group_closing, sv};
             } else {
               auto fields = s.fields;
               reset_state();
@@ -1370,12 +1350,12 @@ namespace cli::parse {
         } else {
           if (sv.size() == 0) {
             reset_state();
-            return Error ::too_few_characters;
+            return {Error::expected_another_field, sv};
           }
 
           if (sv[0] != MemberSeparator) {
             reset_state();
-            return Error::invalid_character;
+            return {Error::expected_delimiter, sv};
           }
 
           sv = skip_ws(sv.substr(1));
@@ -1385,9 +1365,9 @@ namespace cli::parse {
       auto fields = s.fields;
       reset_state();
       if (err != Error::none)
-        return err;
+        return {err, sv};
       else
-        return fields;
+        return {fields, sv};
     }
   };
 
@@ -1440,29 +1420,24 @@ namespace cli::parse {
                                            Postfix>::type;
 
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> sv) {
-      if (sv.size() == 0)
+    constexpr ParseResult<T, CharT> operator()(View<const CharT> s) {
+      if (s.size() == 0)
         return Error::too_few_characters;
 
+      View sv = s;
       if constexpr (Name::string_size > 0) {
         constexpr StringLiteral name{Name{}};
         if (name.size() > 0 and sv.starts_with(name)) {
           // named struct
           sv = skip_ws(sv.substr(name.size()));
 
-          if (sv.size() == 0)
-            return Error::too_few_characters;
-
-          if (sv[0] != Assignment)
-            return Error::invalid_character;
+          if (sv.size() == 0 or sv[0] != Assignment)
+            return {Error::expected_assignment, sv};
 
           sv = skip_ws(sv.substr(1));
 
-          if (sv.size() == 0)
-            return Error::too_few_characters;
-
-          if (sv[0] != Prefix)
-            return Error::invalid_character;
+          if (sv.size() == 0 or (Prefix != ' ' and sv[0] != Prefix))
+            return {Error::expected_group_opening, sv};
 
           sv = skip_ws(sv.substr(1));
         }
@@ -1471,7 +1446,7 @@ namespace cli::parse {
       if (auto res = static_cast<Base *>(this)->operator()(sv))
         return {ctti::from_tuple<T>(res.value), res.rest};
       else
-        return res.error;
+        return {res.error, sv};
     }
   };
 

@@ -1,5 +1,6 @@
 #ifndef CLI_EVENT_HPP
 #define CLI_EVENT_HPP
+#include <compare>
 #include <cstdint>
 
 namespace cli {
@@ -67,6 +68,8 @@ namespace cli {
       param = o.param;
       return *this;
     }
+
+    constexpr auto operator<=>(const Control &) const = default;
   };
 
   /**
@@ -95,6 +98,14 @@ namespace cli {
     constexpr explicit Event(Control ctrl)
       : is_char(false), ctrl(ctrl) {}
 
+    constexpr Event(const Event &o)
+      : is_char(o.is_char) {
+      if (is_char)
+        c = o.c;
+      else
+        ctrl = o.ctrl;
+    }
+
     constexpr Event &operator=(const Event &o) {
       is_char = o.is_char;
       if (o.is_char) {
@@ -105,17 +116,7 @@ namespace cli {
       return *this;
     }
 
-    constexpr volatile Event &operator=(const volatile Event &o) volatile {
-      is_char = o.is_char;
-      if (o.is_char) {
-        c = o.c;
-      } else {
-        ctrl = o.ctrl;
-      }
-      return *this;
-    }
-
-    constexpr volatile Event &operator=(const Event &o) volatile {
+    volatile Event &operator=(const volatile Event &o) volatile {
       is_char = o.is_char;
       if (o.is_char) {
         c = o.c;

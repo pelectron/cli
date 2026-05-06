@@ -44,4 +44,29 @@ TEST_CASE("History") {
   h.cursor_up(13);
   REQUIRE(h.cursor_up(1) == "cmd5");
   REQUIRE(h.cursor_up(1) == "cmd5");
+  REQUIRE(h.cursor_down(5) == "cmd10");
+
+  SECTION("reset") {
+    h.reset();
+    REQUIRE(h.cursor_down(1) == "");
+    REQUIRE(h.cursor_up(1) == "");
+  }
+}
+
+TEST_CASE("Histroy push empty string") {
+  cli::History<cli::default_config> h;
+  h.push({});
+  REQUIRE(h.cursor_down(1) == "");
+  h.push({});
+  REQUIRE(h.cursor_up(1) == "");
+}
+
+TEST_CASE("Histroy cursor up down with n = 0") {
+  cli::History<cli::default_config> h;
+  h.push("hello");
+  REQUIRE(h.cursor_down(0) == "");
+  h.push("hello");
+  REQUIRE(h.cursor_up(0) == "");
+  REQUIRE(h.cursor_down(0) == "");
+  REQUIRE(h.cursor_down(0) == "");
 }

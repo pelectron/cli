@@ -1,4 +1,5 @@
 #include "catch2/catch_test_macros.hpp"
+#include "common.hpp"
 
 #include "cli/parse.hpp"
 
@@ -84,13 +85,18 @@ TEST_CASE("parse::FixedSizeSequence") {
   SECTION("invalid input") {
     SeqTestVector vector[]{
       {.input = {},                         .output{cli::Error::too_few_characters}     },
-      {.input = "a",                        .output{cli::Error::invalid_character}      },
+      {.input = "[",                        .output{cli::Error::too_few_sequence_values}},
+      {.input = "a",                        .output{cli::Error::expected_open_bracket}  },
       {.input = "[]",                       .output{cli::Error::too_few_sequence_values}},
       {.input = "[1,2,3]",                  .output{cli::Error::too_few_sequence_values}},
-      {.input = "[1 2,3]",                  .output{cli::Error::invalid_character}      },
+      {.input = "[1 2,3]",                  .output{cli::Error::expected_delimiter}     },
       {.input = "[0,1,2,3,4,5,6,7,8,9,10]",
        .output{cli::Error::too_many_sequence_values}                                    },
-      {.input = "[1,2,3",                   .output{cli::Error::too_few_characters}     },
+      {.input = "[0,1,2,3,4,5,6,7,8,b]",
+       .output{cli::Error::invalid_sequence_value}                                      },
+      {.input = "[0,1,2,3,4,5,6,7,8,9",
+       .output{cli::Error::expected_closing_bracket}                                    },
+      {.input = "[1,2,3",                   .output{cli::Error::expected_delimiter}     },
     };
     for (const auto &tv : vector) {
       auto res = parse(tv.input);

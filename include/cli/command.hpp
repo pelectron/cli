@@ -141,10 +141,9 @@ namespace cli {
             last_sub->next = &c;
             c.next = sub;
             break;
-          } else {
-            last_sub = sub;
-            sub = sub->next;
           }
+          last_sub = sub;
+          sub = sub->next;
         }
       }
     }
@@ -302,7 +301,7 @@ namespace cli {
               const CommandNode<CharT> *root,
               CharT access_separator) {
 
-    if (command.size() == 0)
+    if (command.size() == 0 or root == nullptr)
       return nullptr;
 
     std::size_t pos = command.find_first_of(
@@ -359,45 +358,10 @@ namespace cli {
     if (pos == 0)
       return {};
 
-    // get the whole command
-    View<const CharT> cmd_name;
-    if (pos == View<const CharT>::npos) {
-      cmd_name = line;
-    } else {
-      cmd_name = line.substr(0, pos);
-    }
-
-    if (cmd_name[cmd_name.size() - 1] == access_separator) {
-      return {};
-    }
-
-    // find the parent node
-    const CommandNode<CharT> *parent = root;
-    std::size_t end = cmd_name.find_first_of(access_separator);
-    while (end != View<const CharT>::npos) {
-      View name = cmd_name.substr(0, end);
-      bool found = false;
-      for (const CommandNode<CharT> &child : *parent) {
-        if (child.name == name) {
-          parent = &child;
-          cmd_name = cmd_name.substr(end + 1);
-          end = cmd_name.find_last_of(access_separator);
-          found = true;
-          break;
-        }
-      }
-      if (not found)
-        return {nullptr};
-    }
-
-    // find the child
-    for (const CommandNode<CharT> &child : *parent) {
-      if (child.name == cmd_name) {
-        return {&child, line.substr(pos)};
-      }
-    }
-
-    return {};
+    const View<const CharT> name = line.substr(0, pos);
+    const View<const CharT> args = line.substr(pos);
+    const CommandNode<CharT> *cmd = get_command(name, root, access_separator);
+    return {cmd, args};
   }
 } // namespace cli
 #endif

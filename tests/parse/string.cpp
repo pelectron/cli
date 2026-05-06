@@ -10,11 +10,21 @@ TEST_CASE("parse::String") {
   cli::parse::String<std::string, char> parse;
 
   SECTION("empty strings") {
+
     SECTION("invalid empty string") {
       auto res = parse("");
       REQUIRE_FALSE(res);
       REQUIRE(res.error == cli::Error::too_few_characters);
+
+      res = parse(" ");
+      REQUIRE_FALSE(res);
+      REQUIRE(res.error == cli::Error::invalid_character);
+
+      res = parse(" abcde");
+      REQUIRE_FALSE(res);
+      REQUIRE(res.error == cli::Error::invalid_character);
     }
+
     SECTION("valid empty string") {
       auto res = parse("\"\"");
       REQUIRE(res);
@@ -22,11 +32,7 @@ TEST_CASE("parse::String") {
       REQUIRE(res.value == "");
     }
   }
-  SECTION("single space") {
-    auto res = parse(" ");
-    REQUIRE_FALSE(res);
-    REQUIRE(res.error == cli::Error::invalid_character);
-  }
+
   SECTION("escaped quote") {
     auto res = parse("\\\"");
     REQUIRE(res);
@@ -95,16 +101,35 @@ TEST_CASE("parse::String") {
     REQUIRE(res.rest == "bc");
     REQUIRE(res.value == "hello \"world");
   }
+  SECTION("missing end quote") {
+    auto res = parse("\"hello");
+    REQUIRE_FALSE(res);
+    REQUIRE(res.error == cli::Error::expected_endquote);
+    res = parse("\"");
+    REQUIRE_FALSE(res);
+    REQUIRE(res.error == cli::Error::expected_endquote);
+  }
 }
 
 TEST_CASE("parse::StringView") {
   cli::parse::StringView<cli::CharView, char> parse;
+
   SECTION("empty strings") {
+
     SECTION("invalid empty string") {
       auto res = parse("");
       REQUIRE_FALSE(res);
       REQUIRE(res.error == cli::Error::too_few_characters);
+
+      res = parse(" ");
+      REQUIRE_FALSE(res);
+      REQUIRE(res.error == cli::Error::invalid_character);
+
+      res = parse(" abcde");
+      REQUIRE_FALSE(res);
+      REQUIRE(res.error == cli::Error::invalid_character);
     }
+
     SECTION("valid empty string") {
       auto res = parse("\"\"");
       REQUIRE(res);
@@ -112,11 +137,7 @@ TEST_CASE("parse::StringView") {
       REQUIRE(res.value == "");
     }
   }
-  SECTION("single space") {
-    auto res = parse(" ");
-    REQUIRE_FALSE(res);
-    REQUIRE(res.error == cli::Error::invalid_character);
-  }
+
   SECTION("escaped quote") {
     auto res = parse("\\\"");
     REQUIRE(res);
@@ -138,6 +159,7 @@ TEST_CASE("parse::StringView") {
     REQUIRE(res.rest == " bc");
     REQUIRE(res.value == "\\\"\\\"");
   }
+
   SECTION("no spaces") {
     auto res = parse("hello");
     REQUIRE(res);
@@ -149,6 +171,7 @@ TEST_CASE("parse::StringView") {
     REQUIRE(res.rest == " world");
     REQUIRE(res.value == "hello");
   }
+
   SECTION("no spaces with quotes") {
     auto res = parse("hello\"world bc");
     REQUIRE(res);
@@ -175,6 +198,7 @@ TEST_CASE("parse::StringView") {
     REQUIRE(res.rest == " bc");
     REQUIRE(res.value == "\\\"hello\\\"world");
   }
+
   SECTION("quoted") {
     auto res = parse("\"hello world\"bc");
     REQUIRE(res);
@@ -185,5 +209,14 @@ TEST_CASE("parse::StringView") {
     REQUIRE(res);
     REQUIRE(res.rest == "bc");
     REQUIRE(res.value == "hello \\\"world");
+  }
+
+  SECTION("missing end quote") {
+    auto res = parse("\"hello");
+    REQUIRE_FALSE(res);
+    REQUIRE(res.error == cli::Error::expected_endquote);
+    res = parse("\"");
+    REQUIRE_FALSE(res);
+    REQUIRE(res.error == cli::Error::expected_endquote);
   }
 }

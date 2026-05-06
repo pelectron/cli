@@ -1,4 +1,5 @@
 #include "cli/format.hpp"
+#include "common.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <string>

@@ -45,10 +45,18 @@ namespace cli {
     too_few_characters,    //< expected more characters
     unexpected_characters, //< unexpected or too many characters
     invalid_character,     //< encountered invalid character
-    unescaped_string, //< a string started with a quote doesn't hae a closing
-                      // quote
     too_many_sequence_values,
     too_few_sequence_values,
+    invalid_sequence_value,
+    expected_open_bracket,
+    expected_closing_bracket,
+    expected_delimiter,
+    expected_group_opening,
+    expected_group_closing,
+    expected_another_field,
+    expected_struct_value,
+    expected_assignment,
+    expected_endquote,
 
     // validation errors
     invalid_value, //< encountered an invalid value

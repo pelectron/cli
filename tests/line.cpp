@@ -346,7 +346,6 @@ TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
     line.clear();
     REQUIRE(line.view().size() == 0);
   }
-
   SECTION("execute with single line display") {
     char buffer[16]{};
     cli::View<char> out{buffer, 16};
@@ -394,6 +393,16 @@ TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
       REQUIRE(d.data == "cant_set_param");
       REQUIRE(d.past == std::vector<std::string>{"c4long.c5long"});
     }
+  }
+
+  SECTION("on_char after execute with single line display") {
+    line.set_data("c1");
+    char buffer[16]{};
+    cli::View<char> out{buffer, 16};
+    line.execute(out);
+    line.on_char('c');
+    REQUIRE(d.data == "c");
+    REQUIRE(d.past == std::vector<std::string>{"c1"});
   }
 
   SECTION("execute with multiline display") {
@@ -446,6 +455,18 @@ TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
       REQUIRE(d.past ==
               std::vector<std::string>{"c4long.c5long", "cant_set_param"});
     }
+  }
+
+  SECTION("on_char after execute with multiline display") {
+    MultilineDisplay d;
+    cli::Line<NoCursor_NoAutocomplete, MultilineDisplay> line(root, d);
+    char buffer[16]{};
+    cli::View<char> out{buffer, 16};
+    line.set_data("c1");
+    line.execute(out);
+    line.on_char('c');
+    REQUIRE(d.data == "c");
+    REQUIRE(d.past == std::vector<std::string>{"c1"});
   }
 }
 

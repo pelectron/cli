@@ -77,6 +77,7 @@ TEST_CASE("View::find_first_not_of") {
   REQUIRE(CharView{"hello"}.find_first_not_of('a') == 0);
   REQUIRE(CharView{"hello"}.find_first_not_of('l', 3) == 4);
   REQUIRE(CharView{"hello"}.find_first_not_of('a', 3) == 3);
+  REQUIRE(CharView{"hhhhh"}.find_first_not_of('h') == CharView::npos);
 
   REQUIRE(CharView{"hello"}.find_first_not_of("abch") == 1);
   REQUIRE(CharView{"hello"}.find_first_not_of("acb") == 0);
@@ -93,6 +94,10 @@ TEST_CASE("View::find_last_of") {
   REQUIRE(CharView{"hello"}.find_last_of("l") == 3);
   REQUIRE(CharView{"hello"}.find_last_of("l", 2) == 2);
   REQUIRE(CharView{"hello"}.find_last_of(' ') == CharView::npos);
+  REQUIRE(CharView{"hello"}.find_last_of(' ', 5) == CharView::npos);
+  REQUIRE(CharView{}.find_last_of(' ') == CharView::npos);
+  REQUIRE(CharView{}.find_last_of("hello") == CharView::npos);
+  REQUIRE(CharView{"hello"}.find_last_of("a", 5) == CharView::npos);
 }
 
 TEST_CASE("View::find_last_not_of") {
@@ -107,6 +112,10 @@ TEST_CASE("View::find_last_not_of") {
   REQUIRE(CharView{"BCDEFG"}.find_last_not_of("EFG", 3) == 2);
   REQUIRE(CharView{"ABBA"}.find_last_not_of('A') == 2);
   REQUIRE(CharView{"ABBA"}.find_last_not_of('A', 1) == 1);
+  REQUIRE(CharView{"BBBB"}.find_last_not_of('B') == CharView::npos);
+  REQUIRE(CharView{"BBBB"}.find_last_not_of('B', 4) == CharView::npos);
+  REQUIRE(CharView{}.find_last_not_of('A') == CharView::npos);
+  REQUIRE(CharView{}.find_last_not_of("A") == CharView::npos);
 }
 
 TEST_CASE("View::find") {
@@ -115,12 +124,16 @@ TEST_CASE("View::find") {
   REQUIRE(CharView{"hello"}.find('l') == 2);
   REQUIRE(CharView{"hello"}.find('l', 3) == 3);
   REQUIRE(CharView{"hello"}.find('a') == CharView::npos);
+  REQUIRE(CharView{"hello"}.find('a', 5) == CharView::npos);
 
   REQUIRE(CharView{"hello"}.find("he") == 0);
+  REQUIRE(CharView{"hello"}.find("ll") == 2);
   REQUIRE(CharView{"hello"}.find("ell") == 1);
   REQUIRE(CharView{"hello"}.find("hello") == 0);
   REQUIRE(CharView{"hello"}.find("o") == 4);
   REQUIRE(CharView{"hello"}.find("lo") == 3);
+  REQUIRE(CharView{"hello"}.find("lo", 5) == CharView::npos);
+  REQUIRE(CharView{"hello"}.find("lowerr") == CharView::npos);
 }
 
 TEST_CASE("operator _sc") {
@@ -140,4 +153,9 @@ TEST_CASE("operator _sc") {
       std::is_same_v<decltype(U"hello"_sc),
                      string_constant<char32_t, 'h', 'e', 'l', 'l', 'o'>>);
   }
+}
+
+TEST_CASE("string_constant operator+") {
+  using cli::operator""_sc;
+  REQUIRE("hello world"_sc == "hello "_sc + "world"_sc);
 }

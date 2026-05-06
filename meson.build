@@ -75,6 +75,7 @@ if(not build_tests.disabled())
 
   ut = executable(
     'unit-test',
+    # formatting tests
     'tests/format/bool.cpp',
     'tests/format/enum.cpp',
     'tests/format/fixed_size_sequence.cpp',
@@ -83,7 +84,9 @@ if(not build_tests.disabled())
     'tests/format/sequence.cpp',
     'tests/format/string.cpp',
     'tests/format/struct.cpp',
+    # parsing tests
     'tests/parse/bool.cpp',
+    'tests/parse/char.cpp',
     'tests/parse/fixed_size_sequence.cpp',
     'tests/parse/enum.cpp',
     # 'tests/parse/fixpoint.cpp',
@@ -91,6 +94,8 @@ if(not build_tests.disabled())
     'tests/parse/sequence.cpp',
     'tests/parse/string.cpp',
     'tests/parse/struct.cpp',
+    'tests/parse/trim_and_skip.cpp',
+    # combined parse and formatting tests
     'tests/parse_format/bool.cpp',
     'tests/parse_format/enum.cpp',
     'tests/parse_format/fixed_size_sequence.cpp',
@@ -98,10 +103,15 @@ if(not build_tests.disabled())
     'tests/parse_format/sequence.cpp',
     'tests/parse_format/struct.cpp',
     'tests/command.cpp',
+    'tests/ctti.cpp',
+    'tests/event.cpp',
     'tests/history.cpp',
     'tests/line.cpp',
     'tests/param.cpp',
+    'tests/ring_buffer.cpp',
     'tests/string.cpp',
+    'tests/util.cpp',
+    'tests/validate.cpp',
     include_directories: test_inc,
     dependencies: [cli_dep, catch_dep],
   )

@@ -4,7 +4,6 @@
 #include <utility>
 
 namespace cli {
-
   /**
    * A view of a FIFO ring buffer, i.e. this is non owning.
    *
@@ -29,7 +28,7 @@ namespace cli {
     }
 
   public:
-    using value_type = std::remove_cv_t<T>;
+    using value_type = T;
 
     /**
      * construct a ring buffer view from an array
@@ -77,11 +76,10 @@ namespace cli {
      * returned.
      */
     constexpr bool push_back(const value_type &t) {
-      auto s = size_;
-      if (s == capacity_)
+      if (size_ == capacity_)
         return false;
       *head = t;
-      size_ = s + 1;
+      ++size_;
       head = incr(head);
       return true;
     }
@@ -107,17 +105,17 @@ namespace cli {
      *
      * @param n the number of elements to remove
      */
-    constexpr void remove_last(std::size_t n) {
-      if (n > size_)
-        n = size_;
-
-      if (head - arr_ >= n) {
-        head -= n;
-      } else {
-        n -= head - arr_;
-        head = arr_ + capacity_ - n;
-      }
-    }
+    // constexpr void remove_last(std::size_t n) {
+    //   if (n > size_)
+    //     n = size_;
+    //
+    //   if (head - arr_ >= n) {
+    //     head -= n;
+    //   } else {
+    //     n -= head - arr_;
+    //     head = arr_ + capacity_ - n;
+    //   }
+    // }
 
     /**
      * removes an element from the front.
@@ -146,6 +144,127 @@ namespace cli {
     };
 
     constexpr write_iterator output() { return {this, 0}; }
+  };
+
+  template<typename T>
+  class RingBufView<volatile T> {
+    volatile T *arr_{};
+    // the head points to the position that was last written to
+    volatile T *head{};
+    // the tail points to the position that can be read from
+    volatile T *tail{};
+    volatile std::size_t size_{};
+    std::size_t capacity_{};
+
+    volatile T *incr(volatile T *p) {
+      ++p;
+      if (p == (arr_ + capacity_))
+        return arr_;
+      else
+        return p;
+    }
+
+  public:
+    using value_type = T;
+
+    RingBufView(volatile T *arr, std::size_t capacity)
+      : arr_(arr), head(arr_), tail(arr_), size_(0), capacity_(capacity) {}
+
+    /**
+     * check if the buffer is full
+     */
+    bool is_full() noexcept { return size_ == capacity_; }
+
+    /**
+     * check if the buffer is empty
+     */
+    bool is_empty() noexcept { return size_ == 0; }
+
+    /**
+     * returns the number of elements stored
+     */
+    std::size_t size() const { return size_; }
+
+    /**
+     * returns the maximum amount of elements that can be stored
+     */
+    std::size_t capacity() const { return capacity_; }
+
+    /**
+     * empties the buffer
+     */
+    void clear() {
+      head = arr_;
+      tail = arr_;
+      size_ = 0;
+    }
+
+    /**
+     * adds a new element to the buffer
+     *
+     * @param t the element
+     * @return true if the operation succeded. If the buffer was full, false is
+     * returned.
+     */
+    bool push_back(const value_type &t) {
+      const std::size_t s = size_;
+      if (s == capacity_)
+        return false;
+      *head = t;
+      size_ = s + 1;
+      head = incr(head);
+      return true;
+    }
+
+    /**
+     * adds a new element to the buffer
+     *
+     * @param t the element
+     * @return true if the operation succeded. If the buffer was full, false is
+     * returned.
+     */
+    constexpr bool push_back(value_type &&t) {
+      const std::size_t s = size_;
+      if (s == capacity_)
+        return false;
+      *head = std::move(t);
+      size_ = s + 1;
+      head = incr(head);
+      return true;
+    }
+
+    /**
+     * removes elements from the back
+     *
+     * @param n the number of elements to remove
+     */
+    // constexpr void remove_last(std::size_t n) {
+    //   if (n > size_)
+    //     n = size_;
+    //
+    //   if (head - arr_ >= n) {
+    //     head -= n;
+    //   } else {
+    //     n -= head - arr_;
+    //     head = arr_ + capacity_ - n;
+    //   }
+    // }
+
+    /**
+     * removes an element from the front.
+     *
+     * @param t where to put the value that is popped
+     * @return true if a value could be popped, else false.
+     */
+    constexpr bool pop(value_type &t) {
+      const std::size_t s = size_;
+      if (s == 0)
+        return false;
+      t = *tail;
+      size_ = s - 1;
+      tail = incr(tail);
+      return true;
+    }
   };
 
   /**

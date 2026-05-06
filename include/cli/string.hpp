@@ -46,11 +46,6 @@ namespace cli {
     constexpr View(CharType *begin, CharType *end) noexcept
       : str_(begin), size_(end - begin) {}
 
-    template<typename Char, std::size_t Size>
-      requires std::assignable_from<CharType *, Char *>
-    constexpr View(Char (&array)[Size]) noexcept
-      : str_(array), size_(Size) {}
-
     constexpr View &operator=(const View &o) noexcept {
       str_ = o.str_;
       size_ = o.size_;
@@ -206,6 +201,9 @@ namespace cli {
 
     constexpr std::size_t find_last_of(value_type c,
                                        std::size_t pos = npos) const noexcept {
+      if (size_ == 0)
+        return npos;
+
       for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
         if (c == str_[i])
           return i;
@@ -220,6 +218,9 @@ namespace cli {
     template<typename Ch>
     constexpr std::size_t find_last_of(View<Ch> s,
                                        std::size_t pos = npos) const noexcept {
+      if (size_ == 0)
+        return npos;
+
       for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
         for (std::size_t j = 0; j < s.size_; ++j)
           if (s.str_[j] == str_[i])
@@ -231,6 +232,7 @@ namespace cli {
     find_last_not_of(value_type c, std::size_t pos = npos) const noexcept {
       if (size_ == 0)
         return npos;
+
       for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
         if (c != str_[i])
           return i;
@@ -248,6 +250,7 @@ namespace cli {
     find_last_not_of(View<Ch> s, std::size_t pos = npos) const noexcept {
       if (size_ == 0)
         return npos;
+
       for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
         if (s.find(str_[i]) == npos)
           return i;
@@ -293,8 +296,8 @@ namespace cli {
   private:
     template<typename>
     friend class View;
-    CharType *str_ = nullptr;
-    std::size_t size_ = 0;
+    CharType *str_{nullptr};
+    std::size_t size_{0};
   };
 
   using CharView = View<const char>;

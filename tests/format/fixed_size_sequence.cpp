@@ -1,5 +1,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include "cli/format.hpp"
+#include "common.hpp"
+
 #include <array>
 #include <catch2/catch_all.hpp>
 

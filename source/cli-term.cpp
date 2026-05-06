@@ -84,7 +84,6 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
-#include <winbase.h>
 
 struct Settings {
   uint32_t baudrate = 115200;

@@ -15,6 +15,13 @@ struct SeqTestVector {
   cli::parse::ParseResult<Seq, char> output;
 };
 
+#define FAIL_TV(input, error, rest)                                            \
+  SeqTestVector<Seq> {                                                         \
+    cli::CharView{input}, cli::parse::ParseResult<Seq, char> {                 \
+      cli::parse::from_error, error, rest                                      \
+    }                                                                          \
+  }
+
 #define PASS_TV(...)                                                           \
   SeqTestVector<Seq> {                                                         \
     .input = "[" #__VA_ARGS__ "]", .output = { Seq{__VA_ARGS__}, {} }          \
@@ -131,6 +138,23 @@ TEMPLATE_TEST_CASE("parse::Sequence", "", Seq1, Seq2) {
       REQUIRE(res);
       REQUIRE(res.error == tv.output.error);
       REQUIRE(res.value == tv.output.value);
+      REQUIRE(str(res.rest) == str(tv.output.rest));
+    }
+  }
+
+  SECTION("invalid sequences") {
+    SeqTestVector<Seq> vectors[]{
+      FAIL_TV("", cli::Error::too_few_characters, ""),
+      FAIL_TV("[", cli::Error::expected_closing_bracket, "["),
+      FAIL_TV("[ ", cli::Error::expected_closing_bracket, "[ "),
+      FAIL_TV("]", cli::Error::expected_open_bracket, "]"),
+      FAIL_TV("[1,2,3", cli::Error::expected_closing_bracket, "[1,2,3"),
+      FAIL_TV("[1,2 3", cli::Error::expected_delimiter, "3"),
+    };
+    for (const auto &tv : vectors) {
+      auto res = parse(tv.input);
+      REQUIRE_FALSE(res);
+      REQUIRE(res.error == tv.output.error);
       REQUIRE(str(res.rest) == str(tv.output.rest));
     }
   }

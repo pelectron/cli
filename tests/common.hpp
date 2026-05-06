@@ -1,9 +1,11 @@
 #ifndef CLI_TEST_COMMON_HPP
 #define CLI_TEST_COMMON_HPP
 #include "cli/concepts.hpp"
+#include "cli/ctti.hpp"
 #include "cli/enums.hpp"
 #include "cli/traits.hpp"
 // #include "fixpoint.hpp"
+#include <catch2/catch_tostring.hpp>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -54,4 +56,33 @@ constexpr F operator|(F f1, F f2) {
   return static_cast<F>(static_cast<uint32_t>(f1) | static_cast<uint32_t>(f2));
 }
 
+namespace cli {
+  inline std::ostream &operator<<(std::ostream &os, const cli::Error &e) {
+    return os << std::string_view{cli::ctti::enum_name(e).data()};
+  }
+
+  inline std::ostream &operator<<(std::ostream &os,
+                                  const cli::View<const char> &str) {
+    if (str.size() == 0)
+      return os;
+    return os << std::string_view{str.data(), str.size()};
+  }
+} // namespace cli
+
+namespace Catch {
+  template<>
+  struct StringMaker<cli::Error> {
+    static std::string convert(cli::Error const &value) {
+      return cli::ctti::enum_name(value).data();
+    }
+  };
+  template<>
+  struct StringMaker<cli::View<const char>> {
+    static std::string convert(cli::View<const char> const &value) {
+      if (value.size() == 0)
+        return {};
+      return {value.data(), value.size()};
+    }
+  };
+} // namespace Catch
 #endif

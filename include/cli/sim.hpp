@@ -22,6 +22,7 @@
 #include <cpp-terminal/options.hpp>
 #include <cpp-terminal/terminal.hpp>
 #include <cpp-terminal/tty.hpp>
+#include <ostream>
 #include <string_view>
 
 namespace cli::sim {
@@ -71,6 +72,7 @@ namespace cli::sim {
 
           switch (key.value) {
             case Term::Key::Ctrl_C:
+              Term::cout << std::endl;
               exit(0);
             case Term::Key::Ctrl_J:
               // clear screen
@@ -93,7 +95,19 @@ namespace cli::sim {
                 engine.on_char(c);
               break;
             case Term::Key::Enter:
-              engine.on_char('\n'); // TODO: respect Cli's delimiter
+              switch (
+                cli::config::input_delimiter_v<typename Engine::config_type>) {
+                case cli::Delimiter::lf:
+                  engine.on_char('\n');
+                  break;
+                case cli::Delimiter::cr:
+                  engine.on_char('\r');
+                  break;
+                case cli::Delimiter::crlf:
+                  engine.on_char('\r');
+                  engine.on_char('\n');
+                  break;
+              }
               break;
             case Term::Key::ArrowDown:
               for (auto c : cli::View{"\x1b[B"})

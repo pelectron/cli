@@ -12,6 +12,7 @@
 #include "cli/traits.hpp"
 
 #include <array>
+#include <limits>
 #include <source_location>
 #include <type_traits>
 #include <utility>
@@ -19,8 +20,8 @@
 // clang-format off
 #if defined(__clang__) && !defined(_MSC_VER)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
-  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
-  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "; cli::CharView = cli::View<const char>]"
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
+  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
 #elif defined(__GNUC__) && !defined(__clang__)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
@@ -118,7 +119,7 @@ namespace cli::ctti {
       const auto name =
         CharView{std::source_location::current().function_name()};
 #if defined(__clang__) and not defined(_MSC_VER)
-      const auto split = name.substr(0, name.find("}]") - 1);
+      const auto split = name.substr(0, name.find("}]"));
       return split.substr(split.find_last_of(".") + 1);
 #elif defined(__GNUC__)
       const auto split = name.substr(0, name.find(")}"));
@@ -332,6 +333,36 @@ namespace cli::ctti {
       generate_enum_names<E, CharT>(
         std::make_index_sequence<traits::enum_traits<E>::max -
                                  traits::enum_traits<E>::min + 1>{});
+
+    template<class E, typename CharT>
+    consteval std::underlying_type_t<E> biggest_enum_value() {
+      const auto &map = enum_name_map<E, CharT>;
+      return static_cast<std::underlying_type_t<E>>(map[map.size() - 1].first);
+    }
+
+    template<class E, typename CharT>
+      requires traits::enum_traits<E>::is_flag
+    consteval std::underlying_type_t<E> biggest_enum_value() {
+      std::underlying_type_t<E> val{};
+      for (const auto &[e, s] : enum_name_map<E, CharT>) {
+        val |= static_cast<std::underlying_type_t<E>>(e);
+      }
+      return static_cast<std::underlying_type_t<E>>(val);
+    }
+
+    template<class E, typename CharT>
+    consteval std::underlying_type_t<E> smallest_enum_value() {
+      return static_cast<std::underlying_type_t<E>>(
+        enum_name_map<E, CharT>[0].first);
+    }
+
+    template<class E, typename CharT>
+    inline constexpr std::underlying_type_t<E> biggest_enum_value_v =
+      biggest_enum_value<E, CharT>();
+
+    template<class E, typename CharT>
+    inline constexpr std::underlying_type_t<E> smallest_enum_value_v =
+      smallest_enum_value<E, CharT>();
 
     template<auto N>
     [[nodiscard]] consteval auto nth(auto... args) {

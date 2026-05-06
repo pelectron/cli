@@ -1,3 +1,5 @@
+#include "catch2/catch_test_macros.hpp"
+#include "cli/string.hpp"
 #include <cli/command.hpp>
 
 #include <catch2/catch_all.hpp>
@@ -8,6 +10,7 @@ TEST_CASE("CommandNode::add_sub ") {
   cli::CommandNode<char> abcd{.name = "abcd"};
   cli::CommandNode<char> abcde{.name = "abcde"};
   cli::CommandNode<char> abcdef{.name = "abcdef"};
+  cli::CommandNode<char> abcdefg{.name = "abcdefg"};
 
   SECTION("add to empty") {
     root.add_sub(abcd);
@@ -35,14 +38,20 @@ TEST_CASE("CommandNode::add_sub ") {
 
   SECTION("add in the middle") {
     root.add_sub(abcd);
-    root.add_sub(abcdef);
+    root.add_sub(abcdefg);
     REQUIRE(root.subcommand == &abcd);
-    REQUIRE(root.last_subcommand == &abcdef);
+    REQUIRE(root.last_subcommand == &abcdefg);
     root.add_sub(abcde);
     REQUIRE(root.subcommand == &abcd);
-    REQUIRE(root.last_subcommand == &abcdef);
+    REQUIRE(root.last_subcommand == &abcdefg);
+    REQUIRE(abcd.next == &abcde);
+    REQUIRE(abcde.next == &abcdefg);
+    root.add_sub(abcdef);
+    REQUIRE(root.subcommand == &abcd);
+    REQUIRE(root.last_subcommand == &abcdefg);
     REQUIRE(abcd.next == &abcde);
     REQUIRE(abcde.next == &abcdef);
+    REQUIRE(abcdef.next == &abcdefg);
   }
 }
 
@@ -122,5 +131,139 @@ TEST_CASE("CommandNode::execute") {
     REQUIRE(i == 0);
     REQUIRE(buf.size() == 0);
     REQUIRE(should_print_newline);
+  }
+}
+
+TEST_CASE("get_command") {
+  cli::CommandNode<char> root;
+  cli::CommandNode<char> abcd{.name = "abcd"};
+  cli::CommandNode<char> bcd{.name = "bcd"};
+  cli::CommandNode<char> cd{.name = "cd"};
+  cli::CommandNode<char> abcde{.name = "abcde"};
+  cli::CommandNode<char> bcde{.name = "bcde"};
+  cli::CommandNode<char> cde{.name = "cde"};
+
+  root.add_sub(abcd);
+  abcd.add_sub(bcd);
+  abcd.add_sub(cd);
+
+  root.add_sub(abcde);
+  abcde.add_sub(bcde);
+  abcde.add_sub(cde);
+
+  SECTION("invalid root") {
+    REQUIRE(cli::get_command<char>(cli::CharView{}, nullptr, '.') == nullptr);
+    REQUIRE(cli::get_command<char>(cli::CharView{"hello"}, nullptr, '.') ==
+            nullptr);
+  }
+  SECTION("plain invalid commands") {
+    REQUIRE(cli::get_command(cli::CharView{}, &root, '.') == nullptr);
+    REQUIRE(cli::get_command(cli::CharView{" "}, &root, '.') == nullptr);
+    REQUIRE(cli::get_command(cli::CharView{"("}, &root, '.') == nullptr);
+    REQUIRE(cli::get_command(cli::CharView{"="}, &root, '.') == nullptr);
+    REQUIRE(cli::get_command(cli::CharView{"."}, &root, '.') == nullptr);
+    REQUIRE(cli::get_command(cli::CharView{".abcd"}, &root, '.') == nullptr);
+    REQUIRE(cli::get_command(cli::CharView{"abcd."}, &root, '.') == nullptr);
+  }
+  SECTION("invalid commands first level") {
+    REQUIRE(cli::get_command(cli::CharView{"abc"}, &root, '.') == nullptr);
+  }
+  SECTION("invalid commands second level") {
+    REQUIRE(cli::get_command(cli::CharView{"abcd.abc"}, &root, '.') == nullptr);
+    REQUIRE(cli::get_command(cli::CharView{"abcde.abc"}, &root, '.') ==
+            nullptr);
+  }
+  SECTION("valid commands") {
+    REQUIRE(cli::get_command(cli::CharView{"abcd"}, &root, '.') == &abcd);
+    REQUIRE(cli::get_command(cli::CharView{"abcde"}, &root, '.') == &abcde);
+    REQUIRE(cli::get_command(cli::CharView{"abcd.bcd"}, &root, '.') == &bcd);
+    REQUIRE(cli::get_command(cli::CharView{"abcd.cd"}, &root, '.') == &cd);
+    REQUIRE(cli::get_command(cli::CharView{"abcde"}, &root, '.') == &abcde);
+    REQUIRE(cli::get_command(cli::CharView{"abcde.bcde"}, &root, '.') == &bcde);
+    REQUIRE(cli::get_command(cli::CharView{"abcde.cde"}, &root, '.') == &cde);
+  }
+}
+
+TEST_CASE("split line") {
+  cli::CommandNode<char> root;
+  cli::CommandNode<char> abcd{.name = "abcd"};
+  cli::CommandNode<char> bcd{.name = "bcd"};
+  cli::CommandNode<char> cd{.name = "cd"};
+  cli::CommandNode<char> abcde{.name = "abcde"};
+  cli::CommandNode<char> bcde{.name = "bcde"};
+  cli::CommandNode<char> cde{.name = "cde"};
+
+  root.add_sub(abcd);
+  abcd.add_sub(bcd);
+  abcd.add_sub(cd);
+
+  root.add_sub(abcde);
+  abcde.add_sub(bcde);
+  abcde.add_sub(cde);
+
+  SECTION("empty line") {
+    cli::SplitResult r = cli::split_line(cli::CharView{}, &root, '.');
+    REQUIRE(r.command == nullptr);
+    REQUIRE(r.args == cli::CharView{});
+  }
+
+  SECTION("empty root") {
+    cli::SplitResult r = cli::split_line<char>(cli::CharView{}, nullptr, '.');
+    REQUIRE(r.command == nullptr);
+    REQUIRE(r.args == cli::CharView{});
+
+    r = cli::split_line<char>(cli::CharView{"hello"}, nullptr, '.');
+    REQUIRE(r.command == nullptr);
+    REQUIRE(r.args == cli::CharView{});
+  }
+
+  SECTION("plain invalid line") {
+    cli::SplitResult r = cli::split_line(cli::CharView{" "}, &root, '.');
+    REQUIRE(r.command == nullptr);
+    REQUIRE(r.args == cli::CharView{});
+
+    r = cli::split_line(cli::CharView{"("}, &root, '.');
+    REQUIRE(r.command == nullptr);
+    REQUIRE(r.args == cli::CharView{});
+
+    r = cli::split_line(cli::CharView{"="}, &root, '.');
+    REQUIRE(r.command == nullptr);
+    REQUIRE(r.args == cli::CharView{});
+
+    r = cli::split_line(cli::CharView{"."}, &root, '.');
+    REQUIRE(r.command == nullptr);
+    REQUIRE(r.args == cli::CharView{});
+
+    r = cli::split_line(cli::CharView{"abcd."}, &root, '.');
+    REQUIRE(r.command == nullptr);
+    REQUIRE(r.args == cli::CharView{});
+  }
+
+  SECTION("valid commands") {
+
+    cli::SplitResult r =
+      cli::split_line(cli::CharView{"abcd args"}, &root, '.');
+    REQUIRE(r.command == &abcd);
+    REQUIRE(r.args == " args");
+
+    r = cli::split_line(cli::CharView{"abcd.bcd args"}, &root, '.');
+    REQUIRE(r.command == &bcd);
+    REQUIRE(r.args == " args");
+
+    r = cli::split_line(cli::CharView{"abcd.cd args"}, &root, '.');
+    REQUIRE(r.command == &cd);
+    REQUIRE(r.args == " args");
+
+    r = cli::split_line(cli::CharView{"abcde args"}, &root, '.');
+    REQUIRE(r.command == &abcde);
+    REQUIRE(r.args == " args");
+
+    r = cli::split_line(cli::CharView{"abcde.bcde args"}, &root, '.');
+    REQUIRE(r.command == &bcde);
+    REQUIRE(r.args == " args");
+
+    r = cli::split_line(cli::CharView{"abcde.cde args"}, &root, '.');
+    REQUIRE(r.command == &cde);
+    REQUIRE(r.args == " args");
   }
 }

@@ -59,8 +59,6 @@ namespace cli {
   concept StringOf = std::constructible_from<const C *, const C *> or
                      std::constructible_from<const C *, std::size_t>;
 
-  namespace dtl {} // namespace dtl
-
   namespace dtl {
 
     template<typename F, class Tuple, class... Args, std::size_t... Is>
@@ -161,7 +159,7 @@ namespace cli {
         else
           return m;
       }
-    };
+    }
 
     template<std::unsigned_integral T, std::unsigned_integral U>
     std::common_type_t<T, U> min(T t, U u) {
@@ -172,16 +170,22 @@ namespace cli {
 
     template<std::signed_integral T, std::unsigned_integral U>
     std::common_type_t<T, U> min(T t, U u) {
-      if (t < 0 or t < u)
+      if (t < 0)
         return t;
-      return u;
+      else if (static_cast<U>(t) < u)
+        return t;
+      else
+        return u;
     }
 
     template<std::unsigned_integral T, std::signed_integral U>
     std::common_type_t<T, U> min(T t, U u) {
-      if (u < 0 or u < t)
+      if (u < 0)
         return u;
-      return t;
+      else if (static_cast<T>(u) < t)
+        return u;
+      else
+        return t;
     }
 
     template<std::signed_integral T, std::signed_integral U>
@@ -655,21 +659,23 @@ namespace cli {
 
   template<class T, typename Ret, class... MemFunArgs>
   struct MemFunBinder<T, Ret (T::*)(MemFunArgs...) const> {
-    const T &t;
+    const T *t;
     Ret (T::*mem_fun)(MemFunArgs...) const;
 
     constexpr MemFunBinder(const T &t, Ret (T::*mem_fun)(MemFunArgs...) const)
-      : t(t), mem_fun(mem_fun) {}
+      : t(&t), mem_fun(mem_fun) {}
     constexpr MemFunBinder(const MemFunBinder &) = default;
     constexpr MemFunBinder(MemFunBinder &&) = default;
     constexpr MemFunBinder &operator=(const MemFunBinder &) = default;
     constexpr MemFunBinder &operator=(MemFunBinder &&) = default;
-    Ret operator()(MemFunArgs... args) const { return (t.*(mem_fun))(args...); }
+    Ret operator()(MemFunArgs... args) const {
+      return (t->*(mem_fun))(args...);
+    }
   };
 
   template<class T, typename Ret, class... MemFunArgs>
   struct MemFunBinder<T, Ret (T::*)(MemFunArgs...) const noexcept> {
-    const T &t;
+    const T *t;
     Ret (T::*mem_fun)(MemFunArgs...) const noexcept;
 
     constexpr MemFunBinder(const T &t,
