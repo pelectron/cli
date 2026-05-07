@@ -3,7 +3,7 @@
 #include "cli/enums.hpp"
 #include "cli/string.hpp"
 
-#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_all.hpp>
 #include <string>
 #include <vector>
 
@@ -271,55 +271,26 @@ static_assert(cli::concepts::Display<Display, char>);
   root.add_sub(z1);                                                            \
   root.add_sub(z2)
 
-TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
+TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
+                   "",
+                   NoCursor_NoAutocomplete,
+                   Cursor_NoAutocomplete,
+                   NoCursor_Autocomplete,
+                   Cursor_Autocomplete) {
   DEFINE_COMMANDS();
-  Display d;
-  cli::Line<NoCursor_NoAutocomplete, Display> line(root, d);
-  REQUIRE(line.on_char('c') == cli::Error::none);
-  REQUIRE(line.on_char('1') == cli::Error::none);
-  REQUIRE(line.view() == "c1");
-  REQUIRE(line.on_char('.') == cli::Error::none);
-  REQUIRE(line.on_char('c') == cli::Error::none);
-  REQUIRE(line.on_char('2') == cli::Error::none);
-  REQUIRE(line.view() == "c1.c2");
-  SECTION("on_char line is full") {
-    line.set_data("01234567890123456789012345678901");
-    REQUIRE(line.on_char('x') == cli::Error::buffer_overflow);
-  }
-  SECTION("on_char empty and access_separator") {
-    line.clear();
-    REQUIRE(line.on_char('.') == cli::Error::none);
-    REQUIRE(line.view().size() == 0);
-  }
-  SECTION("backspace(1)") {
-    line.on_backspace(1);
-    REQUIRE(line.view() == "c1.c");
-    line.on_backspace(4);
-    REQUIRE(line.view().size() == 0);
-  }
-  SECTION("backspace(2)") {
-    line.on_backspace(2);
-    REQUIRE(line.view() == "c1.");
-    line.on_backspace(3);
-    REQUIRE(line.view().size() == 0);
-  }
-  SECTION("autocomplete") {
-    line.set_data("c1.c2");
-    REQUIRE(line.on_autocomplete() == cli::Error::none);
-  }
-  SECTION("clear") {
-    line.clear();
-    REQUIRE(line.view().size() == 0);
-  }
-  SECTION("execute with single line display") {
+  SECTION("single line display") {
+    Display d;
+    cli::Line<TestType, Display> line(root, d);
     char buffer[16]{};
     cli::View<char> out{buffer, 16};
 
     SECTION("invalid command") {
-      line.set_data("c5long");
-      REQUIRE(line.execute(out) == cli::Error::invalid_cmd);
-      REQUIRE(d.data == "invalid_cmd");
-      REQUIRE(d.past == std::vector<std::string>{"c5long"});
+      if constexpr (not std::is_same_v<TestType, NoCursor_Autocomplete>) {
+        line.set_data("c5long");
+        REQUIRE(line.execute(out) == cli::Error::invalid_cmd);
+        REQUIRE(d.data == "invalid_cmd");
+        REQUIRE(d.past == std::vector<std::string>{"c5long"});
+      }
     }
 
     SECTION("no error from execute") {
@@ -343,80 +314,177 @@ TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
       REQUIRE(d.data == "parse error: dual_separators at 5");
       REQUIRE(d.past == std::vector<std::string>{"c2.c3 args"});
     }
-  }
 
-  SECTION("on_char after execute with single line display") {
-    line.set_data("c1");
-    char buffer[16]{};
-    cli::View<char> out{buffer, 16};
-    line.execute(out);
-    line.on_char('c');
-    REQUIRE(d.data == "c");
-    REQUIRE(d.past == std::vector<std::string>{"c1"});
+    SECTION("set_error from execute") {
+      line.set_data("c4long args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data == "can't set param: expected_assignment");
+      REQUIRE(d.past == std::vector<std::string>{"c4long args"});
+    }
+
+    SECTION("get_error from execute") {
+      line.set_data("c4long.c5long args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data == "can't get param: expected_delimiter");
+      REQUIRE(d.past == std::vector<std::string>{"c4long.c5long args"});
+    }
+
+    SECTION("format_error from execute") {
+      line.set_data("z1 args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data == "format error: invalid_argument");
+      REQUIRE(d.past == std::vector<std::string>{"z1 args"});
+    }
+
+    SECTION("format_error from execute") {
+      line.set_data("z2 args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data == "arg 42 is invalid");
+      REQUIRE(d.past == std::vector<std::string>{"z2 args"});
+    }
+
+    SECTION("on_char after execute") {
+      line.set_data("c1");
+      char buffer[16]{};
+      cli::View<char> out{buffer, 16};
+      line.execute(out);
+      line.on_char('c');
+      REQUIRE(d.data == "c");
+      REQUIRE(d.past == std::vector<std::string>{"c1"});
+    }
   }
 
   SECTION("execute with multiline display") {
     MultilineDisplay d;
-    cli::Line<NoCursor_NoAutocomplete, MultilineDisplay> line(root, d);
+    cli::Line<TestType, MultilineDisplay> line(root, d);
     char buffer[16]{};
     cli::View<char> out{buffer, 16};
 
     SECTION("invalid command") {
-      line.set_data("c5long");
-      REQUIRE(line.execute(out) == cli::Error::invalid_cmd);
-      REQUIRE(d.data.empty());
-      REQUIRE(d.past == std::vector<std::string>{"c5long", "invalid_cmd"});
+      if constexpr (not std::is_same_v<TestType, NoCursor_Autocomplete>) {
+        line.set_data("c5long");
+        REQUIRE(line.execute(out) == cli::Error::invalid_cmd);
+        REQUIRE(d.data.empty());
+        REQUIRE(d.past == std::vector<std::string>{"c5long", "invalid_cmd"});
+      }
     }
 
     SECTION("no error from execute") {
-      SECTION("should_print_newline=false, buf is empty") {
+      SECTION("empty result") {
         line.set_data("c1");
         REQUIRE(line.execute(out) == cli::Error::none);
         REQUIRE(d.data.empty());
         REQUIRE(d.past == std::vector<std::string>{"c1"});
       }
-
-      SECTION("should_print_newline=true, buf is empty") {
+      SECTION("with result") {
         line.set_data("c2");
-        line.execute(out);
-        REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{{"c2"}});
-      }
-
-      SECTION("should_print_newline=true, buf is not empty") {
-        line.set_data("c2.c3");
         REQUIRE(line.execute(out) == cli::Error::none);
         REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{"c2.c3", "the answer"});
-      }
-
-      SECTION("should_print_newline=false, buf is not empty") {
-        line.set_data("c4long");
-        REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{"c4long", "the answer"});
+        REQUIRE(d.past == std::vector<std::string>{"c2", "hello"});
       }
     }
 
-    SECTION("error from execute") {
-      line.set_data("c4long.c5long");
-      REQUIRE(line.execute(out) == cli::Error::cant_set_param);
+    SECTION("parse_error from execute") {
+      line.set_data("c2.c3 args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data.empty());
+      REQUIRE(d.past == std::vector<std::string>{
+                          "c2.c3 args", "parse error: dual_separators at 5"});
+    }
+
+    SECTION("set_error from execute") {
+      line.set_data("c4long args");
+      REQUIRE(line.execute(out) == cli::Error::none);
       REQUIRE(d.data.empty());
       REQUIRE(d.past ==
-              std::vector<std::string>{"c4long.c5long", "cant_set_param"});
+              std::vector<std::string>{"c4long args",
+                                       "can't set param: expected_assignment"});
+    }
+
+    SECTION("get_error from execute") {
+      line.set_data("c4long.c5long args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data.empty());
+      REQUIRE(d.past ==
+              std::vector<std::string>{"c4long.c5long args",
+                                       "can't get param: expected_delimiter"});
+    }
+
+    SECTION("format_error from execute") {
+      line.set_data("z1 args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data.empty());
+      REQUIRE(d.past == std::vector<std::string>{
+                          "z1 args", "format error: invalid_argument"});
+    }
+
+    SECTION("format_error from execute") {
+      line.set_data("z2 args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data.empty());
+      REQUIRE(d.past ==
+              std::vector<std::string>{"z2 args", "arg 42 is invalid"});
+    }
+
+    SECTION("on_char after execute") {
+      MultilineDisplay d;
+      cli::Line<NoCursor_Autocomplete, MultilineDisplay> line(root, d);
+      char buffer[16]{};
+      cli::View<char> out{buffer, 16};
+      line.set_data("c1");
+      line.execute(out);
+      line.on_char('c');
+      REQUIRE(d.data == "c");
+      REQUIRE(d.past == std::vector<std::string>{"c1"});
     }
   }
+}
 
-  SECTION("on_char after execute with multiline display") {
-    MultilineDisplay d;
-    cli::Line<NoCursor_NoAutocomplete, MultilineDisplay> line(root, d);
-    char buffer[16]{};
-    cli::View<char> out{buffer, 16};
-    line.set_data("c1");
-    line.execute(out);
-    line.on_char('c');
-    REQUIRE(d.data == "c");
-    REQUIRE(d.past == std::vector<std::string>{"c1"});
+TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
+  DEFINE_COMMANDS();
+  Display d;
+  cli::Line<NoCursor_NoAutocomplete, Display> line(root, d);
+  REQUIRE(line.on_char('c') == cli::Error::none);
+  REQUIRE(line.on_char('1') == cli::Error::none);
+  REQUIRE(line.view() == "c1");
+  REQUIRE(line.on_char('.') == cli::Error::none);
+  REQUIRE(line.on_char('c') == cli::Error::none);
+  REQUIRE(line.on_char('2') == cli::Error::none);
+  REQUIRE(line.view() == "c1.c2");
+
+  SECTION("on_char line is full") {
+    line.set_data("01234567890123456789012345678901");
+    REQUIRE(line.on_char('x') == cli::Error::buffer_overflow);
+  }
+
+  SECTION("on_char empty and access_separator") {
+    line.clear();
+    REQUIRE(line.on_char('.') == cli::Error::none);
+    REQUIRE(line.view().size() == 0);
+  }
+
+  SECTION("backspace(1)") {
+    line.on_backspace(1);
+    REQUIRE(line.view() == "c1.c");
+    line.on_backspace(4);
+    REQUIRE(line.view().size() == 0);
+  }
+
+  SECTION("backspace(2)") {
+    line.on_backspace(2);
+    REQUIRE(line.view() == "c1.");
+    line.on_backspace(3);
+    REQUIRE(line.view().size() == 0);
+  }
+
+  SECTION("autocomplete") {
+    line.set_data("c1.c2");
+    REQUIRE(line.on_autocomplete() == cli::Error::none);
+  }
+
+  SECTION("clear") {
+    line.clear();
+    REQUIRE(line.view().size() == 0);
   }
 }
 
@@ -427,6 +495,7 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
   REQUIRE(line.on_char('a') == cli::Error::none);
   REQUIRE(line.view().size() == 0);
   REQUIRE(d.data.empty());
+
   SECTION("on_char no subcommands") {
     REQUIRE(line.on_char('c') == cli::Error::none);
     REQUIRE(line.on_char('1') == cli::Error::none);
@@ -436,31 +505,37 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.view() == "c1");
     REQUIRE(d.data == "c1");
   }
+
   SECTION("on_char empty and access_separator") {
     line.clear();
     REQUIRE(line.on_char('.') == cli::Error::none);
     REQUIRE(line.view().size() == 0);
   }
+
   SECTION("on_char in args") {
     line.set_data("c2.c3 args");
     REQUIRE(line.on_char('1') == cli::Error::none);
     REQUIRE(line.view() == "c2.c3 args1");
   }
+
   SECTION("on_char and full line") {
     line.set_data("c1 01234567890123456789012345678");
     REQUIRE(line.on_char('x') == cli::Error::buffer_overflow);
   }
+
   SECTION("autocomplete with empty line") {
     REQUIRE(line.on_autocomplete() == cli::Error::none);
     REQUIRE(line.view() == "c1");
     REQUIRE(d.data == "c1");
   }
+
   SECTION("correct set_data without subcommands") {
     REQUIRE(line.set_data("c1") == cli::Error::none);
     REQUIRE(d.data == "c1");
     REQUIRE(line.set_data("c1 args") == cli::Error::none);
     REQUIRE(d.data == "c1 args");
   }
+
   SECTION("incorrect set_data without subcommands") {
     REQUIRE_FALSE(line.set_data("c1.") == cli::Error::none);
     REQUIRE(d.data.empty());
@@ -471,6 +546,7 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE_FALSE(line.set_data("c3 args") == cli::Error::none);
     REQUIRE(d.data.empty());
   }
+
   SECTION("correct set_data with subcommands") {
     REQUIRE(line.set_data("c2") == cli::Error::none);
     REQUIRE(line.view() == "c2");
@@ -491,6 +567,7 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.view() == "c2.c3 args");
     REQUIRE(d.data == "c2.c3 args");
   }
+
   SECTION("incorrect set_data with subcommands") {
     REQUIRE_FALSE(line.set_data("c3") == cli::Error::none);
     REQUIRE(line.view().size() == 0);
@@ -514,6 +591,7 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.view().size() == 0);
     REQUIRE(d.data.empty());
   }
+
   SECTION("autocomplete without subcommands") {
     REQUIRE(line.set_data("c1") == cli::Error::none);
     REQUIRE(d.data == "c1");
@@ -523,6 +601,7 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(d.data == "c1");
     REQUIRE(d.cursor == 2);
   }
+
   SECTION("autocomplete with subcommands with starting character") {
     line.set_data("c2");
     REQUIRE(line.on_char('.') == cli::Error::none);
@@ -534,12 +613,14 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.view() == "c2.c3");
     REQUIRE(d.data == "c2.c3");
   }
+
   SECTION("autocomplete with full name") {
     line.set_data("c2");
     REQUIRE(line.on_autocomplete() == cli::Error::none);
     REQUIRE(line.view() == "c2.");
     REQUIRE(d.data == "c2.");
   }
+
   SECTION("autocomplete with full name and separator") {
     line.set_data("c2.");
     REQUIRE(line.on_autocomplete() == cli::Error::none);
@@ -549,6 +630,7 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.view() == "c2.c3");
     REQUIRE(d.data == "c2.c3");
   }
+
   SECTION("autocomplete with full name and separator") {
     line.set_data("c2.c");
     REQUIRE(line.on_autocomplete() == cli::Error::none);
@@ -558,98 +640,12 @@ TEST_CASE("cli::Line<NoCursor, Autocomplete>") {
     REQUIRE(line.view() == "c2.c3");
     REQUIRE(d.data == "c2.c3");
   }
+
   SECTION("autocomplete in args") {
     line.set_data("c2.c3 args");
     REQUIRE(line.on_autocomplete() == cli::Error::none);
     REQUIRE(line.view() == "c2.c3 args");
     REQUIRE(d.data == "c2.c3 args");
-  }
-
-  SECTION("execute with single line display") {
-    char buffer[16]{};
-    cli::View<char> out{buffer, 16};
-
-    SECTION("no error from execute") {
-      SECTION("should_print_newline=false, buf is empty") {
-        line.set_data("c1");
-        REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data == "c1");
-        REQUIRE(d.past.empty());
-      }
-
-      SECTION("should_print_newline=true, buf is empty") {
-        line.set_data("c2");
-        line.execute(out);
-        REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{{"c2"}});
-      }
-
-      SECTION("should_print_newline=true, buf is not empty") {
-        line.set_data("c2.c3");
-        REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data == "the answer");
-        REQUIRE(d.past == std::vector<std::string>{"c2.c3"});
-      }
-
-      SECTION("should_print_newline=false, buf is not empty") {
-        line.set_data("c4long");
-        REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data == "c4longthe answer");
-        REQUIRE(d.past.empty());
-      }
-    }
-
-    SECTION("error from execute") {
-      line.set_data("c4long.c5long");
-      REQUIRE(line.execute(out) == cli::Error::cant_set_param);
-      REQUIRE(d.data == "cant_set_param");
-      REQUIRE(d.past == std::vector<std::string>{"c4long.c5long"});
-    }
-  }
-
-  SECTION("execute with multiline display") {
-    MultilineDisplay d;
-    cli::Line<NoCursor_Autocomplete, MultilineDisplay> line(root, d);
-    char buffer[16]{};
-    cli::View<char> out{buffer, 16};
-
-    SECTION("no error from execute") {
-      SECTION("should_print_newline=false, buf is empty") {
-        line.set_data("c1");
-        REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{"c1"});
-      }
-
-      SECTION("should_print_newline=true, buf is empty") {
-        line.set_data("c2");
-        line.execute(out);
-        REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{{"c2"}});
-      }
-
-      SECTION("should_print_newline=true, buf is not empty") {
-        line.set_data("c2.c3");
-        REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{"c2.c3", "the answer"});
-      }
-
-      SECTION("should_print_newline=false, buf is not empty") {
-        line.set_data("c4long");
-        REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{"c4long", "the answer"});
-      }
-    }
-
-    SECTION("error from execute") {
-      line.set_data("c4long.c5long");
-      REQUIRE(line.execute(out) == cli::Error::cant_set_param);
-      REQUIRE(d.data.empty());
-      REQUIRE(d.past ==
-              std::vector<std::string>{"c4long.c5long", "cant_set_param"});
-    }
   }
 }
 

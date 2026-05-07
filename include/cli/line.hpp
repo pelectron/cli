@@ -130,7 +130,6 @@ namespace cli {
 
       if (size_ == 0 and command_entered_) {
         display_.newline();
-        return Error::none;
       }
 
       return insert_write<Cfg::max_line_length>(
@@ -356,6 +355,7 @@ namespace cli {
             return dtl::print_error<CharT>(line, display_, fmt_res.error);
           display_.write({buffer, fmt_res.size_written});
           display_.write(string_constant<CharT,
+                                         ' ',
                                          'i',
                                          's',
                                          ' ',
@@ -488,7 +488,6 @@ namespace cli {
 
       if (size_ == 0 and command_entered_) {
         display_.newline();
-        return Error::none;
       }
 
       data_[size_++] = c;
@@ -595,7 +594,6 @@ namespace cli {
 
       if (size_ == 0 and command_entered_) {
         display_.newline();
-        return Error::none;
       }
 
       if (start_of_args_ < size_) {
