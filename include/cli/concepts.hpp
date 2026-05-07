@@ -109,15 +109,13 @@ namespace cli {
      * A CharOutput is used to write a single character to an unbuffered
      * output Output.
      *
-     * It is a callable that takes a character as input and returns a
-     * cli::Error to indicate write success or failure.
+     * It is a callable that takes a character as input and returns void.
      *
      * Example for an embedded target with UART:
      *
      * ```
-     * cli::Error char_output(char c){
-     *   HAL_Status status = HAL_UART_Transmit(c);
-     *   return status_to_cli_err(status);
+     * void char_output(char c){
+     *   HAL_UART_Transmit(c);
      * }
      *
      * static_assert(cli::CharOutput<decltype(&char_output), char>);
@@ -129,7 +127,7 @@ namespace cli {
      */
     template<class O, typename CharT>
     concept CharOutput = requires(std::decay_t<O> output, CharT c) {
-      { output(c) } -> std::same_as<cli::Error>;
+      { output(c) } -> std::same_as<void>;
     };
 
     /**
@@ -137,18 +135,15 @@ namespace cli {
      * unbuffered output Output.
      *
      * It is a callable that takes a cli::View<const CharT> as input
-     * and returns a cli::Error to indicate write success or failure.
+     * and returns void.
      *
      * Example for an embedded target with UART:
      *
      * ```
-     * cli::Error my_string_output(cli::View<const char> string){
+     * void my_string_output(cli::View<const char> string){
      *   for(const char& ch: string){
-     *     HAL_Status status = HAL_UART_Transmit(ch);
-     *     if(status != HAL_STAUS_OK)
-     *       return status_to_cli_err(status);
+     *     HAL_UART_Transmit(ch);
      *   }
-     *   return cli::Error::none;
      * }
      *
      * static_assert(cli::StringOutput<decltype(&my_string_output), char>);
@@ -161,7 +156,7 @@ namespace cli {
     template<class O, typename CharT>
     concept StringOutput =
       requires(std::decay_t<O> output, cli::View<const CharT> s) {
-        { output(s) } -> std::same_as<cli::Error>;
+        { output(s) } -> std::same_as<void>;
       };
 
     /**

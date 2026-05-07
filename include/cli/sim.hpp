@@ -28,9 +28,8 @@
 namespace cli::sim {
 
   namespace dtl {
-    inline cli::Error write(cli::View<const char> s) {
+    inline void write(cli::View<const char> s) {
       Term::cout << std::string_view(s.data(), s.size()) << std::flush;
-      return cli::Error::none;
     }
   } // namespace dtl
 

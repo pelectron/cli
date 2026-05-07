@@ -29,6 +29,7 @@
 #include "cli/enums.hpp"
 #include "cli/format.hpp"
 #include "cli/string.hpp"
+#include "cli/util.hpp"
 
 #include <type_traits>
 
@@ -265,7 +266,7 @@ namespace cli {
     }
 
   private:
-    Out out_;
+    CLI_NO_UNIQUE_ADDRESS Out out_;
   };
 
   template<typename Out>
