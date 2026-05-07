@@ -25,8 +25,11 @@
 #include "cli/type_list.hpp"
 #include "cli/util.hpp"
 #include "cli/validator.hpp"
+#include "command.hpp"
+#include "type_list.hpp"
 
 #include <concepts>
+#include <cstddef>
 #include <type_traits>
 #include <utility>
 
@@ -350,6 +353,11 @@ namespace cli::funcs {
         return std::tuple(parse_field_from_arg(std::get<Is>(args))...);
       }(std::make_index_sequence<sizeof...(Args)>{});
     }
+
+    struct ValidateResult {
+      bool valid{false};
+      std::size_t index{0};
+    };
   } // namespace dtl
 
   /**
@@ -1016,9 +1024,8 @@ namespace cli::funcs {
       Name, Description, Type, Func &&function, std::tuple<Args...> &&args)
       : func_(std::forward<Func>(function)), args_(std::move(args)) {}
 
-    constexpr Error execute(View<const char_type> args,
-                            [[maybe_unused]] View<char_type> &out,
-                            bool &should_print_newline) {
+    constexpr ExecResult<char_type>
+    execute(View<const char_type> args, [[maybe_unused]] View<char_type> out) {
       using Ret = typename traits::return_type;
 
       Parser parse{dtl::parse_field_from_args(this->args_)};
@@ -1026,58 +1033,64 @@ namespace cli::funcs {
       args = parse::trim_ws(args);
 
       if (args.size() == 1 and args[0] == '(') {
-        return Error::expected_rparen;
+        return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
+                                                       args.end());
       }
 
       if (args.size() > 1) {
         if (args[0] == '(') {
           if (args[args.size() - 1] != ')') {
-            return Error::expected_rparen;
+            return ExecResult<char_type>::make_parse_error(
+              Error::expected_rparen, args.end());
           }
           args = args.substr(1, args.size() - 2);
         }
       }
 
-      auto res = parse(args);
+      parse::ParseResult res = parse(args);
+
       if (not res)
-        return res.error;
+        return ExecResult<char_type>::make_parse_error(res.error,
+                                                       res.rest.data());
 
-      return
-        [&tuple = res.value,
-         &out,
-         this,
-         &should_print_newline]<std::size_t... Is>(std::index_sequence<Is...>) {
-          if (not validate(tuple, std::index_sequence<Is...>{}))
-            return Error::invalid_argument;
+      if (res.rest.size() != 0)
+        return ExecResult<char_type>::make_parse_error(
+          Error::unexpected_characters, res.rest.data());
 
-          if constexpr (std::is_same_v<void, Ret>) {
-            out = {};
-            should_print_newline = false;
-            func_(std::get<Is>(tuple).value...);
-            return Error::none;
-          } else {
-            should_print_newline = true;
-            Ret res = func_(std::get<Is>(tuple).value...);
-            format::Format<Ret, typename Base::char_type> format;
-            auto fmt_result = format(out, res);
-            out = out.substr(0, fmt_result.size_written);
-            return fmt_result.error;
-          }
-        }(std::make_index_sequence<sizeof...(Args)>());
-      return Error::unimplemented;
+      return [&tuple = res.value, &out, this]<std::size_t... Is>(
+               std::index_sequence<Is...>) -> ExecResult<char_type> {
+        if (auto validate_res = validate(tuple, std::index_sequence<Is...>{});
+            not validate_res.valid)
+          return ExecResult<char_type>::make_validation_error(
+            validate_res.index);
+
+        if constexpr (std::is_same_v<void, Ret>) {
+          func_(std::get<Is>(tuple).value...);
+          return ExecResult<char_type>::make_success();
+        } else {
+          Ret ret_val = func_(std::get<Is>(tuple).value...);
+          format::Format<Ret, typename Base::char_type> format{};
+          format::FormatResult fmt_result = format(out, ret_val);
+          if (not fmt_result)
+            return ExecResult<char_type>::make_format_error(fmt_result.error);
+          else
+            return ExecResult<char_type>::make_success(
+              out.substr(0, fmt_result.size_written));
+        }
+      }(std::make_index_sequence<sizeof...(Args)>());
     }
 
     template<std::size_t I, std::size_t... Is>
-    static constexpr bool validate(const auto &tuple,
-                                   std::index_sequence<I, Is...>) {
+    static constexpr dtl::ValidateResult
+    validate(const auto &tuple, std::index_sequence<I, Is...>) {
       auto valid =
         typename type_list::type_at_t<I, TypeList<Args...>>::validator{}(
           std::get<I>(tuple).value);
       if constexpr (sizeof...(Is) == 0)
-        return valid;
+        return {.valid = valid, .index = type_list::list_size_v<arguments>};
       else {
         if (not valid)
-          return false;
+          return {.valid = false, .index = I + 1};
         return validate(tuple, std::index_sequence<Is...>{});
       }
     }
@@ -1113,21 +1126,22 @@ namespace cli::funcs {
     constexpr Function(Name, Description, Type, Func &&function)
       : func_(std::forward<Func>(function)) {}
 
-    constexpr Error execute(View<const char_type> args,
-                            [[maybe_unused]] View<char_type> &out,
-                            bool &should_print_newline) {
+    constexpr ExecResult<char_type>
+    execute(View<const char_type> args, [[maybe_unused]] View<char_type> out) {
       using Ret = typename traits::return_type;
 
       args = parse::trim_ws(args);
 
       if (args.size() == 1 and args[0] == '(') {
-        return Error::expected_rparen;
+        return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
+                                                       args.end());
       }
 
       if (args.size() > 1) {
         if (args[0] == '(') {
           if (args[args.size() - 1] != ')') {
-            return Error::expected_rparen;
+            return ExecResult<char_type>::make_parse_error(
+              Error::expected_rparen, args.end());
           }
           args = args.substr(1, args.size() - 2);
         }
@@ -1136,19 +1150,21 @@ namespace cli::funcs {
       args = parse::trim_ws(args);
 
       if (args.size() != 0)
-        return Error::invalid_argument;
+        return ExecResult<char_type>::make_parse_error(Error::invalid_argument,
+                                                       args.data());
 
       if constexpr (std::is_same_v<void, Ret>) {
-        should_print_newline = false;
         func_();
-        out = {};
-        return Error::none;
+        return ExecResult<char_type>::make_success();
       } else {
-        should_print_newline = true;
-        auto res = format_(out, func_());
-        return res.error;
+        format::Format<Ret, typename Base::char_type> format;
+        format::FormatResult res = format(out, func_());
+        if (not res)
+          return ExecResult<char_type>::make_format_error(res.error);
+        else
+          return ExecResult<char_type>::make_success(
+            out.substr(0, res.size_written));
       }
-      return Error::unimplemented;
     }
 
   private:

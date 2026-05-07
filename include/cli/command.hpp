@@ -17,12 +17,12 @@
 #define CLI_COMMAND_HPP
 
 #include "cli/concepts.hpp"
-#include "cli/config.hpp"
-#include "cli/enums.hpp"
+#include "cli/exec_result.hpp"
 #include "cli/parse.hpp"
 #include "cli/string.hpp"
 #include "cli/type_list.hpp"
 
+#include <cstddef>
 #include <tuple>
 
 namespace cli {
@@ -44,7 +44,9 @@ namespace cli {
     /// points to the actual command
     void *this_ = nullptr;
     /// executes the command
-    Error (*exec_)(void *, View<const CharT>, View<CharT> &, bool &) = nullptr;
+    ExecResult<CharT> (*exec_)(void *this_,
+                               View<const CharT> args,
+                               View<CharT> out) = nullptr;
     // the parent command
     CommandNode *parent = nullptr;
     /// the next sibling command
@@ -101,12 +103,9 @@ namespace cli {
      *        printed after execution.
      * @return the error
      */
-    constexpr Error execute(View<const CharT> args,
-                            View<CharT> &out,
-                            bool &should_print_newline) const {
-      if (this_ and exec_)
-        return (*exec_)(this_, args, out, should_print_newline);
-      return Error::invalid_cmd;
+    constexpr ExecResult<CharT> execute(View<const CharT> args,
+                                        View<CharT> out) const {
+      return (*exec_)(this_, args, out);
     }
 
     /**
@@ -198,11 +197,9 @@ namespace cli {
      *        after executing this command.
      * @return the error
      */
-    constexpr Error execute(View<const char_type> args,
-                            View<char_type> &out,
-                            bool &should_print_newline) {
-      return static_cast<Derived *>(this)->execute(
-        args, out, should_print_newline);
+    constexpr ExecResult<char_type> execute(View<const char_type> args,
+                                            View<char_type> out) {
+      return static_cast<Derived *>(this)->execute(args, out);
     }
 
   protected:
@@ -269,11 +266,9 @@ namespace cli {
      *        after executing this command
      * @return the error
      */
-    constexpr Error execute(View<const char_type> args,
-                            View<char_type> &out,
-                            bool &should_print_newline) {
-      return static_cast<Derived *>(this)->execute(
-        type, args, out, should_print_newline);
+    constexpr ExecResult<char_type> execute(View<const char_type> args,
+                                            View<char_type> out) {
+      return static_cast<Derived *>(this)->execute(args, out);
     }
   };
 

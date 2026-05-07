@@ -271,57 +271,64 @@ namespace cli::params {
 
       // Param(SC /*name*/, const T &value, Get getter, Set setter);
 
-      constexpr Error execute(View<const char_type> args,
-                              View<char_type> &out,
-                              bool &should_print_newline) {
+      constexpr ExecResult<char_type> execute(View<const char_type> args,
+                                              View<char_type> out) {
         args = parse::trim_ws(args);
         if (args.size() == 0) {
-          should_print_newline = true;
           return get_value(out);
         }
 
         if (args[0] == '=') {
           args = args.substr(1);
           args = parse::skip_ws(args);
+        } else {
+          return ExecResult<char_type>::make_parse_error(
+            Error::expected_assignment, nullptr);
         }
 
         if (args.size() == 0)
-          return Error::expected_value;
+          return ExecResult<char_type>::make_parse_error(Error::expected_value,
+                                                         nullptr);
 
-        out = {};
-        should_print_newline = false;
         return set_value(args);
       }
 
     private:
-      constexpr Error set_value(View<const char_type> args) {
+      constexpr ExecResult<char_type> set_value(View<const char_type> args) {
         if (args.size() == 0)
-          return Error::too_few_arguments;
+          return ExecResult<char_type>::make_parse_error(
+            Error::too_few_arguments, nullptr);
 
-        auto parse_result = parse_(args);
+        parse::ParseResult parse_result = parse_(args);
         if (not parse_result)
-          return parse_result.error;
+          return ExecResult<char_type>::make_parse_error(
+            parse_result.error, parse_result.rest.data());
 
         if (parse_result.rest.size() != 0)
-          return Error::unexpected_characters;
+          return ExecResult<char_type>::make_parse_error(
+            Error::unexpected_characters, parse_result.rest.data());
 
         if (not validate_(parse_result.value))
-          return Error::invalid_value;
+          return ExecResult<char_type>::make_set_error(Error::invalid_value);
 
-        return set_(parse_result.value);
+        Error e = set_(parse_result.value);
+        if (e != Error::none)
+          return ExecResult<char_type>::make_set_error(e);
+        else
+          return ExecResult<char_type>::make_success();
       }
 
-      constexpr Error get_value(View<char_type> &out) {
+      constexpr ExecResult<char_type> get_value(View<char_type> &out) {
         value_type t{};
-        if (auto err = get_(t); err != Error::none)
-          return err;
+        if (Error err = get_(t); err != Error::none)
+          return ExecResult<char_type>::make_get_error(err);
 
-        auto res = format_(out, t);
+        format::FormatResult res = format_(out, t);
         if (res.error != Error::none)
-          return res.error;
-
-        out = out.substr(0, res.size_written);
-        return Error::none;
+          return ExecResult<char_type>::make_format_error(res.error);
+        else
+          return ExecResult<char_type>::make_success(
+            out.substr(0, res.size_written));
       }
 
       CLI_NO_UNIQUE_ADDRESS Get get_;

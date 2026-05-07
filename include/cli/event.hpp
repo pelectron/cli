@@ -39,10 +39,10 @@ namespace cli {
 
     constexpr Control(Control &&) = default;
 
-    constexpr Control(const volatile Control &o)
+    Control(const volatile Control &o)
       : type(o.type), param(o.param) {}
 
-    constexpr Control(const volatile Control &&o)
+    Control(const volatile Control &&o)
       : type(o.type), param(o.param) {}
 
     constexpr Control &operator=(const Control &o) {
@@ -57,13 +57,13 @@ namespace cli {
       return *this;
     }
 
-    constexpr volatile Control &operator=(const volatile Control &o) volatile {
+    volatile Control &operator=(const volatile Control &o) volatile {
       type = o.type;
       param = o.param;
       return *this;
     }
 
-    constexpr volatile Control &operator=(const volatile Control &&o) volatile {
+    volatile Control &operator=(const volatile Control &&o) volatile {
       type = o.type;
       param = o.param;
       return *this;

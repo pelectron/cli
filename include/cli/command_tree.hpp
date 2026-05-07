@@ -4,6 +4,7 @@
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
 #include "cli/help.hpp"
+#include "command.hpp"
 
 #include <tuple>
 #include <utility>
@@ -127,9 +128,8 @@ namespace cli {
       node.this_ = &cmd;
       node.exec_ = +[](void *this_,
                        View<const char_type> args,
-                       View<char_type> &out,
-                       bool &newline) -> Error {
-        return static_cast<Cmd *>(this_)->execute(args, out, newline);
+                       View<char_type> out) -> ExecResult<char_type> {
+        return static_cast<Cmd *>(this_)->execute(args, out);
       };
       // add the node to the parent
       parent.add_sub(node);

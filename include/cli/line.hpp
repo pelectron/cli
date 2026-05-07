@@ -5,6 +5,7 @@
 #include "cli/concepts.hpp"
 #include "cli/display.hpp"
 #include "cli/enums.hpp"
+#include "cli/format.hpp"
 #include "cli/string.hpp"
 #include "cli/util.hpp"
 
@@ -33,18 +34,12 @@ namespace cli {
 
     template<typename CharT, typename Line, concepts::Display<CharT> Display>
     constexpr Error print_error(Line &line, Display &display, Error e) {
-      Error err = display.newline();
-      if (err != Error::none)
-        return err;
+      display.newline();
 
-      err = display.write(ctti::enum_name<Error, CharT>(e));
-      if (err != Error::none)
-        return err;
+      display.write(ctti::enum_name<Error, CharT>(e));
 
       if constexpr (cli::is_multiline_display_v<Display>) {
-        err = display.newline();
-        if (err != Error::none)
-          return err;
+        display.newline();
       }
 
       line.reset();
@@ -59,7 +54,8 @@ namespace cli {
       if (n >= cursor_)
         n = cursor_;
       cursor_ = static_cast<Index>(cursor_ - n);
-      return display_.cursor_left(n);
+      display_.cursor_left(n);
+      return Error::none;
     }
 
     template<class Index, class Display>
@@ -72,7 +68,8 @@ namespace cli {
       if (n + cursor_ > size_)
         n = size_ - cursor_;
       cursor_ = static_cast<Index>(cursor_ + n);
-      return display_.cursor_right(n);
+      display_.cursor_right(n);
+      return Error::none;
     }
 
     template<std::size_t MaxLineLength, class CharT, class Index, class Display>
@@ -91,7 +88,8 @@ namespace cli {
         for (const CharT &ch : s)
           data_[size_++] = ch;
         cursor_ = size_;
-        return display_.write(s);
+        display_.write(s);
+        return Error::none;
       }
 
       // copy data to the back
@@ -110,12 +108,10 @@ namespace cli {
       cursor_ += static_cast<Index>(s.size());
 
       // write new data
-      Error e = display_.write({data_ + old_cursor, data_ + size_});
-      if (e != Error::none)
-        return e;
-
+      display_.write({data_ + old_cursor, data_ + size_});
       // adjust cursor
-      return display_.cursor_left(size_ - cursor_);
+      display_.cursor_left(size_ - cursor_);
+      return Error::none;
     }
 
     template<class Cfg, class CharT, class Index, class Display>
@@ -133,9 +129,8 @@ namespace cli {
       }
 
       if (size_ == 0 and command_entered_) {
-        const Error e = display_.newline();
-        if (e != Error::none)
-          return e;
+        display_.newline();
+        return Error::none;
       }
 
       return insert_write<Cfg::max_line_length>(
@@ -154,11 +149,13 @@ namespace cli {
         if (n >= size_) {
           size_ = 0;
           cursor_ = 0;
-          return display_.clear_line();
+          display_.clear_line();
+          return Error::none;
         } else {
           size_ = static_cast<Index>(size_ - n);
           cursor_ = static_cast<Index>(cursor_ - n);
-          return display_.backspace(n);
+          display_.backspace(n);
+          return Error::none;
         }
       } else if (n >= cursor_) {
         for (Index i = cursor_; i < size_; ++i) {
@@ -167,14 +164,11 @@ namespace cli {
         size_ -= cursor_;
         cursor_ = 0;
 
-        Error e = display_.clear_line();
-        if (e != Error::none)
-          return e;
+        display_.clear_line();
 
-        e = display_.write({data_, size_});
-        if (e != Error::none)
-          return e;
-        return display_.cursor_left(size_);
+        display_.write({data_, size_});
+        display_.cursor_left(size_);
+        return Error::none;
       } else {
         n = dtl::min(cursor_, n);
         for (Index i = static_cast<Index>(cursor_ - n); i < size_ - n; ++i) {
@@ -183,13 +177,10 @@ namespace cli {
         cursor_ = static_cast<Index>(cursor_ - n);
         size_ = static_cast<Index>(size_ - n);
 
-        if (Error e = display_.clear_line(); e != Error::none)
-          return e;
-
-        if (Error e = display_.write({data_, size_}); e != Error::none)
-          return e;
-
-        return display_.cursor_left(size_ - cursor_);
+        display_.clear_line();
+        display_.write({data_, size_});
+        display_.cursor_left(size_ - cursor_);
+        return Error::none;
       }
     }
 
@@ -200,26 +191,19 @@ namespace cli {
         return Error::none;
 
       // move cursor to the end
-      if (Error e = display_.cursor_right(size_ - cursor_); e != Error::none)
-        return e;
-
+      display_.cursor_right(size_ - cursor_);
       // delete characters
-      if (Error e = display_.backspace(size_ - cursor_); e != Error::none)
-        return e;
-
+      display_.backspace(size_ - cursor_);
       if (cursor_ == size_ - 1) {
         --size_;
         return Error::none;
       }
 
       // write the new characters
-      if (Error e = display_.write({data_ + cursor_ + 1, data_ + size_});
-          e != Error::none)
-        return e;
+      display_.write({data_ + cursor_ + 1, data_ + size_});
 
       // move cursor to old position
-      if (Error e = display_.cursor_left(size_ - cursor_ - 1); e != Error::none)
-        return e;
+      display_.cursor_left(size_ - cursor_ - 1);
 
       // copy data
       for (auto i = cursor_; (i + 1) < size_; ++i) {
@@ -238,17 +222,12 @@ namespace cli {
 
       if (cursor_ == 0) {
         size_ = 0;
-        return display_.clear_line();
+        display_.clear_line();
+        return Error::none;
       }
 
-      if (Error e = display_.cursor_right(size_ - cursor_); e != Error::none)
-        return e;
-
-      if (Error e = display_.backspace(size_ - cursor_); e != Error::none) {
-        cursor_ = size_;
-        return e;
-      }
-
+      display_.cursor_right(size_ - cursor_);
+      display_.backspace(size_ - cursor_);
       size_ = cursor_;
       return Error::none;
     }
@@ -263,28 +242,184 @@ namespace cli {
       if (cursor_ == size_) {
         cursor_ = 0;
         size_ = 0;
-        return display_.clear_line();
+        display_.clear_line();
+        return Error::none;
       }
 
-      if (Error e = display_.clear_line(); e != Error::none)
-        return e;
-
+      display_.clear_line();
       for (std::size_t i = cursor_; i < size_; ++i)
         data_[i - cursor_] = data_[i];
 
       size_ = size_ - cursor_;
       cursor_ = 0;
 
-      if (Error e = display_.write({data_, size_}); e != Error::none) {
-        size_ = 0;
-        return e;
+      display_.write({data_, size_});
+      display_.cursor_left(size_);
+      return Error::none;
+    }
+
+    template<typename Cfg,
+             typename Line,
+             typename CharT,
+             typename Index,
+             typename Display>
+    Error print_result(const ExecResult<CharT> &exec_result,
+                       Line &line,
+                       const CharT *data_,
+                       Index size_,
+                       Display &display_) {
+      if (cli::is_multiline_display_v<Display>) {
+        display_.newline();
       }
 
-      if (Error e = display_.cursor_left(size_); e != Error::none) {
-        cursor_ = size_;
-        return e;
+      switch (exec_result.type()) {
+        case ExecResult<CharT>::success: {
+          View<const CharT> result = exec_result.result();
+          if (result.size() != 0) {
+            if constexpr (not cli::is_multiline_display_v<Display>) {
+              display_.newline();
+            }
+            // print the result
+            display_.write(result);
+
+            if constexpr (cli::is_multiline_display_v<Display>) {
+              display_.newline();
+            }
+          }
+          return Error::none;
+        }
+        case ExecResult<CharT>::parse_error: {
+          if constexpr (not cli::is_multiline_display_v<Display>) {
+            display_.newline();
+          }
+          display_.write(string_constant<CharT,
+                                         'p',
+                                         'a',
+                                         'r',
+                                         's',
+                                         'e',
+                                         ' ',
+                                         'e',
+                                         'r',
+                                         'r',
+                                         'o',
+                                         'r',
+                                         ':',
+                                         ' '>{});
+
+          display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
+          display_.write(string_constant<CharT, ' ', 'a', 't', ' '>{});
+
+          const CharT *err_loc = exec_result.error_location();
+          std::size_t error_location =
+            err_loc == nullptr ? size_ : err_loc - data_;
+
+          CharT buffer[20]{};
+          format::Int<std::size_t, CharT> format;
+          format::FormatResult fmt_res = format({buffer, 20}, error_location);
+          if (not fmt_res)
+            return dtl::print_error<CharT>(line, display_, fmt_res.error);
+          display_.write({buffer, fmt_res.size_written});
+        } break;
+        case ExecResult<CharT>::format_error: {
+          if constexpr (not cli::is_multiline_display_v<Display>) {
+            display_.newline();
+          }
+          display_.write(string_constant<CharT,
+                                         'f',
+                                         'o',
+                                         'r',
+                                         'm',
+                                         'a',
+                                         't',
+                                         ' ',
+                                         'e',
+                                         'r',
+                                         'r',
+                                         'o',
+                                         'r',
+                                         ':',
+                                         ' '>{});
+
+          display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
+        } break;
+        case ExecResult<CharT>::validation_error: {
+          if constexpr (not cli::is_multiline_display_v<Display>) {
+            display_.newline();
+          }
+          display_.write(string_constant<CharT, 'a', 'r', 'g', ' '>{});
+          CharT buffer[20]{};
+          format::Int<std::size_t, CharT> format;
+          format::FormatResult fmt_res =
+            format({buffer, 20}, exec_result.index());
+          if (not fmt_res)
+            return dtl::print_error<CharT>(line, display_, fmt_res.error);
+          display_.write({buffer, fmt_res.size_written});
+          display_.write(string_constant<CharT,
+                                         'i',
+                                         's',
+                                         ' ',
+                                         'i',
+                                         'n',
+                                         'v',
+                                         'a',
+                                         'l',
+                                         'i',
+                                         'd'>{});
+        } break;
+        case ExecResult<CharT>::set_error: {
+          if constexpr (not cli::is_multiline_display_v<Display>) {
+            display_.newline();
+          }
+          display_.write(string_constant<CharT,
+                                         'c',
+                                         'a',
+                                         'n',
+                                         '\'',
+                                         't',
+                                         ' ',
+                                         's',
+                                         'e',
+                                         't',
+                                         ' ',
+                                         'p',
+                                         'a',
+                                         'r',
+                                         'a',
+                                         'm',
+                                         ':',
+                                         ' '>{});
+          display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
+        } break;
+        case ExecResult<CharT>::get_error: {
+          if constexpr (not cli::is_multiline_display_v<Display>) {
+            display_.newline();
+          }
+          display_.write(string_constant<CharT,
+                                         'c',
+                                         'a',
+                                         'n',
+                                         '\'',
+                                         't',
+                                         ' ',
+                                         'g',
+                                         'e',
+                                         't',
+                                         ' ',
+                                         'p',
+                                         'a',
+                                         'r',
+                                         'a',
+                                         'm',
+                                         ':',
+                                         ' '>{});
+          display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
+        } break;
       }
 
+      if (cli::is_multiline_display_v<Display>) {
+        display_.newline();
+      }
       return Error::none;
     }
 
@@ -295,7 +430,7 @@ namespace cli {
                   auto &root_,
                   Display &display_,
                   auto &command_entered_,
-                  View<CharT> &out) {
+                  const View<CharT> &out) {
       command_entered_ = true;
       // parse the input
       SplitResult res =
@@ -304,33 +439,12 @@ namespace cli {
         return dtl::print_error<CharT>(line, display_, Error::invalid_cmd);
 
       // execute the command
-      bool should_print_newline = false;
-      Error e = res.command->execute(res.args, out, should_print_newline);
-      if (e != Error::none)
-        return dtl::print_error<CharT>(line, display_, e);
+      ExecResult<CharT> exec_result = res.command->execute(res.args, out);
 
-      if (should_print_newline or cli::is_multiline_display_v<Display>) {
-        e = display_.newline();
-        if (e != Error::none)
-          return e;
-      }
-
-      if (out.size() != 0) {
-        // print the result
-        e = display_.write(out);
-        if (e != Error::none)
-          return dtl::print_error<CharT>(line, display_, e);
-
-        if constexpr (cli::is_multiline_display_v<Display>) {
-          e = display_.newline();
-          if (e != Error::none)
-            return e;
-        }
-      }
-
+      Error e = print_result<Cfg>(exec_result, line, data_, size_, display_);
       // reset line data
       size_ = 0;
-      return Error::none;
+      return e;
     }
   } // namespace dtl
 
@@ -373,23 +487,24 @@ namespace cli {
       }
 
       if (size_ == 0 and command_entered_) {
-        const Error e = display_.newline();
-        if (e != Error::none)
-          return e;
+        display_.newline();
+        return Error::none;
       }
 
       data_[size_++] = c;
-      return display_.write(c);
+      display_.write(c);
+      return Error::none;
     }
 
     constexpr Error on_backspace(std::size_t n = 1) {
       if (n >= size_) {
         size_ = 0;
-        return display_.clear_line();
+        display_.clear_line();
       } else {
         size_ = static_cast<Index>(size_ - n);
-        return display_.backspace(n);
+        display_.backspace(n);
       }
+      return Error::none;
     }
 
     constexpr Error on_autocomplete() { return Error::none; }
@@ -398,9 +513,7 @@ namespace cli {
       if (s.size() > Cfg::max_line_length)
         return Error::buffer_overflow;
 
-      Error e = display_.clear_line();
-      if (e != Error::none)
-        return e;
+      display_.clear_line();
 
       size_ = 0;
       if (s.size() == 0)
@@ -410,12 +523,14 @@ namespace cli {
         data_[size_++] = ch;
       }
 
-      return display_.write(view());
+      display_.write(view());
+      return Error::none;
     }
 
     constexpr Error clear() {
       size_ = 0;
-      return display_.clear_line();
+      display_.clear_line();
+      return Error::none;
     }
 
     constexpr Error on_delete_char() { return Error::none; }
@@ -430,7 +545,8 @@ namespace cli {
 
     constexpr Error on_clear_screen() {
       size_ = 0;
-      return display_.clear_screen();
+      display_.clear_screen();
+      return Error::none;
     }
 
     constexpr View<const CharT> view() const { return {data_, size_}; }
@@ -478,14 +594,14 @@ namespace cli {
       }
 
       if (size_ == 0 and command_entered_) {
-        const Error e = display_.newline();
-        if (e != Error::none)
-          return e;
+        display_.newline();
+        return Error::none;
       }
 
       if (start_of_args_ < size_) {
         data_[size_++] = c;
-        return display_.write(c);
+        display_.write(c);
+        return Error::none;
       }
 
       switch (c) {
@@ -495,7 +611,8 @@ namespace cli {
 
           last_access_separator_ = size_;
           data_[size_++] = c;
-          return display_.write(c);
+          display_.write(c);
+          return Error::none;
         case ' ':
           [[fallthrough]];
         case '=':
@@ -503,14 +620,16 @@ namespace cli {
         case '(':
           start_of_args_ = size_;
           data_[size_++] = c;
-          return display_.write(c);
+          display_.write(c);
+          return Error::none;
         default: {
           data_[size_++] = c;
           if (size_ == 1) {
             for (const auto &cmd : root_) {
               if (cmd.name[0] == c) {
                 command_ = &cmd;
-                return display_.write(c);
+                display_.write(c);
+                return Error::none;
               }
             }
             --size_;
@@ -521,7 +640,8 @@ namespace cli {
             for (const auto &cmd : *command_) {
               if (cmd.name[0] == c) {
                 command_ = &cmd;
-                return display_.write(c);
+                display_.write(c);
+                return Error::none;
               }
             }
             --size_;
@@ -541,7 +661,8 @@ namespace cli {
             return Error::none;
           }
           command_ = cmd;
-          return display_.write(c);
+          display_.write(c);
+          return Error::none;
         }
       }
     }
@@ -556,7 +677,8 @@ namespace cli {
 
     constexpr Error clear() {
       reset();
-      return display_.clear_line();
+      display_.clear_line();
+      return Error::none;
     }
 
     constexpr Error on_backspace(std::size_t n = 1) {
@@ -565,7 +687,8 @@ namespace cli {
       }
       size_ = static_cast<Index>(size_ - n);
       if (size_ > start_of_args_) {
-        return display_.backspace(n);
+        display_.backspace(n);
+        return Error::none;
       }
 
       for (Index i = start_of_args_ - 1; i >= size_; --i) {
@@ -576,7 +699,8 @@ namespace cli {
 
       start_of_args_ = max_index;
       last_access_separator_ = view().find_last_of(Cfg::access_separator);
-      return display_.backspace(n);
+      display_.backspace(n);
+      return Error::none;
     }
 
     constexpr Error on_autocomplete() {
@@ -592,7 +716,8 @@ namespace cli {
         for (const auto &ch : autocomplete_string) {
           data_[size_++] = ch;
         }
-        return display_.write(autocomplete_string);
+        display_.write(autocomplete_string);
+        return Error::none;
       }
 
       const View autocomplete_string =
@@ -606,7 +731,8 @@ namespace cli {
         data_[size_++] = ch;
       }
 
-      return display_.write(autocomplete_string);
+      display_.write(autocomplete_string);
+      return Error::none;
     }
 
     constexpr Error set_data(View<const CharT> string) {
@@ -674,7 +800,8 @@ namespace cli {
         data_[size_++] = ch;
       }
 
-      return display_.write(string);
+      display_.write(string);
+      return Error::none;
     }
 
     constexpr Error on_delete_char() { return Error::none; }
@@ -692,7 +819,8 @@ namespace cli {
       command_ = &root_;
       start_of_args_ = max_index;
       last_access_separator_ = max_index;
-      return display_.clear_screen();
+      display_.clear_screen();
+      return Error::none;
     }
 
     constexpr View<const CharT> view() const { return {data_, size_}; }
@@ -700,37 +828,18 @@ namespace cli {
     constexpr Error execute(View<CharT> &out) {
       command_entered_ = true;
       // execute the command
-      bool should_print_newline = false;
-      Error e = command_->execute(
-        view().substr(start_of_args_), out, should_print_newline);
-      if (e != Error::none)
-        return dtl::print_error<CharT>(*this, display_, e);
+      ExecResult<CharT> exec_result =
+        command_->execute(view().substr(start_of_args_), out);
 
-      if (should_print_newline or cli::is_multiline_display_v<Display>) {
-        e = display_.newline();
-        if (e != Error::none)
-          return e;
-      }
-
-      if (out.size() != 0) {
-        // print the result
-        e = display_.write(out);
-        if (e != Error::none)
-          return dtl::print_error<CharT>(*this, display_, e);
-
-        if constexpr (cli::is_multiline_display_v<Display>) {
-          e = display_.newline();
-          if (e != Error::none)
-            return e;
-        }
-      }
+      Error e =
+        dtl::print_result<Cfg>(exec_result, *this, data_, size_, display_);
 
       // reset line data
       size_ = 0;
       start_of_args_ = max_index;
       last_access_separator_ = max_index;
       command_ = &root_;
-      return Error::none;
+      return e;
     }
   };
 
@@ -777,7 +886,8 @@ namespace cli {
         data_[size_++] = ch;
       }
       cursor_ = size_;
-      return display_.write(view());
+      display_.write(view());
+      return Error::none;
     }
 
     constexpr void reset() {
@@ -788,7 +898,8 @@ namespace cli {
 
     constexpr Error clear() {
       reset();
-      return display_.clear_line();
+      display_.clear_line();
+      return Error::none;
     }
 
     constexpr Error on_delete_char() {
@@ -814,7 +925,8 @@ namespace cli {
     constexpr Error on_clear_screen() {
       size_ = 0;
       cursor_ = 0;
-      return display_.clear_screen();
+      display_.clear_screen();
+      return Error::none;
     }
 
     constexpr View<const CharT> view() const { return {data_, size_}; }
@@ -895,16 +1007,16 @@ namespace cli {
       if (string.size() > Cfg::max_line_length)
         return Error::buffer_overflow;
 
-      Error e = display_.clear_line();
-      if (e != Error::none or string.size() == 0)
-        return e;
+      display_.clear_line();
 
       size_ = 0;
       for (const auto &ch : string) {
         data_[size_++] = ch;
       }
       cursor_ = size_;
-      return display_.write(view());
+
+      display_.write(view());
+      return Error::none;
     }
 
     constexpr void reset() {
@@ -917,7 +1029,8 @@ namespace cli {
       command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
-      return display_.clear_line();
+      display_.clear_line();
+      return Error::none;
     }
 
     constexpr Error on_delete_char() {
@@ -944,7 +1057,8 @@ namespace cli {
       command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
-      return display_.clear_screen();
+      display_.clear_screen();
+      return Error::none;
     }
 
     constexpr View<const CharT> view() const { return {data_, size_}; }

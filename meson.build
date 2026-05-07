@@ -105,6 +105,7 @@ if(not build_tests.disabled())
     'tests/command.cpp',
     'tests/ctti.cpp',
     'tests/event.cpp',
+    'tests/exec_result.cpp',
     'tests/history.cpp',
     'tests/line.cpp',
     'tests/param.cpp',

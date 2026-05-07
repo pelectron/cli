@@ -20,6 +20,11 @@
 #define CLI_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
 
+#ifndef CLI_ASSERT
+#include <cassert>
+#define CLI_ASSERT(...) assert(__VA_ARGS__)
+#endif
+
 namespace cli {
   template<class>
   inline constexpr bool always_false = false;

@@ -12,85 +12,63 @@ struct Display {
   std::string data{};
   std::vector<std::string> past;
 
-  cli::Error write(char c) {
+  void write(char c) {
     if (cursor == data.size()) {
       data.push_back(c);
       ++cursor;
-      return cli::Error::none;
+    } else {
+      data.insert(data.begin() + cursor, c);
+      ++cursor;
+      data.erase(data.begin() + cursor);
     }
-    data.insert(data.begin() + cursor, c);
-    ++cursor;
-    data.erase(data.begin() + cursor);
-    return cli::Error::none;
   }
 
-  cli::Error write(cli::View<const char> s) {
+  void write(cli::View<const char> s) {
     for (const char &ch : s) {
       data.insert(data.begin() + cursor, ch);
       ++cursor;
     }
     if (cursor != data.size())
       data.erase(cursor, s.size());
-    return cli::Error::none;
   }
 
-  cli::Error backspace(std::size_t n) {
+  void backspace(std::size_t n) {
     data.erase(data.begin() + (n >= cursor ? 0 : cursor - n),
                data.begin() + cursor);
     if (n >= cursor)
       cursor = 0;
     else
       cursor -= n;
-    return cli::Error::none;
   }
 
-  cli::Error clear_line() {
+  void clear_line() {
     data.clear();
     cursor = 0;
-    return cli::Error::none;
   }
 
-  cli::Error clear_screen() {
+  void clear_screen() {
     data.clear();
     cursor = 0;
-    return cli::Error::none;
   }
 
-  cli::Error newline() {
+  void newline() {
     past.push_back(std::move(data));
     cursor = 0;
     data.clear();
-    return cli::Error::none;
   }
 
-  constexpr cli::Error delete_char() {
-    data.erase(data.begin() + cursor);
-    return cli::Error::none;
-  }
+  void delete_char() { data.erase(data.begin() + cursor); }
 
-  constexpr cli::Error clear_line_to_end() {
-    data.erase(data.begin() + cursor, data.end());
-    return cli::Error::none;
-  }
-
-  constexpr cli::Error clear_line_to_begin() {
-    data.erase(data.begin(), data.begin() + cursor);
-    cursor = 0;
-    return cli::Error::none;
-  }
-
-  constexpr cli::Error cursor_left(std::size_t n) {
+  void cursor_left(std::size_t n) {
     if (n >= cursor)
       n = cursor;
     cursor -= n;
-    return cli::Error::none;
   }
 
-  constexpr cli::Error cursor_right(std::size_t n) {
+  void cursor_right(std::size_t n) {
     if (n + cursor > data.size())
       n = data.size() - cursor;
     cursor += n;
-    return cli::Error::none;
   }
 };
 
@@ -114,18 +92,6 @@ TEST_CASE("Display") {
     d.cursor = d.data.size() + 5;
     d.cursor_right(d.data.size() + 5);
     REQUIRE(d.cursor == d.data.size());
-  }
-  SECTION("clear to begin") {
-    d.cursor = 5;
-    d.clear_line_to_begin();
-    REQUIRE(d.data == " world");
-    REQUIRE(d.cursor == 0);
-  }
-  SECTION("clear to end") {
-    d.cursor = 5;
-    d.clear_line_to_end();
-    REQUIRE(d.data == "hello");
-    REQUIRE(d.cursor == 5);
   }
   SECTION("delete char") {
     d.cursor = 5;
@@ -230,81 +196,80 @@ static_assert(cli::concepts::Display<Display, char>);
 
 #define DEFINE_COMMANDS()                                                      \
   cli::CommandNode<char> root;                                                 \
-  cli::CommandNode<char> c1{.name = "c1",                                      \
-                            .description = {},                                 \
-                            .this_ = &root,                                    \
-                            .exec_ = +[](void *,                               \
-                                         cli::View<const char>,                \
-                                         cli::View<char> &buf,                 \
-                                         bool &) -> cli::Error {               \
-                              buf = {};                                        \
-                              return cli::Error::none;                         \
-                            }};                                                \
-  cli::CommandNode<char> c2{.name = "c2",                                      \
-                            .description = {},                                 \
-                            .this_ = &root,                                    \
-                            .exec_ =                                           \
-                              +[](void *,                                      \
-                                  cli::View<const char>,                       \
-                                  cli::View<char> &buf,                        \
-                                  bool &should_print_newline) -> cli::Error {  \
-                              buf = {};                                        \
-                              should_print_newline = true;                     \
-                              return cli::Error::none;                         \
-                            }};                                                \
+  cli::CommandNode<char> c1{                                                   \
+    .name = "c1",                                                              \
+    .description = {},                                                         \
+    .this_ = &root,                                                            \
+    .exec_ = +[](void *,                                                       \
+                 cli::View<const char>,                                        \
+                 cli::View<char> buf) -> cli::ExecResult<char> {               \
+      return cli::ExecResult<char>::make_success();                            \
+    }};                                                                        \
+  cli::CommandNode<char> c2{                                                   \
+    .name = "c2",                                                              \
+    .description = {},                                                         \
+    .this_ = &root,                                                            \
+    .exec_ = +[](void *,                                                       \
+                 cli::View<const char>,                                        \
+                 cli::View<char> buf) -> cli::ExecResult<char> {               \
+      return cli::ExecResult<char>::make_success("hello");                     \
+    }};                                                                        \
   cli::CommandNode<char> c3{.name = "c3",                                      \
                             .description = {},                                 \
                             .this_ = &root,                                    \
                             .exec_ =                                           \
                               +[](void *,                                      \
-                                  cli::View<const char>,                       \
-                                  cli::View<char> &buf,                        \
-                                  bool &should_print_newline) -> cli::Error {  \
-                              should_print_newline = true;                     \
-                              buf[0] = 't';                                    \
-                              buf[1] = 'h';                                    \
-                              buf[2] = 'e';                                    \
-                              buf[3] = ' ';                                    \
-                              buf[4] = 'a';                                    \
-                              buf[5] = 'n';                                    \
-                              buf[6] = 's';                                    \
-                              buf[7] = 'w';                                    \
-                              buf[8] = 'e';                                    \
-                              buf[9] = 'r';                                    \
-                              buf = buf.substr(0, 10);                         \
-                              return cli::Error::none;                         \
+                                  cli::View<const char> buf,                   \
+                                  cli::View<char>) -> cli::ExecResult<char> {  \
+                              return cli::ExecResult<char>::make_parse_error(  \
+                                cli::Error::dual_separators, buf.data());      \
                             }};                                                \
   cli::CommandNode<char> c4{.name = "c4long",                                  \
                             .description = {},                                 \
                             .this_ = &root,                                    \
-                            .exec_ = +[](void *,                               \
-                                         cli::View<const char>,                \
-                                         cli::View<char> &buf,                 \
-                                         bool &) -> cli::Error {               \
-                              buf[0] = 't';                                    \
-                              buf[1] = 'h';                                    \
-                              buf[2] = 'e';                                    \
-                              buf[3] = ' ';                                    \
-                              buf[4] = 'a';                                    \
-                              buf[5] = 'n';                                    \
-                              buf[6] = 's';                                    \
-                              buf[7] = 'w';                                    \
-                              buf[8] = 'e';                                    \
-                              buf[9] = 'r';                                    \
-                              buf = buf.substr(0, 10);                         \
-                              return cli::Error::none;                         \
+                            .exec_ =                                           \
+                              +[](void *,                                      \
+                                  cli::View<const char>,                       \
+                                  cli::View<char>) -> cli::ExecResult<char> {  \
+                              return cli::ExecResult<char>::make_set_error(    \
+                                cli::Error::expected_assignment);              \
                             }};                                                \
-  cli::CommandNode<char> c5{                                                   \
-    .name = "c5long",                                                          \
+  cli::CommandNode<char> c5{.name = "c5long",                                  \
+                            .description = {},                                 \
+                            .this_ = &root,                                    \
+                            .exec_ =                                           \
+                              +[](void *,                                      \
+                                  cli::View<const char>,                       \
+                                  cli::View<char>) -> cli::ExecResult<char> {  \
+                              return cli::ExecResult<char>::make_get_error(    \
+                                cli::Error::expected_delimiter);               \
+                            }};                                                \
+  cli::CommandNode<char> z1{.name = "z1",                                      \
+                            .description = {},                                 \
+                            .this_ = &root,                                    \
+                            .exec_ =                                           \
+                              +[](void *,                                      \
+                                  cli::View<const char>,                       \
+                                  cli::View<char>) -> cli::ExecResult<char> {  \
+                              return cli::ExecResult<char>::make_format_error( \
+                                cli::Error::invalid_argument);                 \
+                            }};                                                \
+  cli::CommandNode<char> z2{                                                   \
+    .name = "z2",                                                              \
     .description = {},                                                         \
     .this_ = &root,                                                            \
-    .exec_ = +[](void *, cli::View<const char>, cli::View<char> &, bool &)     \
-      -> cli::Error { return cli::Error::cant_set_param; }};                   \
+    .exec_ = +[](void *,                                                       \
+                 cli::View<const char>,                                        \
+                 cli::View<char>) -> cli::ExecResult<char> {                   \
+      return cli::ExecResult<char>::make_validation_error(42);                 \
+    }};                                                                        \
   root.add_sub(c1);                                                            \
   root.add_sub(c2);                                                            \
   c2.add_sub(c3);                                                              \
   root.add_sub(c4);                                                            \
-  c4.add_sub(c5)
+  c4.add_sub(c5);                                                              \
+  root.add_sub(z1);                                                            \
+  root.add_sub(z2)
 
 TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
   DEFINE_COMMANDS();
@@ -358,40 +323,25 @@ TEST_CASE("cli::Line<NoCursor, NoAutocomplete>") {
     }
 
     SECTION("no error from execute") {
-      SECTION("should_print_newline=false, buf is empty") {
+      SECTION("empty result") {
         line.set_data("c1");
         REQUIRE(line.execute(out) == cli::Error::none);
         REQUIRE(d.data == "c1");
         REQUIRE(d.past.empty());
       }
-
-      SECTION("should_print_newline=true, buf is empty") {
+      SECTION("with result") {
         line.set_data("c2");
-        line.execute(out);
-        REQUIRE(d.data.empty());
-        REQUIRE(d.past == std::vector<std::string>{{"c2"}});
-      }
-
-      SECTION("should_print_newline=true, buf is not empty") {
-        line.set_data("c2.c3");
         REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data == "the answer");
-        REQUIRE(d.past == std::vector<std::string>{"c2.c3"});
-      }
-
-      SECTION("should_print_newline=false, buf is not empty") {
-        line.set_data("c4long");
-        REQUIRE(line.execute(out) == cli::Error::none);
-        REQUIRE(d.data == "c4longthe answer");
-        REQUIRE(d.past.empty());
+        REQUIRE(d.data == "hello");
+        REQUIRE(d.past == std::vector<std::string>{"c2"});
       }
     }
 
-    SECTION("error from execute") {
-      line.set_data("c4long.c5long");
-      REQUIRE(line.execute(out) == cli::Error::cant_set_param);
-      REQUIRE(d.data == "cant_set_param");
-      REQUIRE(d.past == std::vector<std::string>{"c4long.c5long"});
+    SECTION("parse_error from execute") {
+      line.set_data("c2.c3 args");
+      REQUIRE(line.execute(out) == cli::Error::none);
+      REQUIRE(d.data == "parse error: dual_separators at 5");
+      REQUIRE(d.past == std::vector<std::string>{"c2.c3 args"});
     }
   }
 

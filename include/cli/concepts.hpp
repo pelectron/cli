@@ -11,6 +11,9 @@
 
 namespace cli {
 
+  template<typename CharT>
+  class ExecResult;
+
   /**
    * @brief This concept is true if T is a cli::string_constant
    *
@@ -25,12 +28,14 @@ namespace cli {
     concept Command =
       requires(std::remove_cvref_t<C> &c,
                View<const typename std::remove_cvref_t<C>::char_type> args,
-               View<typename std::remove_cvref_t<C>::char_type> &out,
-               bool &should_print_newline) {
+               View<typename std::remove_cvref_t<C>::char_type> out) {
         { typename std::remove_cvref_t<C>::sub_command_list{} };
         { std::remove_cvref_t<C>::name } -> SC;
         { std::remove_cvref_t<C>::description } -> SC;
-        { c.execute(args, out, should_print_newline) } -> std::same_as<Error>;
+        {
+          c.execute(args, out)
+        }
+        -> std::same_as<ExecResult<typename std::remove_cvref_t<C>::char_type>>;
       };
 
     /**
@@ -64,12 +69,12 @@ namespace cli {
     template<typename D, typename CharT>
     concept DisplayWithoutCursor = requires(
       D d, CharT character, cli::View<const CharT> string, std::size_t n) {
-      { d.write(character) } -> std::same_as<cli::Error>;
-      { d.write(string) } -> std::same_as<cli::Error>;
-      { d.backspace(n) } -> std::same_as<cli::Error>;
-      { d.clear_line() } -> std::same_as<cli::Error>;
-      { d.clear_screen() } -> std::same_as<cli::Error>;
-      { d.newline() } -> std::same_as<cli::Error>;
+      { d.write(character) } -> std::same_as<void>;
+      { d.write(string) } -> std::same_as<void>;
+      { d.backspace(n) } -> std::same_as<void>;
+      { d.clear_line() } -> std::same_as<void>;
+      { d.clear_screen() } -> std::same_as<void>;
+      { d.newline() } -> std::same_as<void>;
     };
 
     /**
@@ -83,8 +88,8 @@ namespace cli {
     concept DisplayWithCursor =
       DisplayWithoutCursor<D, CharT> and
       requires(D d, CharT character, View<const CharT> string, std::size_t n) {
-        { d.cursor_left(n) } -> std::same_as<cli::Error>;
-        { d.cursor_right(n) } -> std::same_as<cli::Error>;
+        { d.cursor_left(n) } -> std::same_as<void>;
+        { d.cursor_right(n) } -> std::same_as<void>;
       };
 
     /**

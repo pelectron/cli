@@ -76,62 +76,28 @@ TEST_CASE("CommandNode::iteration") {
 #define TEST_LAMBDA()                                                          \
   +[](void *i_ptr,                                                             \
       cli::View<const char> args,                                              \
-      cli::View<char> &out,                                                    \
-      bool &should_print_newline) -> cli::Error {                              \
+      cli::View<char> out) -> cli::ExecResult<char> {                          \
+    REQUIRE(i_ptr);                                                            \
     REQUIRE(*reinterpret_cast<int *>(i_ptr) == 5);                             \
     REQUIRE(args == "args");                                                   \
     REQUIRE(out.size() == 16);                                                 \
     *reinterpret_cast<int *>(i_ptr) = 0;                                       \
-    out = {};                                                                  \
-    should_print_newline = true;                                               \
-    return cli::Error::dual_separators;                                        \
+    return cli::ExecResult<char>::make_success();                              \
   }
 
 TEST_CASE("CommandNode::execute") {
   cli::CommandNode<char> root;
   int i = 5;
   char buffer[16]{};
-  bool should_print_newline = false;
 
-  SECTION("execute without this and without execute") {
-    cli::View buf{buffer, 16};
-    REQUIRE(root.execute("args", buf, should_print_newline) ==
-            cli::Error::invalid_cmd);
-    REQUIRE(i == 5);
-    REQUIRE(buf.size() == 16);
-    REQUIRE_FALSE(should_print_newline);
-  }
-
-  SECTION("execute with this and without execute") {
-    root.this_ = &i;
-    cli::View buf{buffer, 16};
-    REQUIRE(root.execute("args", buf, should_print_newline) ==
-            cli::Error::invalid_cmd);
-    REQUIRE(i == 5);
-    REQUIRE(buf.size() == 16);
-    REQUIRE_FALSE(should_print_newline);
-  }
-
-  SECTION("execute without this and with execute") {
-    root.exec_ = TEST_LAMBDA();
-    cli::View buf{buffer, 16};
-    REQUIRE(root.execute("args", buf, should_print_newline) ==
-            cli::Error::invalid_cmd);
-    REQUIRE(i == 5);
-    REQUIRE(buf.size() == 16);
-    REQUIRE_FALSE(should_print_newline);
-  }
-
-  SECTION("execute with this and with execute") {
-    root.this_ = &i;
-    root.exec_ = TEST_LAMBDA();
-    cli::View buf{buffer, 16};
-    REQUIRE(root.execute("args", buf, should_print_newline) ==
-            cli::Error::dual_separators);
-    REQUIRE(i == 0);
-    REQUIRE(buf.size() == 0);
-    REQUIRE(should_print_newline);
-  }
+  root.this_ = &i;
+  root.exec_ = TEST_LAMBDA();
+  cli::View buf{buffer, 16};
+  cli::ExecResult r = root.execute("args", buf);
+  REQUIRE(r);
+  REQUIRE(r.type() == cli::ExecResult<char>::success);
+  REQUIRE(r.error() == cli::Error::none);
+  REQUIRE(i == 0);
 }
 
 TEST_CASE("get_command") {

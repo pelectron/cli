@@ -25,10 +25,11 @@
 #ifndef CLI_DISPLAY_HPP
 #define CLI_DISPLAY_HPP
 
+#include "cli/concepts.hpp"
 #include "cli/enums.hpp"
 #include "cli/format.hpp"
 #include "cli/string.hpp"
-#include <cstdint>
+
 #include <type_traits>
 
 namespace cli {
@@ -175,11 +176,11 @@ namespace cli {
      *
      * @param c the character
      */
-    constexpr Error write(char_type c) {
+    constexpr void write(char_type c) {
       if constexpr (concepts::CharOutput<Out, char_type>) {
-        return out_(c);
+        out_(c);
       } else {
-        return out_(View<const char_type>{&c, 1});
+        out_(View<const char_type>{&c, 1});
       }
     }
 
@@ -188,15 +189,13 @@ namespace cli {
      *
      * @param s the string
      */
-    constexpr Error write(View<const char_type> s) {
+    constexpr void write(View<const char_type> s) {
       if constexpr (concepts::StringOutput<Out, char_type>) {
-        return out_(s);
+        out_(s);
       } else {
         for (const auto &ch : s) {
-          if (Error e = stream(ch); e != Error::none)
-            return e;
+          out_(ch);
         }
-        return Error::none;
       }
     }
 
@@ -205,16 +204,13 @@ namespace cli {
      *
      * @param n the number of characters to delete
      */
-    constexpr Error backspace(std::size_t n) {
+    constexpr void backspace(std::size_t n) {
       for (std::size_t i = 0; i < n; ++i)
-        if (auto e = write(string_constant<char_type, '\b', ' ', '\b'>{});
-            e != Error::none)
-          return e;
-      return Error::none;
+        write(string_constant<char_type, '\b', ' ', '\b'>{});
     }
 
     /// clears the currently displayed line
-    constexpr Error clear_line() {
+    constexpr void clear_line() {
       return write(string_constant<char_type,
                                    '\x1B',
                                    '[',
@@ -227,39 +223,29 @@ namespace cli {
     }
 
     /// clears the entire screen and moves the cursor to the home position
-    constexpr Error clear_screen() {
-      return write(
-        string_constant<char_type, '\x1B', '[', '2', 'J', '\x1B', 'H'>{});
+    constexpr void clear_screen() {
+      write(string_constant<char_type, '\x1B', '[', '2', 'J', '\x1B', 'H'>{});
     }
 
     /// writes a new line
-    constexpr Error newline() { return write('\n'); }
+    constexpr void newline() { write('\n'); }
 
     /**
      * moves the cursor n positions to the left.
      *
      * @param n how much to move
+     *e
      */
-    constexpr Error cursor_left(std::size_t n) {
+    constexpr void cursor_left(std::size_t n) {
       char_type buffer[32]{};
       const cli::format::Format<std::size_t, char_type> fmt;
       const cli::format::FormatResult res = fmt({buffer, 32}, n);
-      if (not res)
-        return res.error;
+      assert(res);
 
-      Error e = write('\x1B');
-      if (e != Error::none)
-        return e;
-
-      e = write('[');
-      if (e != Error::none)
-        return e;
-
-      e = write({buffer, res.size_written});
-      if (e != Error::none)
-        return e;
-
-      return write('D');
+      write('\x1B');
+      write('[');
+      write({buffer, res.size_written});
+      write('D');
     }
 
     /**
@@ -267,26 +253,15 @@ namespace cli {
      *
      * @param n how mch to move
      */
-    constexpr Error cursor_right(std::size_t n) {
+    constexpr void cursor_right(std::size_t n) {
       char_type buffer[32]{};
       const cli::format::Format<std::size_t, char_type> fmt;
       const cli::format::FormatResult res = fmt({buffer, 32}, n);
-      if (not res)
-        return res.error;
-
-      Error e = write('\x1B');
-      if (e != Error::none)
-        return e;
-
-      e = write('[');
-      if (e != Error::none)
-        return e;
-
-      e = write({buffer, res.size_written});
-      if (e != Error::none)
-        return e;
-
-      return write('C');
+      assert(res);
+      write('\x1B');
+      write('[');
+      write({buffer, res.size_written});
+      write('C');
     }
 
   private:
