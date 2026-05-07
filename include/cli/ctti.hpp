@@ -12,7 +12,6 @@
 #include "cli/traits.hpp"
 
 #include <array>
-#include <limits>
 #include <source_location>
 #include <type_traits>
 #include <utility>
