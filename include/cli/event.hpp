@@ -32,7 +32,7 @@ namespace cli {
 
     constexpr Control() {}
 
-    constexpr Control(Type type, uint32_t param)
+    constexpr Control(Type type, uint32_t param = 1)
       : type(type), param(param) {}
 
     constexpr Control(const Control &) = default;

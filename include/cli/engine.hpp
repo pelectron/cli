@@ -9,6 +9,7 @@
 #include "cli/line.hpp"
 #include "cli/util.hpp"
 
+#include <cstdint>
 #include <type_traits>
 
 namespace cli {
@@ -57,13 +58,29 @@ namespace cli {
     }
 
     /**
+     * Notifes the ngine of a newly received character.
+     *
      * This method passes c onto its @ref cli::concepts::Input "input".
+     *
      * @param c the received character
+     * @return Error::none on success, Error::buffer_overflow if the input can't
+     * handle more events.
      */
     constexpr Error on_char(char_type c) { return input_.on_char(c); }
 
     /**
-     * processes the characters received by the input.
+     * Notifies the engine of a newly received control.
+     *
+     * @param ctrl the Control
+     * @return Error::none on success, Error::buffer_overflow if the input can't
+     * handle more events.
+     */
+    constexpr Error on_control(const Control &ctrl) {
+      return input_.on_control(ctrl);
+    }
+
+    /**
+     * processes the characters/events of the input.
      */
     constexpr Error process() {
       Event<char_type> ev{};

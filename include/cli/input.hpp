@@ -16,8 +16,10 @@
 #include "cli/event.hpp"
 #include "cli/format.hpp"
 #include "cli/ring_buffer.hpp"
+#include "enums.hpp"
 
 #include <cassert>
+#include <cstdint>
 #include <type_traits>
 
 namespace cli {
@@ -86,6 +88,11 @@ namespace cli {
           return handle_delimiter(c);
       }
       return Error::implementation_error;
+    }
+
+    constexpr Error on_control(const Control &ctrl) {
+      return buffer_.push_back(event_type(ctrl)) ? Error::none
+                                                 : Error::buffer_overflow;
     }
 
   private:

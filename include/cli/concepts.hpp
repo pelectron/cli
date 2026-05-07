@@ -48,14 +48,22 @@ namespace cli {
     template<typename I, typename CharT>
     concept Input =
       std::is_constructible_v<I> and
-      requires(I input, CharT character, cli::Event<CharT> &event) {
-        /// on_char is called by the engine when a character is received.
+      requires(
+        I input, CharT character, cli::Event<CharT> &event, Control ctrl) {
+        /// on_char is called by the engine's on_char method. It processes the
+        /// character, transforms it into a cli::Event<CharT>, and stores it in
+        /// an internal buffer. Returns cli::Error::none on success.
         { input.on_char(character) } -> std::same_as<cli::Error>;
+
+        /// on_control is called by the engine's on_control method. It adds a
+        /// cli::Event<CharT>, constructed from the control, to its internal
+        /// buffer. Returns cli::Error::none on success.
+        { input.on_control(ctrl) } -> std::same_as<cli::Error>;
 
         /// pop_event is called by the engine to process an event.
         { input.pop_event(event) } -> std::convertible_to<bool>;
 
-        /// reset resets the input to its default state.
+        /// reset resets the input to its empty state.
         { input.reset() } -> std::same_as<void>;
       };
 

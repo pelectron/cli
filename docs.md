@@ -19,19 +19,26 @@
 ## Contents
 
 - [Engine](#engine)
-  - [Engine Example](#engine-example)
+  - [Declaration](#engine-declaration)
+  - [Typedefs](#engine-typedefs)
+  - [Constructor](#engine-constructor)
+  - [Methods](#engine-methods)
+  - [Example](#engine-example)
 - [Config](#config)
   - [Optional Entries](#optional-entries)
-  - [Config Example](#config-example)
+  - [Example](#config-example)
 - [Input](#input)
   - [Input Class Template](#input-class-template)
-  - [Input Example](#input-example)
+  - [Example](#input-example)
 - [Display](#display)
   - [Displays Without Cursor](#display-without-cursor)
     [Example Of A Display Without Cursor](#example-of-a-display-with-cursor)
   - [Displays With Cursor](#display-with-cursor)
     - [Example Of A Display With Cursor](#example-of-a-display-with-cursor)
   - [AnsiDisplay](#ansidisplay)
+    - [AnsiDisplay Constructor](#ansidisplay-constructor)
+      - [AnsiDisplay(output)](#ansidisplayout-output)
+      - [AnsiDisplay(args...)](#ansidisplayargsargs)
     - [Output](#output)
     - [Output Example](#output-example)
 - [Commands](#commands)
@@ -83,6 +90,71 @@ buffer.
 `process()` is the method takes the data from the event buffer and actually
 processes the input.
 
+### Engine Declaration
+
+```cpp
+template<
+  concepts::Config Configuration,
+  concepts::Display Display,
+  concepts::Command... Commands>
+class Engine;
+```
+
+### Engine Typedefs
+
+`Engine` has three inner typedefs:
+
+- **config_type**: the [configuration](#config) of the engine.
+- **char_type**: the character type of the [configuration](#config).
+- **input_type**: the [input](#input) the engine uses.
+
+### Engine Constructor
+
+There is one constructor for `Engine`:
+
+#### `Engine(config, display, commands...)`
+
+To create an `Engine`, provide a [config](#config), a [display](#display), and
+[commands](#commands).
+
+##### Parameters
+
+- **config**: this is the [Engine configuration](#config)
+- **display**: this is the [display](#display) the engine will use to output
+  characters.
+- **commands**: these are the [commands](#commands) of the engine. At least one
+  command must be provided.
+
+### Engine Methods
+
+#### `cli::Error on_char(char_type c)`
+
+This method must be called when a character is received. No heavy processing is
+performed because the `Engine` simply forwards `c` to its [input](#input).
+
+If the default [input](#input-class-template) is used and the [config](#config)
+specifies the use of a volatile input buffer, then this method can be called in
+an ISR.
+
+The return value will be either `cli:Error::none` in case of success, or
+`cli::Error::buffer_overflow` in case the [input](#input) cannot accept more
+characters.
+
+Example:
+
+```cpp
+cli::Engine engine{...};
+engine.on_char('k');
+```
+
+#### `cli::Error process()`
+
+Processes the available events.
+
+#### `void reset()`
+
+Resets the engine. This will reset the input, the display, and any internal state.
+
 ### Engine Example
 
 ```cpp
@@ -112,8 +184,9 @@ using cli::operator""_sc;
 using cli::operator""_arg;
 
 static constinit cli::Engine the_cli{
-  cli::default_config{}, // your configuration structure
-  cli::AnsiDisplay{&send_char}, // your Display
+  cli::default_config{}, // the config
+  cli::AnsiDisplay{&send_char}, // the display
+  // the commands
   // the parameter commands
   cli::param("settings"_sc,
              "settings description"_sc,
@@ -226,30 +299,45 @@ static_assert(cli::concepts::Config<my_config>);
 The input concept formalizes the interface that the [Engine](#engine) uses
 for preprocessing character input.
 
-An Input preprocesses the character input received with `on_char` into a
-sequence of `cli::Event`. This sequence is then accessed in a FIFO order via
-`pop_event` by the [engine](#engine). This way, `on_char` could be called in an
-interrupt service routine because preprocessing the input is not a very
-expensive operation.
+An Input preprocesses the character input received with `on_char` and
+`on_control` into a sequence of `cli::Event`. This sequence is then accessed in
+a FIFO order via `pop_event` by the [engine](#engine). This way, `on_char`
+could be called in an interrupt service routine because preprocessing the input
+is not a very expensive operation.
+
+**Note**: f you want to call the engine's `on_char` and `on_control` methods in
+an ISR, you must add a static constexpr member called
+`use_volatile_input_buffer` of type `bool` to your [Config](#config) and set it
+to true. If you want your own input type to respect that setting, you can use
+`cli::config::use_volatile_input_buffer_v` to query this configuration value.
+
+`CLI` provides a default implementation called [cli::Input](#input-class-template).
+
+### Input Concept Definition
 
 ```cpp
 template<typename I, typename CharT>
-concept cli::concepts::Input;
+concept cli::concepts::Input =
+  std::is_constructible_v<I> and
+  requires(
+    I input, CharT character, cli::Event<CharT> &event, Control ctrl) {
+    /// on_char is called by the engine's on_char method. It processes the
+    /// character, transforms it into a cli::Event<CharT>, and stores it in
+    /// an internal buffer. Returns cli::Error::none on success.
+    { input.on_char(character) } -> std::same_as<cli::Error>;
+
+    /// on_control is called by the engine's on_control method. It adds a
+    /// cli::Event<CharT>, constructed from the control, to its internal
+    /// buffer. Returns cli::Error::none on success.
+    { input.on_control(ctrl) } -> std::same_as<cli::Error>;
+
+    /// pop_event is called by the engine to process an event.
+    { input.pop_event(event) } -> std::convertible_to<bool>;
+
+    /// reset resets the input to its empty state.
+    { input.reset() } -> std::same_as<void>;
+  };
 ```
-
-For a variable `input` of type `I`, a `character` value of type `CharT`,
-and a non-const lvalue reference `event` of type `cli::Event<CharT>&`, the
-following must be satisfied:
-
-- `I` is constructible without any arguments.
-- `input.on_char(character)`: is called by the engine when a character is
-  received. Must return a `cli::Error`. `on_char` preprocesses the character
-  input and stores a resulting `cli::Event` in an internal buffer.
-- `input.pop_event(event)`: called by the engine to get the next available
-  event. Must return a `bool`, which indicates that an event has been popped
-  (`true`), or that no event was available (`false`).
-
-`CLI` provides a default implementation called [cli::Input](#input-class-template).
 
 ### Input Class Template
 
@@ -257,12 +345,6 @@ The default implementation of the [Input Concept](#input). If you
 want to use a custom input, your [Config](#config) must specify an inner
 typedef called `input_type`. This `input_type` must satisfy the [Input
 Concept](#input).
-
-Note: f you want to call the engine's `on_char` method in an ISR, you must add
-a static constexpr member called `use_volatile_input_buffer` of type `bool` to
-your [Config](#config) and set it to true. If you want your own input type to
-respect that setting, you can use `cli::config::use_volatile_input_buffer_v` to
-query this configuration value.
 
 ```cpp
 template<cli::concepts::Config Cfg>
@@ -272,6 +354,7 @@ public:
   using event_type = cli::Event<char_type>;
 
   constexpr cli::Error on_char(char_type c);
+  constexpr cli::Error on_control(const Control& ctrl);
   constexpr bool pop_event(event_type& event);
   constexpr void reset();
 }
@@ -292,12 +375,12 @@ These special characters and escape sequences are recognized by `cli::Input`:
   Cfg::use_cursor is false).
 - **tab** (0x09, \\t) -> passed through as is if autocomplete is not
   enabled, else Control:autocomplete.
-- **linefeed** (0x0A, \\n) -> Control::enter if Cfg::delimiter is lf, else
+- **linefeed** (0x0A, \\n) -> Control::enter if Cfg::input_delimiter is lf, else
   passed through as is.
-- **carriage return** (0x0D, \\r) -> Control::enter if Cfg::delimiter is
+- **carriage return** (0x0D, \\r) -> Control::enter if Cfg::input_delimiter is
   cr, else passed through as is.
 - **carriage return + linefeed** ([0x0A, 0x0B], \\r\\n) -> Control::enter
-  if Cfg::delimiter is crlf.
+  if Cfg::input_delimiter is crlf.
 - **delete** (0x7F) -> Control::delete_char. Deletes the character under
   the cursor. If cursor is not enabled, this has no effect.
 - **CSI n A** -> Control::cursor_up. Cursor up movement. If history is
@@ -396,8 +479,7 @@ multi-line, the display must have a static constexpr member called
 For a variable `d` of type `D`, a variable `character` of type `CharT`, a
 variable `string` of type `cli::View<const CharT>`, and a variable `n` of type
 `std::size_t`, the following must hold for `D` to satisfy the
-`DisplayWithoutCursor` concept. Note that all methods must return a
-`cli::Error`.
+`DisplayWithoutCursor` concept. Note that all methods must return void.
 
 - `d.write(character)`: writes a character.
 - `d.write(string)`: writes a string.
@@ -420,23 +502,25 @@ Below is an example definition for a char display without cursor.
 ```cpp
 class MySingleLineDisplay{
 public:
-  cli::Error write(char character);
-  cli::Error write(cli::View<const char> string);
-  cli::Error backspace(std::size_t n);
-  cli::Error clear_line();
-  cli::Error clear_screen();
-  cli::Error newline();
+  MySingleLineDisplay();
+  void write(char character);
+  void write(cli::View<const char> string);
+  void backspace(std::size_t n);
+  void clear_line();
+  void clear_screen();
+  void newline();
 };
 
 class MyMutlilineDisplay{
 public:
   static constexpr bool is_multiline_display = true;
-  cli::Error write(char character);
-  cli::Error write(cli::View<const char> string);
-  cli::Error backspace(std::size_t n);
-  cli::Error clear_line();
-  cli::Error clear_screen();
-  cli::Error newline();
+  MyMutlilineDisplay();
+  void write(char character);
+  void write(cli::View<const char> string);
+  void backspace(std::size_t n);
+  void clear_line();
+  void clear_screen();
+  void newline();
 };
 ```
 
@@ -448,8 +532,7 @@ superset of `DisplayWithoutCursor`.
 For a variable `d` of type `D`, a variable `character` of type `CharT`, a
 variable `string` of type `cli::View<const CharT>`, and a variable `n` of type
 `std::size_t`, the following must hold for `D` to satisfy the
-`DisplayWithCursor` concept. Note that all methods must return a
-`cli::Error`.
+`DisplayWithCursor` concept. Note that all methods must return void.
 
 - `d.write(character)`: writes a character at the current cursor position. This
   will overwrite a character if it was already there.
@@ -471,27 +554,29 @@ Below is an example definition for a char display with cursor.
 ```cpp
 class MySingleLineDisplay{
 public:
-  cli::Error write(char character);
-  cli::Error write(cli::View<const char> string);
-  cli::Error backspace(std::size_t n);
-  cli::Error clear_line();
-  cli::Error clear_screen();
-  cli::Error newline();
-  cli::Error cursor_left(std::size_t n);
-  cli::Error cursor_right(std::size_t n);
+  MySingleLineDisplay();
+  void write(char character);
+  void write(cli::View<const char> string);
+  void backspace(std::size_t n);
+  void clear_line();
+  void clear_screen();
+  void newline();
+  void cursor_left(std::size_t n);
+  void cursor_right(std::size_t n);
 };
 
 class MyMutlilineDisplay{
 public:
   static constexpr bool is_multiline_display = true;
-  cli::Error write(char character);
-  cli::Error write(cli::View<const char> string);
-  cli::Error backspace(std::size_t n);
-  cli::Error clear_line();
-  cli::Error clear_screen();
-  cli::Error newline();
-  cli::Error cursor_left(std::size_t n);
-  cli::Error cursor_right(std::size_t n);
+  MyMutlilineDisplay();
+  void write(char character);
+  void write(cli::View<const char> string);
+  void backspace(std::size_t n);
+  void clear_line();
+  void clear_screen();
+  void newline();
+  void cursor_left(std::size_t n);
+  void cursor_right(std::size_t n);
 };
 ```
 
@@ -507,11 +592,46 @@ class AnsiDisplay;
 
 `AnsiDisplay` uses an [Output](#output) to actually write characters.
 
+#### AnsiDisplay Constructor
+
+There are two constructors for `AnsiDisplay`:
+
+##### AnsiDisplay(Out output)
+
+Constructs an AnsiDisplay from an [output](#output).
+
+Example:
+
+```cpp
+void my_output(char c);
+
+cli::AnsiDisplay display{&my_output};
+```
+
+##### AnsiDisplay(Args...args)
+
+Constructs an AnsiDisplay by forwarding `args` to its [output](#output).
+
+Example:
+
+```cpp
+class MyOutput{
+public:
+  MyOutput(int handle, void* bla);
+  void operator()(char c);
+};
+
+int handle = 5;
+void* bla = ...;
+
+cli::AnsiDisplay<MyOutput> display{handle, bla};
+```
+
 #### Output
 
 The Output concept denotes a callable that can take a character of type
 `CharT`, or a string of type `cli::View<const CharT>`, or both, as an input and
-returns a `cli::Error`.
+returns `void`.
 
 ```cpp
 // denotes an output for strings of type cli::View<const CharT>
@@ -534,21 +654,17 @@ Here is an example of an [Output](#output) of char for an embedded UART.
 
 ```cpp
 // satisfies cli::concepts::StringOutput<char>
-cli::Error string_output(cli::View<const char> string){
+void string_output(cli::View<const char> string){
   for(const char& ch: string){
-    HAL_Status status = HAL_UART_Transmit(ch);
-    if(status != HAL_STAUS_OK)
-      return status_to_cli_err(status);
+    HAL_UART_Transmit(ch);
   }
-  return cli::Error::none;
 }
 
 static_assert(cli::concepts::StringOutput<decltype(string_output), char>);
 
 // satisfies cli::concepts::CharOutput<char>
-cli::Error char_output(char c){
-  HAL_Status status = HAL_UART_Transmit(c);
-  return status_to_cli_err(status);
+void char_output(char c){
+  HAL_UART_Transmit(c);
 }
 
 static_assert(cli::concepts::CharOutput<decltype(char_output), char>);
@@ -557,18 +673,14 @@ static_assert(cli::concepts::CharOutput<decltype(char_output), char>);
 // cli::concepts::CharOutput<char> and
 // cli::concepts::Output.
 struct MyOutput{
-  cli::Error operator()(cli::View<const char> string){
+  void operator()(cli::View<const char> string){
     for(const char& ch: string){
-      HAL_Status status = HAL_UART_Transmit(ch);
-      if(status != HAL_STAUS_OK)
-        return status_to_cli_err(status);
+      HAL_UART_Transmit(ch);
     }
-    return cli::Error::none;
   }
 
-  cli::Error operator()(char c){
-    HAL_Status status = HAL_UART_Transmit(c);
-    return status_to_cli_err(status);
+  void operator()(char c){
+    HAL_UART_Transmit(c);
   }
 };
 
