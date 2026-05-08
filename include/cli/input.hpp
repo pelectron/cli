@@ -90,32 +90,33 @@ namespace cli {
       return Error::implementation_error;
     }
 
-    constexpr Error on_control(const Control &ctrl) {
-      return buffer_.push_back(event_type(ctrl)) ? Error::none
-                                                 : Error::buffer_overflow;
+    constexpr Error on_control(Control ctrl, std::uint8_t param = 1) {
+      return buffer_.push_back(event_type(ctrl, param))
+               ? Error::none
+               : Error::buffer_overflow;
     }
 
   private:
     constexpr Error handle_normal(char_type c) {
       switch (c) {
         case 0x07: // bell
-          return push_control(Control::Type::bell, 1);
+          return push_control(Control::bell, 1);
         case 0x08: // backspace
-          return push_control(Control::Type::backspace, 1);
+          return push_control(Control::backspace, 1);
         case 0x09: // tab
           if constexpr (Cfg::use_autocomplete)
-            return push_control(Control::Type::autocomplete, 1);
+            return push_control(Control::autocomplete, 1);
           else
             return push_char(0x09);
         case 0x0A: // linefeed
           if (config::input_delimiter_v<Cfg> == Delimiter::lf)
-            return push_control(Control::Type::enter, 1);
+            return push_control(Control::enter, 1);
           else
             return push_char(c);
         case 0x0D: // carriage return
           switch (config::input_delimiter_v<Cfg>) {
             case Delimiter::cr:
-              return push_control(Control::Type::enter, 1);
+              return push_control(Control::enter, 1);
             case Delimiter::lf:
               return push_char(c);
             case Delimiter::crlf:
@@ -126,7 +127,7 @@ namespace cli {
           state_ = State::escape_start;
           return Error::none;
         case 0x7F: // delete
-          return push_control(Control::Type::delete_char, 1);
+          return push_control(Control::delete_char, 1);
         default:
           return push_char(c);
       }
@@ -134,6 +135,7 @@ namespace cli {
 
     constexpr Error handle_escape_start(char_type c) {
       if (c == static_cast<char_type>('[')) {
+        param_ = 0;
         state_ = State::escape_bracket;
         return Error::none;
       }
@@ -149,18 +151,18 @@ namespace cli {
       state_ = State::normal;
       switch (c) {
         case 'A':
-          return push_control(Control::Type::cursor_up, 1);
+          return push_control(Control::cursor_up, 1);
         case 'B':
-          return push_control(Control::Type::cursor_down, 1);
+          return push_control(Control::cursor_down, 1);
         case 'C':
-          return push_control(Control::Type::cursor_right, 1);
+          return push_control(Control::cursor_right, 1);
         case 'D':
-          return push_control(Control::Type::cursor_left, 1);
+          return push_control(Control::cursor_left, 1);
         case 'J':
           // unsupported
           return print_escape(c);
         case 'K':
-          return push_control(Control::Type::clear_line_to_end, 0);
+          return push_control(Control::clear_line_to_end, 1);
         default:
           if (c >= '0' and c <= '9') {
             state_ = State::escape_param;
@@ -175,31 +177,37 @@ namespace cli {
       state_ = State::normal;
       switch (c) {
         case 'A':
-          return push_control(Control::Type::cursor_up, param_);
+          return push_control(Control::cursor_up, param_ == 0 ? 1 : param_);
         case 'B':
-          return push_control(Control::Type::cursor_down, param_);
+          return push_control(Control::cursor_down, param_ == 0 ? 1 : param_);
         case 'C':
-          return push_control(Control::Type::cursor_right, param_);
+          return push_control(Control::cursor_right, param_ == 0 ? 1 : param_);
         case 'D':
-          return push_control(Control::Type::cursor_left, param_);
+          return push_control(Control::cursor_left, param_ == 0 ? 1 : param_);
         case 'J':
           if (param_ == 2) // clear screen escape code
-            return push_control(Control::Type::clear_screen, param_);
+            return push_control(Control::clear_screen, 1);
           return print_param(c);
         case 'K':
           switch (param_) {
             case 0:
-              return push_control(Control::Type::clear_line_to_end, 0);
+              return push_control(Control::clear_line_to_end, 1);
             case 1:
-              return push_control(Control::Type::clear_line_to_begin, 0);
+              return push_control(Control::clear_line_to_begin, 1);
             case 2:
-              return push_control(Control::Type::clear_line, 0);
+              return push_control(Control::clear_line, 1);
             default:
               return print_param(c);
           }
         default:
           if (c >= '0' and c <= '9') {
-            param_ = param_ * 10u + static_cast<uint32_t>(c - '0');
+            std::uint8_t new_param =
+              param_ * 10u + static_cast<std::uint8_t>(c - '0');
+            if (new_param < param_) {
+              // overflow
+              return print_param(c);
+            }
+            param_ = new_param;
             state_ = State::escape_param;
             return Error::none;
           }
@@ -210,7 +218,7 @@ namespace cli {
     constexpr Error handle_delimiter(char_type c) {
       state_ = State::normal;
       if (c == '\n') {
-        return push_control(Control::Type::enter, 1);
+        return push_control(Control::enter, 1);
       } else {
         // did not have \r\n
         Error e = push_char('\r');
@@ -236,7 +244,7 @@ namespace cli {
 
     constexpr Error print_param(char_type end) {
       char_type buf[10]{};
-      cli::format::Format<uint32_t, char_type> fmt;
+      cli::format::Int<std::uint8_t, char_type> fmt;
       cli::format::FormatResult res = fmt({buf, 10}, param_);
       if (not res) {
         // implementation_error
@@ -253,7 +261,7 @@ namespace cli {
       return push_char(end);
     }
 
-    enum class State {
+    enum class State : std::uint8_t {
       normal,
       escape_start,
       escape_bracket,
@@ -261,10 +269,9 @@ namespace cli {
       delimiter
     };
 
-    constexpr Error push_control(Control::Type c, uint32_t param) {
-      return buffer_.push_back(event_type(Control(c, param)))
-               ? Error::none
-               : Error::buffer_overflow;
+    constexpr Error push_control(Control c, uint8_t param) {
+      return buffer_.push_back(event_type(c, param)) ? Error::none
+                                                     : Error::buffer_overflow;
     }
 
     constexpr Error push_char(char_type c) {
@@ -276,8 +283,16 @@ namespace cli {
                                        volatile event_type,
                                        event_type>;
 
-    State state_{State::normal};
-    uint32_t param_{0};
+    using State_t = std::conditional_t<config::use_volatile_input_buffer_v<Cfg>,
+                                       volatile State,
+                                       State>;
+
+    using Param_t = std::conditional_t<config::use_volatile_input_buffer_v<Cfg>,
+                                       volatile std::uint8_t,
+                                       std::uint8_t>;
+
+    State_t state_{State::normal};
+    Param_t param_{0};
     RingBuffer<event_t, config::input_size_v<Cfg>> buffer_{};
   };
 

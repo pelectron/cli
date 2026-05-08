@@ -299,11 +299,11 @@ static_assert(cli::concepts::Config<my_config>);
 The input concept formalizes the interface that the [Engine](#engine) uses
 for preprocessing character input.
 
-An Input preprocesses the character input received with `on_char` and
+An Input preprocesses the character and control input received with `on_char` and
 `on_control` into a sequence of `cli::Event`. This sequence is then accessed in
-a FIFO order via `pop_event` by the [engine](#engine). This way, `on_char`
-could be called in an interrupt service routine because preprocessing the input
-is not a very expensive operation.
+a FIFO order via `pop_event` by the [engine](#engine). This way, `on_char` and
+`on_control` could be called in an interrupt service routine because
+preprocessing the input is not a very expensive operation.
 
 **Note**: f you want to call the engine's `on_char` and `on_control` methods in
 an ISR, you must add a static constexpr member called
@@ -319,17 +319,21 @@ to true. If you want your own input type to respect that setting, you can use
 template<typename I, typename CharT>
 concept cli::concepts::Input =
   std::is_constructible_v<I> and
-  requires(
-    I input, CharT character, cli::Event<CharT> &event, Control ctrl) {
+  requires(I input,
+           CharT character,
+           cli::Event<CharT> &event,
+           cli::Control ctrl,
+           std::uint8_t param)
+  {
     /// on_char is called by the engine's on_char method. It processes the
     /// character, transforms it into a cli::Event<CharT>, and stores it in
     /// an internal buffer. Returns cli::Error::none on success.
     { input.on_char(character) } -> std::same_as<cli::Error>;
 
     /// on_control is called by the engine's on_control method. It adds a
-    /// cli::Event<CharT>, constructed from the control, to its internal
-    /// buffer. Returns cli::Error::none on success.
-    { input.on_control(ctrl) } -> std::same_as<cli::Error>;
+    /// cli::Event<CharT>, constructed from the control and param, to its
+    /// internal buffer. Returns cli::Error::none on success.
+    { input.on_control(ctrl, param) } -> std::same_as<cli::Error>;
 
     /// pop_event is called by the engine to process an event.
     { input.pop_event(event) } -> std::convertible_to<bool>;
@@ -354,7 +358,7 @@ public:
   using event_type = cli::Event<char_type>;
 
   constexpr cli::Error on_char(char_type c);
-  constexpr cli::Error on_control(const Control& ctrl);
+  constexpr cli::Error on_control(Control ctrl, std::uint8_t param=1);
   constexpr bool pop_event(event_type& event);
   constexpr void reset();
 }
@@ -406,7 +410,7 @@ These special characters and escape sequences are recognized by `cli::Input`:
   cursor moves to the top starting position. If the cursor is not enabled,
   this has no effect.
 
-Node: Certain escape sequences effects differ from the ANSI standard because
+**NOTE**: Certain escape sequences effects differ from the ANSI standard because
 CLI is intended to be used as a single line interface, not a fully featured
 ANSI terminal. This affects the sequences `CSI n K` and `CSI 2 J`. However, if
 your display/output is connected to a fully ANSI compliant device, then you can

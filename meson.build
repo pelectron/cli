@@ -1,10 +1,10 @@
 project(
-  'cli', 
-  'cpp', 
-  license: 'BSL-1.0', 
-  license_files: 'LICENSE_1_0.txt', 
-  meson_version: '>=1.1.0', 
-  default_options: ['cpp_std=c++20']
+  'cli',
+  'cpp',
+  license: 'BSL-1.0',
+  license_files: 'LICENSE_1_0.txt',
+  meson_version: '>=1.1.0',
+  default_options: ['cpp_std=c++20'],
 )
 
 inc = include_directories('include')
@@ -15,44 +15,51 @@ simulation = get_option('sim')
 cli_term = get_option('cli-term')
 
 # testing, building examples, and simulation can only be done for  non-embeded targets
-build_tests.disable_if(meson.is_cross_build(), error_message: 'can\'t build tests for embedded targets')
-build_examples.disable_if(meson.is_cross_build(), error_message: 'can\'t build examples on embedded targets')
-simulation.disable_if(meson.is_cross_build(), error_message: 'can\'t have simulation with embedded targets')
-cli_term.disable_if(meson.is_cross_build(), error_message: 'cli-term can\'t be built for embedded targets')
+build_tests.disable_if(
+  meson.is_cross_build(),
+  error_message: 'can\'t build tests for embedded targets',
+)
+build_examples.disable_if(
+  meson.is_cross_build(),
+  error_message: 'can\'t build examples on embedded targets',
+)
+simulation.disable_if(
+  meson.is_cross_build(),
+  error_message: 'can\'t have simulation with embedded targets',
+)
+cli_term.disable_if(
+  meson.is_cross_build(),
+  error_message: 'cli-term can\'t be built for embedded targets',
+)
 
 deps = []
 
-if(not simulation.disabled())
+if (not simulation.disabled())
   deps += dependency('cpp-terminal', required: true)
 endif
 
-cli_dep = declare_dependency(
-  include_directories:inc, 
-  dependencies: deps
-)
+cli_dep = declare_dependency(include_directories: inc, dependencies: deps)
 
 meson.override_dependency('cli', cli_dep)
 
-must_fail_to_compile = files(
-  'tests/fails/param_t.cpp'
-)
+must_fail_to_compile = files('tests/fails/param_t.cpp')
 
 cpp = meson.get_compiler('cpp')
 
-foreach file: must_fail_to_compile 
-  if(cpp.compiles(file, include_directories: inc))
-    error('CLI is able to compile '+ file.full_path()+ ', which should be a compile error.')
+foreach file : must_fail_to_compile
+  if (cpp.compiles(file, include_directories: inc))
+    error(
+      'CLI is able to compile '
+      + file.full_path()
+      + ', which should be a compile error.',
+    )
   endif
 endforeach
 
-if(not build_examples.disabled())
+if (not build_examples.disabled())
 
-  if(not simulation.disabled())
-    executable(
-      'cli',
-      'examples/cli.cpp',
-      dependencies: cli_dep
-    )
+  if (not simulation.disabled())
+    executable('cli', 'examples/cli.cpp', dependencies: cli_dep)
   endif
 
   # executable('led-example',
@@ -62,7 +69,7 @@ if(not build_examples.disabled())
 
 endif
 
-if(not build_tests.disabled())
+if (not build_tests.disabled())
   catch_dep = dependency(
     'catch2',
     default_options: ['tests=false'],
@@ -107,6 +114,7 @@ if(not build_tests.disabled())
     'tests/event.cpp',
     'tests/exec_result.cpp',
     'tests/history.cpp',
+    'tests/input.cpp',
     'tests/line.cpp',
     'tests/param.cpp',
     'tests/ring_buffer.cpp',
@@ -120,15 +128,15 @@ if(not build_tests.disabled())
   test('unit test', ut)
 endif
 
-if(get_option('docs'))
+if (get_option('docs'))
   doxygen = find_program('doxygen', required: true)
   run_command(doxygen, 'Doxyfile', check: false)
 endif
 
-if(not cli_term.disabled())
+if (not cli_term.disabled())
   deps = [
     dependency('cpp-terminal', required: true),
-    dependency('asio', required: true)
+    dependency('asio', required: true),
   ]
 
   executable(
@@ -136,7 +144,7 @@ if(not cli_term.disabled())
     'source/cli-term.cpp',
     dependencies: deps,
     include_directories: inc,
-    cpp_args:['-DASIO_NO_DEPRECATED']
+    cpp_args: ['-DASIO_NO_DEPRECATED'],
   )
 
   executable(
@@ -144,6 +152,6 @@ if(not cli_term.disabled())
     'source/cli-term-mock.cpp',
     dependencies: deps,
     include_directories: inc,
-    cpp_args:['-DASIO_NO_DEPRECATED']
+    cpp_args: ['-DASIO_NO_DEPRECATED'],
   )
 endif

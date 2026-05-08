@@ -3,9 +3,12 @@
 #include "cli/concepts.hpp"
 #include "cli/ctti.hpp"
 #include "cli/enums.hpp"
+#include "cli/event.hpp"
 #include "cli/traits.hpp"
 // #include "fixpoint.hpp"
 #include <catch2/catch_tostring.hpp>
+#include <cstdint>
+#include <ostream>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -56,6 +59,10 @@ constexpr F operator|(F f1, F f2) {
   return static_cast<F>(static_cast<uint32_t>(f1) | static_cast<uint32_t>(f2));
 }
 
+constexpr std::uint8_t operator""_u8(unsigned long long int i) {
+  return static_cast<std::uint8_t>(i);
+}
+
 namespace cli {
   inline std::ostream &operator<<(std::ostream &os, const cli::Error &e) {
     return os << std::string_view{cli::ctti::enum_name(e).data()};
@@ -66,6 +73,20 @@ namespace cli {
     if (str.size() == 0)
       return os;
     return os << std::string_view{str.data(), str.size()};
+  }
+
+  inline std::ostream &operator<<(std::ostream &os, const Control &ctrl) {
+    return os << ctti::enum_name(ctrl);
+  }
+
+  inline std::ostream &operator<<(std::ostream &os,
+                                  const cli::Event<char> &ev) {
+    if (ev.type() == cli::Control::character) {
+      return os << std::format("{{char: {}}}", ev.as_char());
+    } else {
+      return os << "{ctrl: " << ctti::enum_name(ev.type())
+                << ",param: " << (unsigned)ev.param() << "}";
+    }
   }
 } // namespace cli
 

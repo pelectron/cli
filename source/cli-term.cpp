@@ -53,6 +53,10 @@
  * also add CLI's include folder to your include path.
  */
 
+#ifdef _MSC_VER
+#define _WIN32_WINNT 0x0601
+#endif
+
 #include "cli/ctti.hpp"
 #include "cli/enums.hpp"
 #include "cli/parse.hpp"

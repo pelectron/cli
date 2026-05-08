@@ -391,6 +391,10 @@ namespace cli::parse {
 
   public:
     constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+      static_assert(static_cast<unsigned>(
+                      Format & (Fmt::binary | Fmt::hex | Fmt::normal)) != 0,
+                    "Invalid Fmt specified. Must be at least one of "
+                    "Fmt::binary, Fmt::hex, or Fmt::normal");
       if (str.size() == 0)
         return Error::too_few_characters;
 
@@ -410,6 +414,8 @@ namespace cli::parse {
         // a decimal number
         return parse_dec(str);
       }
+
+      return {Error::invalid_character, str};
     }
   };
 

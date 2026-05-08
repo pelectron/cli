@@ -67,6 +67,7 @@ std::string max_string(cli::Fmt fmt = cli::Fmt::normal) {
     case cli::Fmt::binary:
       return std::format("{:#b}", std::numeric_limits<T>::max());
   }
+  return std::to_string(std::numeric_limits<T>::max());
 }
 
 template<class T>

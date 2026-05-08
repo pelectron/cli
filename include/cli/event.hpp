@@ -1,75 +1,28 @@
 #ifndef CLI_EVENT_HPP
 #define CLI_EVENT_HPP
-#include <compare>
+
+#include "cli/concepts.hpp"
+#include "cli/util.hpp"
+
 #include <cstdint>
 
 namespace cli {
 
-  /**
-   * @class Control
-   * @brief
-   *
-   */
-  struct Control {
-    enum Type {
-      bell,
-      backspace,
-      autocomplete,
-      cursor_up,
-      cursor_down,
-      cursor_left,
-      cursor_right,
-      delete_char,
-      clear_screen,
-      clear_line,
-      clear_line_to_end,
-      clear_line_to_begin,
-      enter
-    };
-
-    Type type{};
-    uint32_t param{0};
-
-    constexpr Control() {}
-
-    constexpr Control(Type type, uint32_t param = 1)
-      : type(type), param(param) {}
-
-    constexpr Control(const Control &) = default;
-
-    constexpr Control(Control &&) = default;
-
-    Control(const volatile Control &o)
-      : type(o.type), param(o.param) {}
-
-    Control(const volatile Control &&o)
-      : type(o.type), param(o.param) {}
-
-    constexpr Control &operator=(const Control &o) {
-      type = o.type;
-      param = o.param;
-      return *this;
-    }
-
-    constexpr Control &operator=(Control &&o) {
-      type = o.type;
-      param = o.param;
-      return *this;
-    }
-
-    volatile Control &operator=(const volatile Control &o) volatile {
-      type = o.type;
-      param = o.param;
-      return *this;
-    }
-
-    volatile Control &operator=(const volatile Control &&o) volatile {
-      type = o.type;
-      param = o.param;
-      return *this;
-    }
-
-    constexpr auto operator<=>(const Control &) const = default;
+  enum class Control : std::uint8_t {
+    character,
+    bell,
+    backspace,
+    autocomplete,
+    cursor_up,
+    cursor_down,
+    cursor_left,
+    cursor_right,
+    delete_char,
+    clear_screen,
+    clear_line,
+    clear_line_to_end,
+    clear_line_to_begin,
+    enter
   };
 
   /**
@@ -81,50 +34,67 @@ namespace cli {
    * @tparam CharT the character type
    */
   template<typename CharT>
-  struct Event {
-    bool is_char; //< if true, c is the active member of the union, else ctrl is
-                  //< the active member.
-    union {
-      Control ctrl;
-      CharT c;
-    };
-
-    constexpr Event()
-      : is_char(true), c(0) {}
+  class Event {
+  public:
+    constexpr Event() {}
 
     constexpr explicit Event(CharT c)
-      : is_char(true), c(c) {}
+      : type_(Control::character), payload_{c} {}
 
-    constexpr explicit Event(Control ctrl)
-      : is_char(false), ctrl(ctrl) {}
+    constexpr Event(Control type)
+      : type_{type}, payload_{0} {}
+
+    constexpr Event(Control type, std::uint8_t param)
+      : type_{type}, payload_{static_cast<CharT>(param)} {}
 
     constexpr Event(const Event &o)
-      : is_char(o.is_char) {
-      if (is_char)
-        c = o.c;
-      else
-        ctrl = o.ctrl;
-    }
+      : type_(o.type_), payload_(o.payload_) {}
 
     constexpr Event &operator=(const Event &o) {
-      is_char = o.is_char;
-      if (o.is_char) {
-        c = o.c;
-      } else {
-        ctrl = o.ctrl;
-      }
+      type_ = o.type_;
+      payload_ = o.payload_;
+      return *this;
+    }
+
+    constexpr Event &operator=(Event &&o) {
+      type_ = o.type_;
+      payload_ = o.payload_;
       return *this;
     }
 
     volatile Event &operator=(const volatile Event &o) volatile {
-      is_char = o.is_char;
-      if (o.is_char) {
-        c = o.c;
-      } else {
-        ctrl = o.ctrl;
-      }
+      type_ = o.type_;
+      payload_ = o.payload_;
       return *this;
     }
+
+    volatile Event &operator=(volatile Event &&o) volatile {
+      type_ = o.type_;
+      payload_ = o.payload_;
+      return *this;
+    }
+
+    constexpr Control type() const { return type_; }
+
+    constexpr CharT as_char() const {
+      CLI_ASSERT(type_ == Control::character);
+      return payload_;
+    }
+
+    constexpr std::uint8_t param() const { return payload_; }
+
+    Control type() const volatile { return type_; }
+
+    CharT as_char() const volatile {
+      CLI_ASSERT(type_ == Control::character);
+      return payload_;
+    }
+
+    std::uint8_t param() const volatile { return payload_; }
+
+  private:
+    Control type_{};
+    CharT payload_{};
   };
 } // namespace cli
 #endif

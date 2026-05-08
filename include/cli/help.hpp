@@ -2,6 +2,7 @@
 #define CLI_HELP_HPP
 
 #include "cli/command.hpp"
+#include "cli/config.hpp"
 #include "cli/function.hpp"
 #include "cli/string.hpp"
 #include <utility>

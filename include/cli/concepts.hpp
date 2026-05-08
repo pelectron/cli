@@ -2,17 +2,22 @@
 #define CLI_CONCEPTS_HPP
 
 #include "cli/enums.hpp"
-#include "cli/event.hpp"
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
 
 #include <concepts>
+#include <cstdint>
 #include <type_traits>
 
 namespace cli {
 
   template<typename CharT>
   class ExecResult;
+
+  template<typename CharT>
+  class Event;
+
+  enum class Control : std::uint8_t;
 
   /**
    * @brief This concept is true if T is a cli::string_constant
@@ -47,18 +52,20 @@ namespace cli {
      */
     template<typename I, typename CharT>
     concept Input =
-      std::is_constructible_v<I> and
-      requires(
-        I input, CharT character, cli::Event<CharT> &event, Control ctrl) {
+      std::is_constructible_v<I> and requires(I input,
+                                              CharT character,
+                                              cli::Event<CharT> &event,
+                                              Control ctrl,
+                                              std::uint8_t param) {
         /// on_char is called by the engine's on_char method. It processes the
         /// character, transforms it into a cli::Event<CharT>, and stores it in
         /// an internal buffer. Returns cli::Error::none on success.
         { input.on_char(character) } -> std::same_as<cli::Error>;
 
         /// on_control is called by the engine's on_control method. It adds a
-        /// cli::Event<CharT>, constructed from the control, to its internal
-        /// buffer. Returns cli::Error::none on success.
-        { input.on_control(ctrl) } -> std::same_as<cli::Error>;
+        /// cli::Event<CharT>, constructed from the control and param, to its
+        /// internal buffer. Returns cli::Error::none on success.
+        { input.on_control(ctrl, param) } -> std::same_as<cli::Error>;
 
         /// pop_event is called by the engine to process an event.
         { input.pop_event(event) } -> std::convertible_to<bool>;

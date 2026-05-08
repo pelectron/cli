@@ -30,6 +30,7 @@ namespace cli {
     using config_type = Cfg;
     using char_type = typename config_type::char_type;
     using input_type = get_input_type<config_type>;
+    using event_type = Event<char_type>;
 
     static_assert(concepts::Input<input_type, char_type>,
                   "The input_type of your config does not satisfy the Input "
@@ -75,8 +76,8 @@ namespace cli {
      * @return Error::none on success, Error::buffer_overflow if the input can't
      * handle more events.
      */
-    constexpr Error on_control(const Control &ctrl) {
-      return input_.on_control(ctrl);
+    constexpr Error on_control(Control ctrl, std::uint8_t param = 1) {
+      return input_.on_control(ctrl, param);
     }
 
     /**
@@ -85,13 +86,7 @@ namespace cli {
     constexpr Error process() {
       Event<char_type> ev{};
       while (input_.pop_event(ev)) {
-        Error e{};
-
-        if (ev.is_char)
-          e = process_char(ev.c);
-        else
-          e = process_control(ev.ctrl);
-
+        Error e = process_event(ev);
         if (e != Error::none)
           return e;
       }
@@ -112,22 +107,22 @@ namespace cli {
     }
 
   private:
-    constexpr Error process_char(char_type c) { return line_.on_char(c); }
-
-    constexpr Error process_control(const Control &ctrl) {
-      switch (ctrl.type) {
+    constexpr Error process_event(const event_type &ev) {
+      switch (ev.type()) {
+        case Control::character:
+          return line_.on_char(ev.as_char());
         case Control::backspace:
-          return line_.on_backspace(ctrl.param);
+          return line_.on_backspace(ev.param());
         case Control::autocomplete:
           return line_.on_autocomplete();
         case Control::cursor_down:
-          return on_cursor_down(ctrl.param);
+          return on_cursor_down(ev.param());
         case Control::cursor_up:
-          return on_cursor_up(ctrl.param);
+          return on_cursor_up(ev.param());
         case Control::cursor_left:
-          return line_.on_cursor_left(ctrl.param);
+          return line_.on_cursor_left(ev.param());
         case Control::cursor_right:
-          return line_.on_cursor_right(ctrl.param);
+          return line_.on_cursor_right(ev.param());
         case Control::delete_char:
           return line_.on_delete_char();
         case Control::clear_screen:
