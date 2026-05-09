@@ -57,7 +57,6 @@ settings.foo # returns 42
 settings.bar # returns 'x'
 gooify(normal, 15) # calls gooify(Mode::normal, 15)
 gooify(n = 10, mode = extreme) # calls gooify(Mode::extreme, 10)
-gooify n = 10, mode = extreme  # same as above, the parentheses are optional
 ```
 
 In your main application, you will create an Engine object, and populate it

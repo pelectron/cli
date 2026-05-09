@@ -40,6 +40,7 @@ namespace cli {
     unexpected_characters_after_closing_paren, //< characters after closing
                                                //< parentheses
     expected_rparen,                           //< expected closing parentheses
+    expected_lparen,
     //
     // parse errors
     too_few_characters,    //< expected more characters
@@ -54,6 +55,7 @@ namespace cli {
     expected_group_opening,
     expected_group_closing,
     expected_another_field,
+    expected_field,
     expected_struct_value,
     expected_assignment,
     expected_endquote,

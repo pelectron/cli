@@ -102,6 +102,12 @@ namespace cli {
       }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 
+    template<typename Cmd>
+    static constexpr bool has_help_context =
+      requires(const Cmd &cmd, cli::View<const char_type> arg) {
+        { cmd.help_context(arg) } -> std::same_as<cli::View<const char_type>>;
+      };
+
     template<concepts::Command Cmd>
     constexpr void
     init_cmd(std::size_t &index, CommandNode<char_type> &parent, Cmd &cmd) {
@@ -116,6 +122,13 @@ namespace cli {
                        View<char_type> out) -> ExecResult<char_type> {
         return static_cast<Cmd *>(this_)->execute(args, out);
       };
+
+      if constexpr (has_help_context<Cmd>) {
+        node.help_context_ = +[](const void *this_, View<const char_type> arg) {
+          return static_cast<const Cmd *>(this_)->help_context(arg);
+        };
+      }
+
       // add the node to the parent
       parent.add_sub(node);
       // initialize sub commands of cmd

@@ -47,6 +47,8 @@ namespace cli {
     ExecResult<CharT> (*exec_)(void *this_,
                                View<const CharT> args,
                                View<CharT> out) = nullptr;
+    cli::View<const CharT> (*help_context_)(const void *this_,
+                                            cli::View<const CharT>) = nullptr;
     // the parent command
     CommandNode *parent = nullptr;
     /// the next sibling command
@@ -106,6 +108,14 @@ namespace cli {
     constexpr ExecResult<CharT> execute(View<const CharT> args,
                                         View<CharT> out) const {
       return (*exec_)(this_, args, out);
+    }
+
+    constexpr cli::View<const CharT>
+    help_context(cli::View<const CharT> arg) const {
+      if (help_context_)
+        return (*help_context_)(this, arg);
+      else
+        return {};
     }
 
     /**

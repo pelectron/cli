@@ -18,67 +18,93 @@ namespace cli {
     using config_type = typename Engine::config_type;
     using char_type = typename config_type::char_type;
 
-    using error_message = string_constant<char_type,
-                                          'n',
-                                          'o',
-                                          ' ',
-                                          's',
-                                          'u',
-                                          'c',
-                                          'h',
-                                          ' ',
-                                          'c',
-                                          'o',
-                                          'm',
-                                          'm',
-                                          'a',
-                                          'n',
-                                          'd'>;
+    static constexpr View<const char_type> cmd_not_found{
+      string_constant<char_type,
+                      'n',
+                      'o',
+                      ' ',
+                      's',
+                      'u',
+                      'c',
+                      'h',
+                      ' ',
+                      'c',
+                      'o',
+                      'm',
+                      'm',
+                      'a',
+                      'n',
+                      'd'>{}};
 
+    static constexpr View<const char_type> no_desc_available{
+      string_constant<char_type,
+                      'n',
+                      'o',
+                      ' ',
+                      'd',
+                      'e',
+                      's',
+                      'c',
+                      'r',
+                      'i',
+                      'p',
+                      't',
+                      'i',
+                      'o',
+                      'n',
+                      ' ',
+                      'a',
+                      'v',
+                      'a',
+                      'i',
+                      'l',
+                      'a',
+                      'b',
+                      'l',
+                      'e'>{}};
     /**
      * returns the description of cmd
      *
      * @param cmd the command
      */
-    constexpr View<const char_type>
-    operator()(View<const char_type> cmd) const {
+    constexpr void operator()(View<const char_type> cmd,
+                              View<const char_type> arg) const {
+      engine.display_.newline();
       if (cmd.size() == 0) {
-        if constexpr (not config::empty_help_prints_commands_v<config_type>) {
-          return error_message{};
-        } else {
-          engine.print();
-          return {};
-        }
+        if (arg.size() != 0)
+          return engine.display_.write(cmd_not_found);
+
+        if constexpr (not config::empty_help_prints_commands_v<config_type>)
+          return engine.display_.write(cmd_not_found);
+
+        return engine.print();
       }
 
-      const CommandNode<char_type> *node = engine.root();
-      auto end = cmd.find_first_of(config_type::access_separator);
-      while (end != CharView::npos) {
-        auto s = cmd.substr(0, end);
-        bool found = false;
-        for (const auto &sub : *node) {
-          if (sub.name == s) {
-            node = &sub;
-            cmd = cmd.substr(end + 1);
-            end = cmd.find_last_of(config_type::access_separator);
-            found = true;
-            break;
-          }
-        }
-        if (not found)
-          return error_message{};
+      const CommandNode<char_type> *cmd_node =
+        get_command(cmd, engine.root(), config_type::access_separator);
+
+      if (cmd_node == nullptr)
+        return engine.display_.write(cmd_not_found);
+
+      if (arg.size() == 0) {
+        engine.display_.write('[');
+        engine.display_.write(cmd_node->type);
+        engine.display_.write(
+          View<const char_type>{string_constant<char_type, ']', ':', ' '>{}});
+
+        if (cmd_node->description.size() == 0)
+          return engine.display_.write(no_desc_available);
+        else
+          return engine.display_.write(cmd_node->description);
       }
 
-      for (const auto &sub : *node) {
-        if (sub.name == cmd) {
-          node = &sub;
-          return sub.description;
-          break;
-        }
-      }
-
-      return error_message{};
+      const View context_help = cmd_node->help_context(arg);
+      if (context_help.size() == 0)
+        engine.display_.write(no_desc_available);
+      else
+        engine.display_.write(context_help);
     }
+
     Engine &engine;
   };
 
@@ -89,14 +115,10 @@ namespace cli {
       cli::Help<Engine>{engine},
       funcs::arg<cli::View<const typename Engine::char_type>,
                  string_constant<typename Engine::char_type>{}>(
-        string_constant<typename Engine::char_type,
-                        'c',
-                        'o',
-                        'm',
-                        'm',
-                        'a',
-                        'n',
-                        'd'>{}));
+        string_constant<typename Engine::char_type, 'c', 'm', 'd'>{}),
+      funcs::arg<cli::View<const typename Engine::char_type>,
+                 string_constant<typename Engine::char_type>{}>(
+        string_constant<typename Engine::char_type, 'a', 'r', 'g'>{}));
   }
 
   template<class Engine>

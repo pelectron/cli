@@ -35,8 +35,9 @@ namespace cli::funcs {
 
   template<class A>
   concept FuncArg = requires(A &&arg) {
-    { typename std::remove_cvref_t<A>::name{} } -> SC;
-    { typename std::remove_cvref_t<A>::description{} } -> SC;
+    { typename std::remove_cvref_t<A>::char_type{} };
+    { arg.name } -> SC;
+    { arg.description } -> SC;
     { arg.parse } -> parse::Parser;
     { arg.validate } -> validate::Validator;
     // {
@@ -56,11 +57,9 @@ namespace cli::funcs {
            validate::Validator Validate>
   struct FunctionArg {
     using char_type = typename Name::char_type;
-    using name = Name;
-    using description = Description;
     using type = std::remove_cvref_t<decltype(DefaultValue)>;
-    using parser = Parse;
     using validator = Validate;
+    using parser = Parse;
 
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
     constexpr FunctionArg(Name,
@@ -79,6 +78,8 @@ namespace cli::funcs {
     constexpr FunctionArg(Name, Description, P &&parse, V &&validate)
       : parse(std::forward<P>(parse)), validate(std::forward<V>(validate)) {}
 
+    CLI_NO_UNIQUE_ADDRESS Name name;
+    CLI_NO_UNIQUE_ADDRESS Description description;
     CLI_NO_UNIQUE_ADDRESS Parse parse{};
     CLI_NO_UNIQUE_ADDRESS Validate validate{};
   };
@@ -133,8 +134,6 @@ namespace cli::funcs {
            validate::Validator Validate>
   struct FunctionArgWithoutDefault {
     using char_type = typename Name::char_type;
-    using name = Name;
-    using description = Description;
     using type = T;
     using parser = Parse;
     using validator = Validate;
@@ -151,6 +150,8 @@ namespace cli::funcs {
                                         V &&validate)
       : parse(std::forward<P>(parse)), validate(std::forward<V>(validate)) {}
 
+    CLI_NO_UNIQUE_ADDRESS Name name;
+    CLI_NO_UNIQUE_ADDRESS Description description;
     CLI_NO_UNIQUE_ADDRESS Parse parse{};
     CLI_NO_UNIQUE_ADDRESS Validate validate{};
   };
@@ -183,11 +184,12 @@ namespace cli::funcs {
   template<SC Name, SC Description>
   struct UndeducedArg {
     using char_type = typename Name::char_type;
-    using name = Name;
-    using description = Description;
     using type = Deduced;
     using parser = parse::Parse<Deduced, char_type>;
     using validator = validate::DefaultValidate<Deduced>;
+
+    CLI_NO_UNIQUE_ADDRESS Name name;
+    CLI_NO_UNIQUE_ADDRESS Description description;
   };
 
   namespace dtl {
@@ -204,9 +206,9 @@ namespace cli::funcs {
       using arg_type = std::remove_cvref_t<type_list::type_at_t<I, args>>;
       static_assert(parse::ParserOf<P, T, typename N::char_type>);
       static_assert(validate::ValidatorOf<V, T>);
-      static_assert(
-        std::same_as<arg_type, T>,
-        "the I-th arg's explicitly set type does not match F's I-th argument");
+      static_assert(std::same_as<arg_type, T>,
+                    "the I-th arg's explicitly set type does not match "
+                    "function F's I-th argument");
       return arg;
     }
 
@@ -224,9 +226,9 @@ namespace cli::funcs {
       static_assert(parse::ParserOf<P, T, typename N::char_type>);
       static_assert(validate::ValidatorOf<V, T>);
       static_assert(std::constructible_from<T, decltype(DV)>);
-      static_assert(
-        std::same_as<arg_type, T>,
-        "the I-th arg's explicitly set type does not match F's I-th argument");
+      static_assert(std::same_as<arg_type, T>,
+                    "the I-th arg's explicitly set type does not match "
+                    "function F's I-th argument");
       return arg;
     }
 
@@ -287,7 +289,7 @@ namespace cli::funcs {
 
     template<FuncArg A, FuncArg... As>
     constexpr auto make_pretty_signature_name(const A &arg, const As &...args) {
-      using CharT = typename A::name::char_type;
+      using CharT = typename A::char_type;
       if constexpr (sizeof...(As) == 0)
         return pretty_arg_name(arg);
       else
@@ -994,7 +996,7 @@ namespace cli::funcs {
 
     template<class... Fields>
     using PartialParser = parse::
-      FieldGroup<typename Name::char_type, '=', ',', ' ', ' ', Fields...>;
+      FieldGroup<typename Name::char_type, '=', ',', '(', ')', Fields...>;
     using Parser = type_list::apply_t<PartialParser,
                                       decltype(dtl::parse_field_from_args(
                                         std::declval<std::tuple<Args...>>()))>;
@@ -1029,21 +1031,6 @@ namespace cli::funcs {
       Parser parse{dtl::parse_field_from_args(this->args_)};
 
       args = parse::trim_ws(args);
-
-      if (args.size() == 1 and args[0] == '(') {
-        return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
-                                                       args.end());
-      }
-
-      if (args.size() > 1) {
-        if (args[0] == '(') {
-          if (args[args.size() - 1] != ')') {
-            return ExecResult<char_type>::make_parse_error(
-              Error::expected_rparen, args.end());
-          }
-          args = args.substr(1, args.size() - 2);
-        }
-      }
 
       parse::ParseResult res = parse(args);
 
@@ -1093,9 +1080,30 @@ namespace cli::funcs {
       }
     }
 
+    View<const char_type> help_context(View<const char_type> arg) const {
+      return get_help(arg, std::make_index_sequence<sizeof...(Args)>{});
+    }
+
   private:
+    template<std::size_t I, std::size_t... Is>
+    View<const char_type> get_help(View<const char_type> arg,
+                                   std::index_sequence<I, Is...>) const {
+      using Arg = std::remove_reference_t<decltype(std::get<I>(args_))>;
+      if (arg == std::get<I>(args_).name) {
+        return string_constant<char_type, '['>{} +
+               ctti::name<typename Arg::type>() +
+               string_constant<char_type, ']', ':', ' '>{} +
+               std::get<I>(args_).description;
+      } else {
+        if constexpr (sizeof...(Is) == 0)
+          return {};
+        else
+          return get_help(arg, std::index_sequence<Is...>{});
+      }
+    }
+
     CLI_NO_UNIQUE_ADDRESS F func_{};
-    std::tuple<Args...> args_{};
+    CLI_NO_UNIQUE_ADDRESS std::tuple<Args...> args_{};
   };
 
   template<SC Name, SC Description, SC Type, Callable F>
@@ -1130,26 +1138,36 @@ namespace cli::funcs {
 
       args = parse::trim_ws(args);
 
-      if (args.size() == 1 and args[0] == '(') {
-        return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
-                                                       args.end());
+      if (args.size() == 0) {
+        return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
+                                                       nullptr);
+      }
+
+      if (args.size() == 1) {
+        if (args[0] == '(')
+          return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
+                                                         args.end());
+        else
+          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
+                                                         args.end());
       }
 
       if (args.size() > 1) {
         if (args[0] == '(') {
-          if (args[args.size() - 1] != ')') {
+          View rest = parse::skip_ws(args);
+          if (rest.size() == 0) {
             return ExecResult<char_type>::make_parse_error(
               Error::expected_rparen, args.end());
           }
-          args = args.substr(1, args.size() - 2);
+          if (rest[0] != ')') {
+            return ExecResult<char_type>::make_parse_error(
+              Error::invalid_argument, args.begin());
+          }
+        } else {
+          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
+                                                         args.begin());
         }
       }
-
-      args = parse::trim_ws(args);
-
-      if (args.size() != 0)
-        return ExecResult<char_type>::make_parse_error(Error::invalid_argument,
-                                                       args.data());
 
       if constexpr (std::is_same_v<void, Ret>) {
         func_();

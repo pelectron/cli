@@ -20,6 +20,7 @@
 
 #include "cli/ctti.hpp"
 #include "cli/enums.hpp"
+#include "cli/string.hpp"
 #include "cli/traits.hpp"
 #include "cli/type_list.hpp"
 #include "cli/u64.hpp"
@@ -213,13 +214,16 @@ namespace cli::parse {
 
   template<typename CharT>
   constexpr View<CharT> skip_ws(View<CharT> str) {
-    return str.substr(str.find_first_not_of(" \n\r\t\v\f"));
+    return str.substr(str.find_first_not_of(View<const CharT>{
+      string_constant<CharT, ' ', '\n', '\r', '\t', '\v', '\f'>{}}));
   }
 
   template<typename CharT>
   constexpr View<CharT> trim_ws(View<CharT> str) {
     View s = skip_ws(str);
-    std::size_t idx = s.find_last_not_of(" \n\r\t\v\f");
+    std::size_t idx = s.find_last_not_of(View<const CharT>{
+      string_constant<CharT, ' ', '\n', '\r', '\t', '\v', '\f'>{}});
+
     if (idx == View<CharT>::npos)
       return s;
     return s.substr(0, idx + 1);
@@ -443,6 +447,7 @@ namespace cli::parse {
 
   /**
    * A parser for stringviews.
+   *
    */
   template<concepts::StringView T, typename CharT>
   class StringView {
@@ -465,33 +470,31 @@ namespace cli::parse {
         }
         return {Error::expected_endquote, str};
       } else {
-        for (std::size_t i = 0; i < str.size(); ++i) {
-          if (str[i] == ' ') {
-            if (i == 0)
-              return {Error::invalid_character, str};
-            const auto value = str.substr(0, i);
-            return {T(value.data(), value.size()), str.substr(i)};
-          }
-        }
-        return {T(str.data(), str.size())};
+        std::size_t end =
+          str.find_first_of(View<const CharT>{string_constant<CharT,
+                                                              ' ',
+                                                              '\n',
+                                                              '\r',
+                                                              '\t',
+                                                              '\v',
+                                                              '\f',
+                                                              '(',
+                                                              ')',
+                                                              '{',
+                                                              '}',
+                                                              ',',
+                                                              '='>{}});
+        if (end == 0)
+          return {Error::invalid_character, str};
+        View rest = str.substr(end);
+        View value = str.substr(0, end);
+        return {T(value.data(), value.size()), rest};
       }
     }
   };
 
   /**
    * @brief
-   *
-   * '' -> invalid
-   * ' ' -> invalid
-   * '""' -> ''
-   * '\"' -> '"'
-   * '\"\"' -> '""'
-   * 'hello' -> 'hello'
-   * 'hello world' -> 'hello', rest = ' world'
-   * '"hello world"' -> 'hello world'
-   * 'hello"world' -> 'hello"world'
-   * 'hello\"world' -> 'hello"world'
-   * '"hello \"world\""' -> 'hello "world"'
    * @tparam CharT
    * @param str
    * @return
@@ -521,11 +524,39 @@ namespace cli::parse {
         }
         return {Error::expected_endquote, str};
       } else {
+        std::size_t end =
+          str.find_first_of(View<const CharT>{string_constant<CharT,
+                                                              ' ',
+                                                              '\n',
+                                                              '\r',
+                                                              '\t',
+                                                              '\v',
+                                                              '\f',
+                                                              '(',
+                                                              ')',
+                                                              '{',
+                                                              '}',
+                                                              ',',
+                                                              '='>{}});
+        if (end == 0) {
+          return {Error::invalid_character, str};
+        }
+
         for (std::size_t i = 0; i < str.size(); ++i) {
-          if (str[i] == ' ') {
-            if (i == 0) {
-              return {Error::invalid_character, str};
-            }
+          if (View<const CharT>{string_constant<CharT,
+                                                ' ',
+                                                '\n',
+                                                '\r',
+                                                '\t',
+                                                '\v',
+                                                '\f',
+                                                '(',
+                                                ')',
+                                                '{',
+                                                '}',
+                                                ',',
+                                                '='>{}}
+                .find(str[i]) != View<const CharT>::npos) {
             return {ret, str.substr(i)};
           } else if (i < (str.size() - 1) and str[i] == '\\' and
                      str[i + 1] == '"') {
@@ -1135,6 +1166,13 @@ namespace cli::parse {
       bool initialized[sizeof...(Fields)]{};
       bool optional[sizeof...(Fields)]{};
       std::tuple<Fields...> fields{};
+      constexpr bool all_fields_have_a_value() const {
+        for (std::size_t i = 0; i < sizeof...(Fields); ++i) {
+          if (not(initialized[i] or optional[i]))
+            return false;
+        }
+        return true;
+      }
     };
     using Pair =
       std::pair<View<const CharT>, void (*)(State &, View<const CharT> &)>;
@@ -1271,6 +1309,15 @@ namespace cli::parse {
         s.fields,
         s);
 
+      if (sv[0] == Postfix) {
+        if (s.all_fields_have_a_value()) {
+          auto res = std::move(s.fields);
+          reset_state();
+          return {std::move(res), sv.substr(1)};
+        }
+        return {Error::expected_field, str};
+      }
+
       std::size_t pos_index = 0;
       while (s.error == Error::none and s.consumed < sizeof...(Fields)) {
         std::size_t parser_index = 0;
@@ -1353,19 +1400,31 @@ namespace cli::parse {
               return {std::move(fields), sv.substr(1)};
             }
           }
-        } else {
-          if (sv.size() == 0) {
-            reset_state();
-            return {Error::expected_another_field, sv};
-          }
-
-          if (sv[0] != MemberSeparator) {
-            reset_state();
-            return {Error::expected_delimiter, sv};
-          }
-
-          sv = skip_ws(sv.substr(1));
         }
+
+        if (sv.size() == 0) {
+          if (s.all_fields_have_a_value() and Postfix == ' ') {
+            auto fields = s.fields;
+            reset_state();
+            return {std::move(fields)};
+          }
+
+          reset_state();
+          return {Error::expected_another_field, sv};
+        }
+
+        if (sv[0] == Postfix and s.all_fields_have_a_value()) {
+          auto fields = s.fields;
+          reset_state();
+          return {std::move(fields), sv.substr(1)};
+        }
+
+        if (sv[0] != MemberSeparator) {
+          reset_state();
+          return {Error::expected_delimiter, sv};
+        }
+
+        sv = skip_ws(sv.substr(1));
       }
       auto err = s.error;
       auto fields = s.fields;

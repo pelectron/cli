@@ -3,6 +3,7 @@
 
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
+#include "cli/config.hpp"
 #include "cli/display.hpp"
 #include "cli/enums.hpp"
 #include "cli/format.hpp"
@@ -17,7 +18,7 @@ namespace cli {
   namespace dtl {
     template<bool MutliLineDisplay>
     struct CommandEntered {
-      bool value;
+      bool value{false};
       constexpr operator bool() { return value; }
       constexpr CommandEntered &operator=(bool v) {
         value = v;
@@ -31,20 +32,6 @@ namespace cli {
       constexpr operator bool() { return false; }
       constexpr CommandEntered &operator=(bool) { return *this; }
     };
-
-    template<typename CharT, typename Line, concepts::Display<CharT> Display>
-    constexpr Error print_error(Line &line, Display &display, Error e) {
-      display.newline();
-
-      display.write(ctti::enum_name<Error, CharT>(e));
-
-      if constexpr (cli::is_multiline_display_v<Display>) {
-        display.newline();
-      }
-
-      line.reset();
-      return e;
-    }
 
     template<class Index, class Display>
     constexpr Error
@@ -129,6 +116,7 @@ namespace cli {
       }
 
       if (size_ == 0 and command_entered_) {
+        command_entered_ = false;
         display_.newline();
       }
 
@@ -266,9 +254,15 @@ namespace cli {
                        Line &line,
                        const CharT *data_,
                        Index size_,
-                       Display &display_) {
-      if (cli::is_multiline_display_v<Display>) {
-        display_.newline();
+                       Display &display_,
+                       bool is_help) {
+      if constexpr (cli::is_multiline_display_v<Display>) {
+        if constexpr (config::use_help_v<Cfg>) {
+          if (not is_help)
+            display_.newline();
+        } else {
+          display_.newline();
+        }
       }
 
       switch (exec_result.type()) {
@@ -316,8 +310,7 @@ namespace cli {
           CharT buffer[20]{};
           format::Int<std::size_t, CharT> format;
           format::FormatResult fmt_res = format({buffer, 20}, error_location);
-          if (not fmt_res)
-            return dtl::print_error<CharT>(line, display_, fmt_res.error);
+          CLI_ASSERT(fmt_res);
           display_.write({buffer, fmt_res.size_written});
         } break;
         case ExecResult<CharT>::format_error: {
@@ -351,8 +344,7 @@ namespace cli {
           format::Int<std::size_t, CharT> format;
           format::FormatResult fmt_res =
             format({buffer, 20}, exec_result.index());
-          if (not fmt_res)
-            return dtl::print_error<CharT>(line, display_, fmt_res.error);
+          CLI_ASSERT(fmt_res);
           display_.write({buffer, fmt_res.size_written});
           display_.write(string_constant<CharT,
                                          ' ',
@@ -420,6 +412,7 @@ namespace cli {
       if (cli::is_multiline_display_v<Display>) {
         display_.newline();
       }
+
       return Error::none;
     }
 
@@ -435,13 +428,32 @@ namespace cli {
       // parse the input
       SplitResult res =
         split_line({data_, size_}, &root_, Cfg::access_separator);
-      if (res.command == nullptr)
-        return dtl::print_error<CharT>(line, display_, Error::invalid_cmd);
 
+      if (res.command == nullptr) {
+        display_.newline();
+
+        display_.write(ctti::enum_name<Error, CharT>(Error::invalid_cmd));
+
+        if constexpr (cli::is_multiline_display_v<Display>) {
+          display_.newline();
+        }
+
+        size_ = 0;
+        return Error::invalid_cmd;
+      }
+
+      const bool is_help = [&res] {
+        if constexpr (config::use_help_v<Cfg>)
+          return res.command->name ==
+                 string_constant<CharT, 'h', 'e', 'l', 'p'>{};
+        else
+          return false;
+      }();
       // execute the command
       ExecResult<CharT> exec_result = res.command->execute(res.args, out);
 
-      Error e = print_result<Cfg>(exec_result, line, data_, size_, display_);
+      Error e =
+        print_result<Cfg>(exec_result, line, data_, size_, display_, is_help);
       // reset line data
       size_ = 0;
       return e;
@@ -487,6 +499,7 @@ namespace cli {
       }
 
       if (size_ == 0 and command_entered_) {
+        command_entered_ = false;
         display_.newline();
       }
 
@@ -575,7 +588,7 @@ namespace cli {
     Index start_of_args_{max_index};
     Index last_access_separator_ = max_index;
     CLI_NO_UNIQUE_ADDRESS
-    CmdEntered command_entered_{false};
+    CmdEntered command_entered_{true};
     const CommandNode<CharT> *command_{};
     const CommandNode<CharT> &root_;
     Display &display_;
@@ -593,6 +606,7 @@ namespace cli {
       }
 
       if (size_ == 0 and command_entered_) {
+        command_entered_ = false;
         display_.newline();
       }
 
@@ -828,8 +842,16 @@ namespace cli {
       ExecResult<CharT> exec_result =
         command_->execute(view().substr(start_of_args_), out);
 
-      Error e =
-        dtl::print_result<Cfg>(exec_result, *this, data_, size_, display_);
+      const bool is_help = [cmd = this->command_] {
+        if constexpr (config::use_help_v<Cfg>) {
+          return cmd->name == string_constant<CharT, 'h', 'e', 'l', 'p'>{};
+        } else {
+          return false;
+        }
+      }();
+
+      Error e = dtl::print_result<Cfg>(
+        exec_result, *this, data_, size_, display_, is_help);
 
       // reset line data
       size_ = 0;

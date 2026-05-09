@@ -27,6 +27,11 @@ struct MockEngine {
 
   bool print_called = false;
   cli::CommandTree<MockEngine<Commands...>, Commands...> tree;
+  struct {
+    void write(cli::View<const char>) {}
+    void write(char) {}
+    void newline() {}
+  } display_;
 };
 
 using cli::operator""_sc;

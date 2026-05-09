@@ -194,8 +194,8 @@ namespace cli {
     constexpr Error on_cursor_down(uint32_t n) {
       if constexpr (Cfg::use_cursor) {
         View str = history_.cursor_down(n);
-        if (line_.view().size() == 0)
-          display_.newline();
+        // if (line_.view().size() == 0)
+        //   display_.newline();
         return line_.set_data(str);
       } else
         return Error::none;
@@ -204,8 +204,8 @@ namespace cli {
     constexpr Error on_cursor_up(uint32_t n) {
       if constexpr (Cfg::use_cursor) {
         View str = history_.cursor_up(n);
-        if (line_.view().size() == 0)
-          display_.newline();
+        // if (line_.view().size() == 0)
+        //   display_.newline();
         return line_.set_data(str);
       } else
         return Error::none;

@@ -65,6 +65,7 @@
 #include "cli/u64.hpp"
 #include "cli/util.hpp"
 
+#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>

@@ -8,7 +8,7 @@
   used to receive characters
 - [cli::concepts::Display](#display) and
   [cli::AnsiDisplay](#ansidisplay): used to display characters
-- [cli::concept::Command](#commands): the commands, which are either
+- [cli::concepts::Command](#commands): the commands, which are either
   [Parameters](#parameters) or [Functions](#functions)
 - [cli::string_constant](#string-constant): a compile time string
 - [Parsing](#parsing)
@@ -1053,11 +1053,8 @@ Functions are commands that execute an action. They take arguments and optionall
 return a value. Functions can be called like so:
 
 ```bash
-function(arg1, arg2)
+function(arg1, arg2, ..., argn)
 function(name1 = arg1, name2 = arg2)
-# parentheses are optional
-function arg1, arg2
-function name1 = arg1, name2 = arg2
 ```
 
 To create a function, you can use the `cli::func` template overload set.
@@ -1317,10 +1314,54 @@ To enable the help command, set `use_help` in the [config](#config) to `true`.
 If the whole command tree should be printed when `help` is called without
 arguments, set `empty_help_prints_commands` in the [config](#config) to `true`.
 
-`help` takes in an optional command name as a string as its argument and
-returns the description of the command, i.e. the signature is `(string?) ->
-string`.
+`help` takes two optional string arguments. The first argument is `cmd`, which
+is the command name. The second argument is `arg`. `arg` should be empty for
+parameter commands. For function commands, `arg` can set to an argument of the
+function to get its description.
 
+The signature of `help` is:
+
+`(cmd: string?, arg: string?) -> void`
+
+### Parameter Help
+
+Calling `help` with the parameter name:
+
+```python
+help(param_name)
+```
+
+will return parameter's info in the form:
+
+```python
+[type]: description
+```
+
+### Function Help
+
+Calling `help` for a function:
+
+```python
+help(function_name)
+```
+
+will return the function's info in the form:
+
+```python
+[(args...) -> return_type]: description
+```
+
+To get the description of a function's argument, use:
+
+```python
+help(function_name, arg_name)
+```
+
+which will print the argument's info in the form:
+
+```python
+[type]: description
+```
 
 ## String Constant
 
