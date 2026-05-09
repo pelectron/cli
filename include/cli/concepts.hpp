@@ -27,6 +27,15 @@ namespace cli {
   template<class T>
   concept SC = cli::dtl::is_string_constant_v<std::remove_cvref_t<T>>;
 
+  /**
+   * @brief This concept is true if T is a string_constant that does not contain
+   * whitespace, or any characters of these charcters: (){},='".
+   *
+   * @tparam T
+   */
+  template<typename T>
+  concept Id = cli::dtl::is_identifier_v<std::remove_cvref_t<T>>;
+
   namespace concepts {
 
     template<class C>

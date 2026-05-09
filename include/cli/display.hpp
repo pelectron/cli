@@ -210,6 +210,7 @@ namespace cli {
    *
    * @ingroup Display
    * @tparam Out the type to output characters.
+   * @tparam NumLines thenumber of lines in the displays.
    */
   template<concepts::Output Out, std::size_t NumLines = unlimited_lines>
   class AnsiDisplay {
@@ -218,14 +219,37 @@ namespace cli {
     static constexpr bool is_multiline_display = true;
     static constexpr std::size_t number_of_lines = NumLines;
 
+    /**
+     * construct an AnsiDisplay from an output.
+     *
+     * @param output  the output
+     */
     template<concepts::Output O>
     constexpr explicit AnsiDisplay(O &&output)
       : out_(std::forward<O>(output)) {}
 
+    /**
+     * construct an AnsiDisplay from an output an a constant that set the number
+     * of lines
+     *
+     * Example:
+     * ```
+     *  AnsiDisplay disp{output, cli::constant<10>{}};
+     * ```
+     * @param output the output
+     * @param NLines the number of lines
+     */
     template<concepts::Output O, auto NLines>
-    constexpr explicit AnsiDisplay(O &&output, constant<NLines>)
+    constexpr AnsiDisplay(O &&output, constant<NLines>)
       : out_(std::forward<O>(output)) {}
 
+    /**
+     * constructs an AnsiDisplay by forwarding args to its output.
+     *
+     * @tparam Args
+     * @param args
+     * @return
+     */
     template<typename... Args>
     constexpr AnsiDisplay(Args &&...args)
       : out_(std::forward<Args>(args)...) {}

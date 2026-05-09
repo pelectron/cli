@@ -120,7 +120,7 @@ namespace cli::params {
   using get_char_t = typename Str::char_type;
 
   namespace dtl {
-    template<SC Name,
+    template<Id Name,
              SC Description,
              SC Type,
              Getter Get,
@@ -339,7 +339,7 @@ namespace cli::params {
       CLI_NO_UNIQUE_ADDRESS Validate validate_;
     };
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              SC Type,
              Getter Get,
@@ -366,7 +366,7 @@ namespace cli::params {
                                           std::decay_t<Validate>,
                                           std::decay_t<SubCommands>...>;
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              SC Type,
              Getter Get,
@@ -390,7 +390,7 @@ namespace cli::params {
                                         std::decay_t<Format>,
                                         std::decay_t<Validate>>;
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              SC Type,
              Getter Get,
@@ -418,7 +418,7 @@ namespace cli::params {
                std::decay_t<Validate>,
                std::decay_t<SubCommands>...>;
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              SC Type,
              Getter Get,
@@ -446,7 +446,7 @@ namespace cli::params {
                std::decay_t<Validate>,
                std::decay_t<SubCommands>...>;
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              SC Type,
              class MemberPointer,
@@ -481,7 +481,7 @@ namespace cli::params {
           validate(std::forward<Validate_>(validate)) {}
     };
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              SC Help,
              class MemberPointer,
@@ -517,7 +517,7 @@ namespace cli::params {
           validate(std::forward<Validate_>(validate)) {}
     };
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              SC Help,
              class MemberPointer,
@@ -654,7 +654,7 @@ namespace cli::params {
     };
 
     template<class T,
-             SC Name,
+             Id Name,
              SC Description,
              SC Help,
              class MemberPointer,
@@ -697,7 +697,7 @@ namespace cli::params {
     }
 
     template<class T,
-             SC Name,
+             Id Name,
              SC Description,
              SC Help,
              class MemberPointer,
@@ -847,7 +847,7 @@ namespace cli::params {
    * @param cmds the sub commands.
    * @return a Command
    */
-  template<SC Name, SC Description, concepts::Command... SubCommands>
+  template<Id Name, SC Description, concepts::Command... SubCommands>
     requires(sizeof...(SubCommands) > 0)
   [[nodiscard]] constexpr auto
   param(Name name, Description description, SubCommands &&...cmds) {
@@ -875,7 +875,7 @@ namespace cli::params {
    * @param cmds the sub commands.
    * @return a Command
    */
-  template<SC Name, concepts::Command... SubCommands>
+  template<Id Name, concepts::Command... SubCommands>
     requires(sizeof...(SubCommands) > 0)
   [[nodiscard]] constexpr auto param(Name name, SubCommands &&...cmds) {
     (void)name;
@@ -992,7 +992,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            GetterOf<T> Get,
            SetterOf<T> Set,
@@ -1055,7 +1055,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            GetterOf<T> Get,
            SetterOf<T> Set,
@@ -1110,7 +1110,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            GetterOf<T> Get,
            SetterOf<T> Set,
@@ -1162,7 +1162,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            SetterOf<T> Set,
            parse::ParserOf<T, get_char_t<Name>> Parse,
@@ -1215,7 +1215,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            GetterOf<T> Get,
            format::FormatterOf<T, get_char_t<Name>> Format,
@@ -1266,7 +1266,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            GetterOf<T> Get,
            SetterOf<T> Set,
@@ -1313,7 +1313,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            SetterOf<T> Set,
            parse::ParserOf<T, get_char_t<Name>> Parse,
@@ -1361,7 +1361,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            GetterOf<T> Get,
            format::FormatterOf<T, get_char_t<Name>> Format,
@@ -1409,7 +1409,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            SetterOf<T> Set,
            validate::ValidatorOf<T> Validate,
@@ -1453,7 +1453,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            GetterOf<T> Get,
            concepts::Command... SubCommands>
@@ -1493,7 +1493,7 @@ namespace cli::params {
    * @return a Command
    */
   template<typename T,
-           SC Name,
+           Id Name,
            SC Description,
            SetterOf<T> Set,
            concepts::Command... SubCommands>
@@ -1594,7 +1594,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -1660,7 +1660,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -1722,7 +1722,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -1782,7 +1782,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            SetterOf<T> Set,
@@ -1844,7 +1844,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -1899,7 +1899,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -1954,7 +1954,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            SetterOf<T> Set,
@@ -2012,7 +2012,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -2066,7 +2066,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            SetterOf<T> Set,
@@ -2118,7 +2118,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -2173,7 +2173,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            parse::ParserOf<T, get_char_t<Name>> Parse,
@@ -2224,7 +2224,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -2271,7 +2271,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            SetterOf<T> Set,
@@ -2322,7 +2322,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            parse::ParserOf<T, get_char_t<Name>> Parse,
@@ -2370,7 +2370,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            validate::ValidatorOf<T> Validate,
@@ -2412,7 +2412,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            CmdOrMemDataOrMemFun... SubCommands>
@@ -2478,7 +2478,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -2526,7 +2526,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            GetterOf<T> Get,
@@ -2569,7 +2569,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            format::FormatterOf<T, get_char_t<Name>> Format,
@@ -2607,7 +2607,7 @@ namespace cli::params {
    * @param cmds additional optional subcommands
    * @return a Command
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            CmdOrMemDataOrMemFun... SubCommands>
@@ -2642,7 +2642,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T, GetterOf<T> Get,
+  // template <Id Name, typename T, GetterOf<T> Get,
   //           parse::ParserOf<T, get_char_t<Name>> Parse,
   //           format::FormatterOf<T, get_char_t<Name>> Format,
   //           concepts::Command... SubCommands>
@@ -2678,7 +2678,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T, SetterOf<T> Set,
+  // template <Id Name, typename T, SetterOf<T> Set,
   //           parse::ParserOf<T, get_char_t<Name>> Parse,
   //           format::FormatterOf<T, get_char_t<Name>> Format,
   //           validate::ValidatorOf<T> Validate, concepts::Command...
@@ -2717,7 +2717,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T, SetterOf<T> Set,
+  // template <Id Name, typename T, SetterOf<T> Set,
   //           parse::ParserOf<T, get_char_t<Name>> Parse,
   //           format::FormatterOf<T, get_char_t<Name>> Format,
   //           concepts::Command... SubCommands>
@@ -2755,7 +2755,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, SC Description, typename T, GetterOf<T> Get, SetterOf<T>
+  // template <Id Name, SC Description, typename T, GetterOf<T> Get, SetterOf<T>
   // Set,
   //           validate::ValidatorOf<T> Validate, concepts::Command...
   //           SubCommands>
@@ -2792,7 +2792,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T,
+  // template <Id Name, typename T,
   //           parse::ParserOf<T, get_char_t<Name>> Parse,
   //           format::FormatterOf<T, get_char_t<Name>> Format,
   //           concepts::Command... SubCommands>
@@ -2835,7 +2835,7 @@ namespace cli::params {
   //  * @param cmds optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, SC Description, class T, concepts::Command...
+  // template <Id Name, SC Description, class T, concepts::Command...
   // SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   // [[nodiscard]] constexpr auto param(Name name, Description description, T
@@ -2871,7 +2871,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T, GetterOf<T> Get, SetterOf<T> Set,
+  // template <Id Name, typename T, GetterOf<T> Get, SetterOf<T> Set,
   //           concepts::Command... SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   // [[nodiscard]] constexpr auto param(Name name, T &t, Get &&get, Set &&set,
@@ -2903,7 +2903,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T, SetterOf<T> Set, concepts::Command...
+  // template <Id Name, typename T, SetterOf<T> Set, concepts::Command...
   // SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   // [[nodiscard]] constexpr auto param(Name name, T &t, Set &&set, SubCommands
@@ -2935,7 +2935,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, typename T, GetterOf<T> Get, concepts::Command...
+  // template <Id Name, typename T, GetterOf<T> Get, concepts::Command...
   // SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   // [[nodiscard]] constexpr auto param(Name name, T &t, Get &&get, SubCommands
@@ -2974,7 +2974,7 @@ namespace cli::params {
   //  * @param cmds optional subcommands
   //  * @return a Command
   //  */
-  // // template <SC Name, class T, concepts::Command... SubCommands>
+  // // template <Id Name, class T, concepts::Command... SubCommands>
   // //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   // // [[nodiscard]] constexpr auto param(Name name, T &t, SubCommands
   // &&...cmds) {
@@ -3018,7 +3018,7 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <SC Name, SC Description, SC Type, Getter Get, Setter Set,
+  // template <Id Name, SC Description, SC Type, Getter Get, Setter Set,
   //           parse::Parser Parse, format::Formatter Format,
   //           validate::Validator Validate, concepts::Command... SubCommands>
   // [[nodiscard]] constexpr auto param(Name name, Description description, Type
@@ -3058,7 +3058,7 @@ namespace cli::params {
   //  data
   //  * @return
   //  */
-  // template <SC Name, class T, class... CommandOrMemberDataOrMemberFunction>
+  // template <Id Name, class T, class... CommandOrMemberDataOrMemberFunction>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   // [[nodiscard]] constexpr auto param(Name name, T &obj,
   //                      CommandOrMemberDataOrMemberFunction &&...m) {
@@ -3095,7 +3095,7 @@ namespace cli::params {
   //  data
   //  * @return
   //  */
-  // template <SC Name, SC Description, class T,
+  // template <Id Name, SC Description, class T,
   //           class... CommandOrMemberDataOrMemberFunction>
   // [[nodiscard]] constexpr auto param(Name name, Description description, T
   // &obj,
@@ -3281,7 +3281,7 @@ namespace cli::params {
    * @return
    */
   template<
-    SC Name,
+    Id Name,
     SC Description,
     class MemberPointer,
     parse::ParserOf<mem_data_type<MemberPointer>, get_char_t<Name>> Parse,
@@ -3323,7 +3323,7 @@ namespace cli::params {
    * @return
    */
   template<
-    SC Name,
+    Id Name,
     SC Description,
     class MemberPointer,
     parse::ParserOf<mem_data_type<MemberPointer>, get_char_t<Name>> Parse,
@@ -3361,7 +3361,7 @@ namespace cli::params {
    * @param cmds
    * @return
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            class MemberPointer,
            validate::ValidatorOf<mem_data_type<MemberPointer>> Validate,
@@ -3406,7 +3406,7 @@ namespace cli::params {
    * cli::string_constant.
    * @param cmds the subcommands
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            class MemberPointer,
            concepts::Command... SubCommands>
@@ -3458,7 +3458,7 @@ namespace cli::params {
    * @param f member data pointer
    * @param cmds the subcommands
    */
-  template<SC Name, class MemberPointer, concepts::Command... SubCommands>
+  template<Id Name, class MemberPointer, concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
   [[nodiscard]] constexpr auto
   param(Name name, MemberPointer f, SubCommands &&...cmds) {
@@ -3579,7 +3579,7 @@ namespace cli::params {
    * @return
    */
   template<
-    SC Name,
+    Id Name,
     SC Description,
     class MemberPointer,
     format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,

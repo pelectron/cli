@@ -524,6 +524,17 @@ namespace cli {
     template<typename CharT, CharT... Cs>
     inline constexpr bool
       is_string_constant_v<cli::string_constant<CharT, Cs...>> = true;
+
+    template<typename T>
+    inline constexpr bool is_identifier_v = false;
+
+    template<typename CharT, CharT... Cs>
+    inline constexpr bool is_identifier_v<string_constant<CharT, Cs...>> =
+      ((Cs != ' ' and Cs != '\n' and Cs != '\r' and Cs != '\t' and
+        Cs != '\v' and Cs != '\f' and Cs != '(' and Cs != ')' and Cs != '{' and
+        Cs != '}' and Cs != ',' and Cs != '=' and Cs != '\'' and Cs != '"') and
+       ...);
+
   } // namespace dtl
 } // namespace cli
 #endif

@@ -4,12 +4,14 @@
 #include "cli/command.hpp"
 #include "cli/command_tree.hpp"
 #include "cli/concepts.hpp"
+#include "cli/config.hpp"
 #include "cli/display.hpp"
 #include "cli/enums.hpp"
 #include "cli/event.hpp"
 #include "cli/history.hpp"
 #include "cli/input.hpp"
 #include "cli/line.hpp"
+#include "cli/string.hpp"
 #include "cli/util.hpp"
 
 #include <cstdint>
@@ -26,9 +28,19 @@ namespace cli {
   template<typename CharT>
   struct PrintData<CharT, false> {};
 
+  template<bool useHelp, typename CharT, typename Cmd>
+  constexpr bool name_is_not_help() {
+    if constexpr (useHelp)
+      return Cmd::name != string_constant<CharT, 'h', 'e', 'l', 'p'>{};
+    else
+      return true;
+  }
+
   /**
    * @brief The Engine is the interface for CLI. It contains the @ref Input,
    * @ref Display, and commands.
+   *
+   * See [here](docs.md#engine) for more info.
    *
    * @param Cfg the configuration
    * @param Display the display type
@@ -59,6 +71,29 @@ namespace cli {
                   "The maximum line length is smaller than the minimum length "
                   "required to input the largets command. Increase "
                   "'max_line_length' to fix this error.");
+
+    static_assert(is_multiline_display_v<Display>
+                    ? number_of_lines_v<Display> > 1
+                    : true,
+                  "A display can't be multiline and only have one line "
+                  "available. Either set is_multiline_display to false or set "
+                  "number_of_lines to a value greater than 1.");
+
+    static_assert(
+      not is_multiline_display_v<Display> ? number_of_lines_v<Display> == 1
+                                          : true,
+      "A display can't be single line and only have more than one line "
+      "available. Either set is_multiline_display to true or set "
+      "number_of_lines to 1.");
+
+    static_assert(
+      (name_is_not_help<config::use_help_v<config_type>,
+                        char_type,
+                        Commands>() and
+       ...),
+      "A command with the name 'help' is detected. This is not valid because "
+      "'use_help' is true. Either remove said command or set 'use_help' to "
+      "false.");
 
     template<concepts::Config C,
              concepts::Display<typename C::char_type> D,
@@ -113,6 +148,9 @@ namespace cli {
       line_.clear_screen();
     }
 
+    /**
+     * prints the command tree
+     */
     constexpr void print() {
       if constexpr (needs_incremental_print) {
         print_data_.current = nullptr;

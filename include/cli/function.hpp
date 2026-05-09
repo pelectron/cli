@@ -49,7 +49,7 @@ namespace cli::funcs {
     constexpr Deduced() = default;
   } deduced{};
 
-  template<SC Name,
+  template<Id Name,
            SC Description,
            class T,
            auto DefaultValue,
@@ -84,7 +84,7 @@ namespace cli::funcs {
     CLI_NO_UNIQUE_ADDRESS Validate validate{};
   };
 
-  template<SC Name,
+  template<Id Name,
            SC Description,
            class T,
            auto DefaultValue,
@@ -102,7 +102,7 @@ namespace cli::funcs {
                                           std::decay_t<Parse>,
                                           std::decay_t<Validate>>;
 
-  template<SC Name,
+  template<Id Name,
            SC Description,
            auto DefaultValue,
            parse::Parser Parse,
@@ -115,7 +115,7 @@ namespace cli::funcs {
                    std::decay_t<Parse>,
                    std::decay_t<Validate>>;
 
-  template<SC Name,
+  template<Id Name,
            SC Description,
            parse::Parser Parse,
            validate::Validator Validate>
@@ -127,7 +127,7 @@ namespace cli::funcs {
                    std::decay_t<Parse>,
                    std::decay_t<Validate>>;
 
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            parse::Parser Parse,
@@ -156,7 +156,7 @@ namespace cli::funcs {
     CLI_NO_UNIQUE_ADDRESS Validate validate{};
   };
 
-  template<SC Name,
+  template<Id Name,
            SC Description,
            typename T,
            parse::Parser Parse,
@@ -169,7 +169,7 @@ namespace cli::funcs {
                                  std::decay_t<Parse>,
                                  std::decay_t<Validate>>;
 
-  template<SC Name,
+  template<Id Name,
            SC Description,
            parse::Parser Parse,
            validate::Validator Validate>
@@ -181,7 +181,7 @@ namespace cli::funcs {
       std::decay_t<Parse>,
       std::decay_t<Validate>>;
 
-  template<SC Name, SC Description>
+  template<Id Name, SC Description>
   struct UndeducedArg {
     using char_type = typename Name::char_type;
     using type = Deduced;
@@ -260,7 +260,7 @@ namespace cli::funcs {
       }(std::make_index_sequence<sizeof...(Args)>());
     }
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              class T,
              parse::Parser Parse,
@@ -273,7 +273,7 @@ namespace cli::funcs {
              ctti::name<T, CharT>();
     }
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              class T,
              auto DefaultValue,
@@ -321,7 +321,7 @@ namespace cli::funcs {
       return "()->"_sc + ctti::name<typename function_traits<F>::return_type>();
     }
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              class T,
              auto DefaultValue,
@@ -334,7 +334,7 @@ namespace cli::funcs {
         DefaultValue, arg.parse};
     }
 
-    template<SC Name,
+    template<Id Name,
              SC Description,
              typename T,
              parse::Parser Parse,
@@ -415,7 +415,7 @@ namespace cli::funcs {
   // clang-format on
   template<class T,
            auto DefaultValue,
-           SC Name,
+           Id Name,
            SC Description,
            parse::ParserOf<T, typename Name::char_type> Parse,
            validate::ValidatorOf<T> Validate>
@@ -455,7 +455,7 @@ namespace cli::funcs {
   // clang-format on
   template<class T,
            auto DefaultValue,
-           SC Name,
+           Id Name,
            SC Description,
            parse::ParserOf<T, typename Name::char_type> Parse>
   constexpr auto arg(Name name, Description description, Parse &&parse) {
@@ -493,7 +493,7 @@ namespace cli::funcs {
   // clang-format on
   template<class T,
            auto DefaultValue,
-           SC Name,
+           Id Name,
            SC Description,
            validate::ValidatorOf<T> Validate>
   constexpr auto arg(Name name, Description description, Validate &&validate) {
@@ -527,7 +527,7 @@ namespace cli::funcs {
   * @return a FunctionArg
   */
   // clang-format on
-  template<class T, auto DefaultValue, SC Name, SC Description>
+  template<class T, auto DefaultValue, Id Name, SC Description>
   constexpr auto arg(Name name, Description description) {
     (void)name;
     (void)description;
@@ -558,7 +558,7 @@ namespace cli::funcs {
   * @return a FunctionArg
   */
   // clang-format on
-  template<class T, auto DefaultValue, SC Name>
+  template<class T, auto DefaultValue, Id Name>
   constexpr auto arg(Name name) {
     (void)name;
     return FunctionArg{Name{},
@@ -593,7 +593,7 @@ namespace cli::funcs {
    */
   // clang-format on
   template<auto DefaultValue,
-           SC Name,
+           Id Name,
            SC Description,
            parse::Parser Parse,
            validate::Validator Validate>
@@ -630,7 +630,7 @@ namespace cli::funcs {
    */
   // clang-format on
   template<auto DefaultValue,
-           SC Name,
+           Id Name,
            SC Description,
            parse::Parser Parse,
            validate::Validator Validate>
@@ -668,7 +668,7 @@ namespace cli::funcs {
    */
   // clang-format on
   template<auto DefaultValue,
-           SC Name,
+           Id Name,
            SC Description,
            validate::Validator Validate>
   constexpr auto arg(Name name, Description description, Validate &&validate) {
@@ -703,7 +703,7 @@ namespace cli::funcs {
  * @return a FunctionArg
  */
   // clang-format on
-  template<auto DefaultValue, SC Name, SC Description>
+  template<auto DefaultValue, Id Name, SC Description>
   constexpr auto arg(Name name, Description description) {
     (void)name;
     (void)description;
@@ -733,7 +733,7 @@ namespace cli::funcs {
  * @return a FunctionArg
  */
   // clang-format on
-  template<auto DefaultValue, SC Name>
+  template<auto DefaultValue, Id Name>
   constexpr auto arg(Name name) {
     (void)name;
     using T = std::decay_t<decltype(DefaultValue)>;
@@ -779,7 +779,7 @@ namespace cli::funcs {
    * @return a FunctionArg
    */
   template<class T,
-           SC Name,
+           Id Name,
            SC Description,
            parse::ParserOf<T, typename Name::char_type> Parse,
            validate::ValidatorOf<T> Validate>
@@ -811,7 +811,7 @@ namespace cli::funcs {
    * @return a FunctionArg
    */
   template<class T,
-           SC Name,
+           Id Name,
            SC Description,
            parse::ParserOf<T, typename Name::char_type> Parse>
   constexpr auto arg(Name name, Description description, Parse &&parse) {
@@ -840,7 +840,7 @@ namespace cli::funcs {
    * @param validate the validator for the argument
    * @return a FunctionArg
    */
-  template<class T, SC Name, SC Description, validate::ValidatorOf<T> Validate>
+  template<class T, Id Name, SC Description, validate::ValidatorOf<T> Validate>
   constexpr auto arg(Name name, Description description, Validate &&validate) {
     (void)name;
     (void)description;
@@ -867,7 +867,7 @@ namespace cli::funcs {
    * @param description a string_constant that is used by the help functionality
    * @return a FunctionArg
    */
-  template<class T, SC Name, SC Description>
+  template<class T, Id Name, SC Description>
   constexpr auto arg(Name name, Description description) {
     (void)name;
     (void)description;
@@ -892,7 +892,7 @@ namespace cli::funcs {
    * @param name the humanreadable name of the argument as a string_constant
    * @return a FunctionArg
    */
-  template<class T, SC Name>
+  template<class T, Id Name>
   constexpr auto arg(Name name) {
     (void)name;
     return FunctionArgWithoutDefault{
@@ -932,7 +932,7 @@ namespace cli::funcs {
    * @param description a string_constant that is used by the help functionality
    * @return a FunctionArg
    */
-  template<SC Name, SC Description>
+  template<Id Name, SC Description>
   constexpr auto arg(Name name, Description description) {
     (void)name;
     (void)description;
@@ -952,7 +952,7 @@ namespace cli::funcs {
    * @param name the humanreadable name of the argument as a string_constant
    * @return a FunctionArg
    */
-  template<SC Name>
+  template<Id Name>
   constexpr auto arg(Name name) {
     (void)name;
     return UndeducedArg<Name, NoDescription<typename Name::char_type>>{};
@@ -981,7 +981,7 @@ namespace cli::funcs {
 
   /// @}
 
-  template<SC Name, SC Description, SC Type, Callable F, FuncArg... Args>
+  template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
   class Function
     : public CommandBase<Function<Name, Description, Type, F, Args...>,
                          Name,
@@ -1106,7 +1106,7 @@ namespace cli::funcs {
     CLI_NO_UNIQUE_ADDRESS std::tuple<Args...> args_{};
   };
 
-  template<SC Name, SC Description, SC Type, Callable F>
+  template<Id Name, SC Description, SC Type, Callable F>
   class Function<Name, Description, Type, F>
     : public CommandBase<Function<Name, Description, Type, F>,
                          Name,
@@ -1187,11 +1187,11 @@ namespace cli::funcs {
     CLI_NO_UNIQUE_ADDRESS F func_{};
   };
 
-  // template <SC Name, SC Description, SC Help, Callable F>
+  // template <Id Name, SC Description, SC Help, Callable F>
   // Function(Name, Description, Help, F &&)
   //     -> Function<Name, Description, Help, std::remove_cvref_t<F>>;
 
-  template<SC Name, SC Description, SC Type, Callable F, FuncArg... Args>
+  template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
   Function(Name, Description, Type, F &&, Args &&...)
     -> Function<Name,
                 Description,
@@ -1199,11 +1199,11 @@ namespace cli::funcs {
                 std::decay_t<F>,
                 std::decay_t<Args>...>;
 
-  template<SC Name, SC Description, SC Type, Callable F, FuncArg... Args>
+  template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
   Function(Name, Description, Type, F &&, const std::tuple<Args...> &)
     -> Function<Name, Description, Type, std::decay_t<F>, Args...>;
 
-  template<SC Name, SC Description, SC Type, Callable F, FuncArg... Args>
+  template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
   Function(Name, Description, Type, F &&, std::tuple<Args...> &&)
     -> Function<Name, Description, Type, std::decay_t<F>, Args...>;
   /**
@@ -1263,7 +1263,7 @@ namespace cli::funcs {
    * @param args the functions arguments. See cli::arg and @ref Arguments.
    * @return
    */
-  template<SC Name, SC Description, Callable F, class... Args>
+  template<Id Name, SC Description, Callable F, class... Args>
   [[nodiscard]] constexpr auto
   func(Name name, Description description, F &&f, Args &&...args) {
     (void)name;
@@ -1319,7 +1319,7 @@ namespace cli::funcs {
    * @param args the functions arguments. See cli::arg and @ref Arguments
    * @return
    */
-  template<SC Name, Callable F, class... Args>
+  template<Id Name, Callable F, class... Args>
   [[nodiscard]] constexpr auto func(Name name, F &&f, Args &&...args) {
     (void)name;
     static_assert(
@@ -1455,7 +1455,7 @@ namespace cli::funcs {
    * @param args the member function's arguments. See cli::arg and @ref
    * Arguments.
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            class T,
            class MemberFunctionPointer,
@@ -1523,7 +1523,7 @@ namespace cli::funcs {
    * @param args the member function's arguments. See cli::arg and @ref
    * Arguments.
    */
-  template<SC Name,
+  template<Id Name,
            SC Description,
            class T,
            class MemberFunctionPointer,
@@ -1588,7 +1588,7 @@ namespace cli::funcs {
    * @param args the member function's arguments. See cli::arg and @ref
    * Arguments.
    */
-  template<SC Name, class T, class MemberFunctionPointer, class... Args>
+  template<Id Name, class T, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer> and
              (not function_traits<MemberFunctionPointer>::is_const)
   [[nodiscard]] constexpr auto
@@ -1622,7 +1622,7 @@ namespace cli::funcs {
    * @param args the member function's arguments. See cli::arg and @ref
    * Arguments.
    */
-  template<SC Name, class T, class MemberFunctionPointer, class... Args>
+  template<Id Name, class T, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer> and
              function_traits<MemberFunctionPointer>::is_const
   [[nodiscard]] constexpr auto
@@ -1638,7 +1638,7 @@ namespace cli::funcs {
    * @}
    */
 
-  template<SC Name, SC Description, SC Help, class Function, class... Args>
+  template<Id Name, SC Description, SC Help, class Function, class... Args>
   struct MemberFunction {
     using arguments = TypeList<Args...>;
     static_assert(std::is_member_function_pointer_v<Function>,
@@ -1662,7 +1662,7 @@ namespace cli::funcs {
       : f(mem_fun_ptr), args(args) {}
   };
 
-  template<SC Name, SC Description, SC Help, class Function>
+  template<Id Name, SC Description, SC Help, class Function>
   struct MemberFunction<Name, Description, Help, Function> {
     using arguments = TypeList<>;
     static_assert(std::is_member_function_pointer_v<Function>,
@@ -1677,14 +1677,14 @@ namespace cli::funcs {
       : f(mem_fun_ptr) {}
   };
 
-  template<SC Name, SC Description, SC Help, class Function, class... Args>
+  template<Id Name, SC Description, SC Help, class Function, class... Args>
   MemberFunction(Name &&, Description &&, Help &&, Function &&, Args &&...)
     -> MemberFunction<std::decay_t<Name>,
                       std::decay_t<Description>,
                       std::decay_t<Help>,
                       std::decay_t<Function>,
                       std::decay_t<Args>...>;
-  template<SC Name, SC Description, SC Help, class Function, FuncArg... Args>
+  template<Id Name, SC Description, SC Help, class Function, FuncArg... Args>
   MemberFunction(
     Name &&, Description &&, Help &&, Function &&, const std::tuple<Args...> &)
     -> MemberFunction<std::decay_t<Name>,
@@ -1693,7 +1693,7 @@ namespace cli::funcs {
                       std::decay_t<Function>,
                       std::decay_t<Args>...>;
 
-  template<SC Name, SC Description, SC Help, class Function>
+  template<Id Name, SC Description, SC Help, class Function>
   MemberFunction(Name &&, Description &&, Help &&, Function &&)
     -> MemberFunction<std::decay_t<Name>,
                       std::decay_t<Description>,
@@ -1766,7 +1766,7 @@ namespace cli::funcs {
    * @param args the arguments. See cli::arg and @ref Arguments.
    * @return a partial Command
    */
-  template<SC Name, SC Description, class MemberFunctionPointer, class... Args>
+  template<Id Name, SC Description, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer>
   [[nodiscard]] constexpr auto func(Name name,
                                     Description description,
@@ -1827,7 +1827,7 @@ namespace cli::funcs {
    * @param args the arguments. See cli::arg and @ref Arguments.
    * @return a partial Command
    */
-  template<SC Name, class MemberFunctionPointer, class... Args>
+  template<Id Name, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer>
   [[nodiscard]] constexpr auto
   func(Name name, MemberFunctionPointer mem_fun, Args &&...args) {
@@ -1989,7 +1989,7 @@ namespace cli::funcs {
     /**
      * create a Function from an object reference and a MemberFunction
      */
-    template<class T, SC Name, SC Description, SC Help, class F, class... Args>
+    template<class T, Id Name, SC Description, SC Help, class F, class... Args>
     constexpr auto
     to_cmd(T &obj,
            const MemberFunction<Name, Description, Help, F, Args...>
@@ -2008,7 +2008,7 @@ namespace cli::funcs {
     /**
      * create a Function from an object referenece and a MemberFunction
      */
-    template<class T, SC Name, SC Description, SC Help, class F, class... Args>
+    template<class T, Id Name, SC Description, SC Help, class F, class... Args>
     constexpr auto
     to_cmd(const T &obj,
            const MemberFunction<Name, Description, Help, F, Args...>

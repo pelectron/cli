@@ -69,6 +69,8 @@
   - [Struct Parsing](#struct-parsing)
   - [Custom Parsing](#custom-parsing)
 - [Validation](#validation)
+- [Simulation](#simulation)
+  - [Simulation Functions](#simulation-functions)
 - [cli-term](#cli-term)
   - [Usage](#cli-term-usage)
   - [Mappings](#mappings)
@@ -118,8 +120,6 @@ There is one constructor for `Engine`:
 To create an `Engine`, provide a [config](#config), a [display](#display), and
 [commands](#commands).
 
-##### Parameters
-
 - **config**: this is the [Engine configuration](#config)
 - **display**: this is the [display](#display) the engine will use to output
   characters.
@@ -148,9 +148,27 @@ cli::Engine engine{...};
 engine.on_char('k');
 ```
 
+#### `cli::Error on_control(cli::Control ctrl, std::uint8_t param)`
+
+This method can be called, instead of `on_char` to notify the engine of a
+control input. No heavy processing is performed because the `Engine` simply
+forwards `c` to its [input](#input).
+
+The return value will be either `cli:Error::none` in case of success, or
+`cli::Error::buffer_overflow` in case the [input](#input) cannot accept more
+characters.
+
+Example:
+
+```cpp
+cli::Engine engine{...};
+engine.on_control(cli::Control::cursor_left, 5);
+```
+
 #### `cli::Error process()`
 
-Processes the available events.
+Processes the available events. Returns early if an error occurred during
+processing.
 
 #### `void reset()`
 
@@ -227,8 +245,8 @@ and typedefs to satisfy the `Config` concept:
 
 - **char_type**: a **typedef** for the character type to use. Can be any of _char_,
   _signed char_, _unsigned char_, _char8_t_, _char16_t_, _char32_t_.
-- **name**: convertible to `cli::View<const char_type>`. The name of the cli as a
-  string.
+- **name**: convertible to `cli::View<const char_type>`. The name of the cli as
+  a string.
 - **description**: convertible to `cli::View<const char_type>`. The description
   of the cli.
 - **access_separator**: of type `char_type`. This specifies what kind of
@@ -591,7 +609,7 @@ public:
 a ANSI compliant display device, for example a terminal.
 
 ```cpp
-template<cli::concepts::Output Out>
+template<cli::concepts::Output Out,std::size_t NumLines = cli::unlimited_lines>
 class AnsiDisplay;
 ```
 
@@ -599,7 +617,7 @@ class AnsiDisplay;
 
 #### AnsiDisplay Constructor
 
-There are two constructors for `AnsiDisplay`:
+There are three constructors for `AnsiDisplay`:
 
 ##### AnsiDisplay(Out output)
 
@@ -611,6 +629,16 @@ Example:
 void my_output(char c);
 
 cli::AnsiDisplay display{&my_output};
+```
+
+##### AnsiDisplay(Out output, constant\<NumLines\>)
+
+Constructs an AnsiDisplay from an [output](#output) and the number of lines.
+
+Example:
+
+```cpp
+cli::AnsiDisplay display{output, cli::constant<10>{}};
 ```
 
 ##### AnsiDisplay(Args...args)
@@ -807,7 +835,7 @@ The parts have the following functions:
 There are a multitude of overloads so that certain parts can be left out, if
 you wish to use the defaults provided by cli.
 
-**Note**
+**Note**:
 
 - leaving out the setter creates a read-only parameter. A parser is then not
   necessary.
@@ -1387,6 +1415,11 @@ auto s16 = u"hello"_sc; // CharT is char16_t
 auto s32 = U"hello"_sc; // CharT is char32_t
 ```
 
+### Id
+
+The concept `cli::Id` is a special form of `cli::string_constant` which does
+not contain whitespac or any of these characters: `(){},='"`.
+
 ## Formatting
 
 A Formatter takes a `cli::View<CharT>` as its first argument and a `T` as its
@@ -1761,7 +1794,8 @@ bool validate_foo(int foo){
 
 ## Simulation
 
-`CLI` can also be run on the PC.
+`CLI` can also be run on the PC. All simulation functions are in the header
+`cli/sim.hpp` and in the `cli::sim` namespace.
 
 An example:
 
@@ -1802,6 +1836,27 @@ There are the following key mappings available:
 
 **Note:** [cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) is
 required to run simulations.
+
+### Simulation Functions
+
+#### bool cli::sim::init()
+
+Initializes the sim. Returns false if initialization failed.
+
+#### cli::Engine cli::sim::create(config, commands...)
+
+Creates an Engine with the specified config and commads.
+
+#### cli::Engine cli::sim::create(config, cli::constant\<NumberOfLines\>, commands...)
+
+Creates an Engine with the specified config and commands. The display will act
+as if it only has `NumberOfLines` lines.
+
+Example:
+
+```cpp
+cli::Engine e = cli::sim::create(cli::default_config{}, cli::constant<10>{}, commands...);
+```
 
 ## cli-term
 

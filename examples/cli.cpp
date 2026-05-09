@@ -6,6 +6,7 @@
  */
 
 #include "cli/config.hpp"
+#include "cli/display.hpp"
 #include "cli/sim.hpp"
 #include "cli/util.hpp"
 
@@ -73,7 +74,6 @@ struct Config : cli::default_config {};
 // the cli object itself
 static cli::Engine cli_ = cli::sim::create(
   Config{},
-  cli::constant<5>{},
   param<int>("foo"_sc, 
             "foo description"_sc, 
             &foo_getter, 
@@ -82,12 +82,12 @@ static cli::Engine cli_ = cli::sim::create(
   // functions
   // @{
   // free functions
-  func("free1"_sc, &free1, cli::arg("param"_sc)),
+  func("free1"_sc, &free1, cli::arg("param"_sc,"a parameter"_sc)),
   // lambdas without templated call operator
   func("lambda"_sc, 
-      [](int /*i*/, char /*c*/) {},
+      [](int /*i*/, char /*arg*/) {},
       "i"_arg, 
-      "c"_arg),
+      "arg"_arg),
   // and any other functor without templated call operator
   func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
   func(MyFunctor2{}, "f"_arg),
@@ -121,7 +121,7 @@ int main() {
   if (not cli::sim::init())
     return -1;
 
-  cli_.print();
+  // cli_.print();
 
   while (cli::sim::get_input_and_process(cli_)) {
   }
