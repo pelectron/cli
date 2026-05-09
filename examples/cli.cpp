@@ -7,6 +7,7 @@
 
 #include "cli/config.hpp"
 #include "cli/sim.hpp"
+#include "cli/util.hpp"
 
 // the parameters and functions used in this example
 constinit static bool enable = false;
@@ -72,6 +73,7 @@ struct Config : cli::default_config {};
 // the cli object itself
 static cli::Engine cli_ = cli::sim::create(
   Config{},
+  cli::constant<5>{},
   param<int>("foo"_sc, 
             "foo description"_sc, 
             &foo_getter, 

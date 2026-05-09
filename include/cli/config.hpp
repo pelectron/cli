@@ -94,6 +94,16 @@ namespace cli {
         static constexpr bool value = C::empty_help_prints_commands;
       };
 
+      template<concepts::Config C, typename = void>
+      struct use_help : std::false_type {};
+
+      template<concepts::Config C>
+      struct use_help<
+        C,
+        std::enable_if_t<std::is_convertible_v<decltype(C::use_help), bool>>> {
+        static constexpr bool value = C::use_help;
+      };
+
       template<concepts::Config C, typename Display>
       struct display_fits_config : std::false_type {};
 
@@ -164,7 +174,7 @@ namespace cli {
     } and (C::history_depth > 0);
 
     /**
-     * is true if C specifies that en empty help string prints the whole
+     * is true if C specifies that an empty help string prints the whole
      * command structure.
      *
      * @ingroup config
@@ -173,6 +183,15 @@ namespace cli {
     template<concepts::Config C>
     inline constexpr bool empty_help_prints_commands_v =
       dtl::empty_help_prints_commands<C>::value;
+
+    /**
+     * is true if C specifies that help fucntionality shoudl be used.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
+    template<concepts::Config C>
+    inline constexpr bool use_help_v = dtl::use_help<C>::value;
 
     /**
      * checks if the config C and the Display fit together.
@@ -194,6 +213,7 @@ namespace cli {
     static constexpr char_type access_separator = '.';
     static constexpr bool use_autocomplete = true;
     static constexpr bool use_cursor = true;
+    static constexpr bool use_help = true;
     static constexpr bool use_history = true;
     static constexpr std::size_t history_depth = 16;
     static constexpr std::size_t max_line_length = 256;

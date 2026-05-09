@@ -57,6 +57,7 @@
       - [Optional Arguments](#optional-arguments)
       - [Required Arguments](#required-arguments)
       - [Deduced Arguments](#deduced-arguments)
+- [Help Command](#help-command)
 - [String Constant](#string-constant)
 - [Formatting](#formatting)
   - [Custom Formatting](#custom-formatting)
@@ -1305,6 +1306,21 @@ cli::operator""_arg();
 // Example usage:
 "x"_arg // equivalent to cli::arg("x"_sc)
 ```
+
+## Help Command
+
+`CLI` provides a `help` function command, which prints the description of a
+command.
+
+To enable the help command, set `use_help` in the [config](#config) to `true`.
+
+If the whole command tree should be printed when `help` is called without
+arguments, set `empty_help_prints_commands` in the [config](#config) to `true`.
+
+`help` takes in an optional command name as a string as its argument and
+returns the description of the command, i.e. the signature is `(string?) ->
+string`.
+
 
 ## String Constant
 

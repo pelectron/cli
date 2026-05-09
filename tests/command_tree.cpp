@@ -10,18 +10,20 @@ struct MockEngine {
   using config_type = cli::default_config;
   using char_type = typename config_type::char_type;
 
-  MockEngine(Commands... commands)
+  constexpr MockEngine(Commands... commands)
     : tree(*this, commands...) {}
 
-  MockEngine(std::tuple<Commands...> &&commands)
+  constexpr MockEngine(std::tuple<Commands...> &&commands)
     : tree(*this, std::move(commands)) {}
 
-  MockEngine(const std::tuple<Commands...> &commands)
+  constexpr MockEngine(const std::tuple<Commands...> &commands)
     : tree(*this, commands) {}
 
-  void print() { print_called = true; }
+  constexpr void print() { print_called = true; }
 
-  const cli::CommandNode<char_type> *root() const { return tree.root(); }
+  constexpr const cli::CommandNode<char_type> *root() const {
+    return tree.root();
+  }
 
   bool print_called = false;
   cli::CommandTree<MockEngine<Commands...>, Commands...> tree;
@@ -29,7 +31,8 @@ struct MockEngine {
 
 using cli::operator""_sc;
 
-static int i;
+static constinit int i{0};
+
 TEST_CASE("CommandTree") {
   MockEngine engine{cli::param("c1"_sc, "c1 desc"_sc, i),
                     cli::param("c"_sc, "c desc"_sc, i)};

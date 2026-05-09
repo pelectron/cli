@@ -3,7 +3,9 @@
 
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
+#include "cli/config.hpp"
 #include "cli/help.hpp"
+#include "cli/string.hpp"
 
 #include <tuple>
 #include <utility>
@@ -25,8 +27,16 @@ namespace cli {
     using command_node = CommandNode<char_type>;
 
     template<concepts::Command... Cmds>
+      requires config::use_help_v<config_type>
     constexpr CommandTree(Engine &e, Cmds &&...cmds)
-      : commands_{create_help(e), std::forward<Cmds>(cmds)...} {
+      : commands_{create_help_cmd(e), std::forward<Cmds>(cmds)...} {
+      init_commands();
+    }
+
+    template<concepts::Command... Cmds>
+      requires(not config::use_help_v<config_type>)
+    constexpr CommandTree(Engine &e, Cmds &&...cmds)
+      : commands_{std::forward<Cmds>(cmds)...} {
       init_commands();
     }
 
@@ -59,29 +69,36 @@ namespace cli {
 
   private:
     using Help = HelpCommand<Engine>;
+    using CommandTuple = std::conditional_t<config::use_help_v<config_type>,
+                                            std::tuple<Help, Commands...>,
+                                            std::tuple<Commands...>>;
+    using CommanNodeArray =
+      std::array<command_node,
+                 (num_cmds_v<Commands> + ...) +
+                   (config::use_help_v<config_type> ? 2 : 1)>;
 
-    std::array<command_node, (num_cmds_v<Commands> + ...) + 2> cmds_{};
-    std::tuple<Help, Commands...> commands_{};
-
-    static constexpr Help create_help(Engine &e) {
-      return create_help_cmd<Engine>(e);
-    }
+    CommanNodeArray cmds_{};
+    CommandTuple commands_{};
 
     template<concepts::Command... Cmds>
-    constexpr std::tuple<Help, Commands...>
-    init_tuple(Engine &e, const std::tuple<Cmds...> &t) {
+    constexpr CommandTuple init_tuple(Engine &e, const std::tuple<Cmds...> &t) {
       return [&t, &e, this]<std::size_t... Is>(
-               std::index_sequence<Is...>) -> std::tuple<Help, Commands...> {
-        return {create_help(e), std::get<Is>(t)...};
+               std::index_sequence<Is...>) -> CommandTuple {
+        if constexpr (config::use_help_v<config_type>)
+          return {create_help_cmd(e), std::get<Is>(t)...};
+        else
+          return {std::get<Is>(t)...};
       }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 
     template<concepts::Command... Cmds>
-    constexpr std::tuple<Help, Commands...>
-    init_tuple(Engine &e, std::tuple<Cmds...> &&t) {
+    constexpr CommandTuple init_tuple(Engine &e, std::tuple<Cmds...> &&t) {
       return [&t, &e, this]<std::size_t... Is>(
-               std::index_sequence<Is...>) -> std::tuple<Help, Commands...> {
-        return {create_help(e), std::move(std::get<Is>(t))...};
+               std::index_sequence<Is...>) -> CommandTuple {
+        if constexpr (config::use_help_v<config_type>)
+          return {create_help_cmd(e), std::move(std::get<Is>(t))...};
+        else
+          return {std::move(std::get<Is>(t))...};
       }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 
@@ -111,9 +128,10 @@ namespace cli {
     }
 
     constexpr void init_commands() {
-      auto &root = cmds_[0];
+      CommandNode<char_type> &root = cmds_[0];
       root.name = config_type::name;
       root.description = config_type::description;
+      root.type = string_constant<char_type, 'r', 'o', 'o', 't'>{};
       std::size_t index = 0;
       for_each([this, &index, &root](
                  auto &cmd) { this->init_cmd(++index, root, cmd); },
@@ -121,17 +139,6 @@ namespace cli {
     }
   };
 
-  template<concepts::Config Cfg, concepts::Command... Cmds>
-  CommandTree(Cfg &&, Cmds &&...)
-    -> CommandTree<std::remove_cvref_t<Cfg>, std::remove_cvref_t<Cmds>...>;
-
-  template<concepts::Config Cfg, concepts::Command... Cmds>
-  CommandTree(Cfg &&, std::tuple<Cmds...> &&)
-    -> CommandTree<std::remove_cvref_t<Cfg>, std::remove_cvref_t<Cmds>...>;
-
-  template<concepts::Config Cfg, concepts::Command... Cmds>
-  CommandTree(Cfg &&, const std::tuple<Cmds...> &)
-    -> CommandTree<std::remove_cvref_t<Cfg>, std::remove_cvref_t<Cmds>...>;
 } // namespace cli
 
 #endif

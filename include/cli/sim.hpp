@@ -14,6 +14,7 @@
 #define CLI_SIM_HPP
 
 #include "cli.hpp"
+#include "cli/util.hpp"
 
 #include <cpp-terminal/exception.hpp>
 #include <cpp-terminal/input.hpp>
@@ -22,6 +23,7 @@
 #include <cpp-terminal/options.hpp>
 #include <cpp-terminal/terminal.hpp>
 #include <cpp-terminal/tty.hpp>
+#include <cstddef>
 #include <ostream>
 #include <string_view>
 
@@ -165,6 +167,21 @@ namespace cli::sim {
                        std::forward<Commands>(commands)...};
   }
 
+  template<cli::concepts::Config Config,
+           auto NumLines,
+           cli::concepts::Command... Commands>
+  constexpr auto create(Config,
+                        constant<NumLines>,
+                        Commands &&...commands) /* -> cli::Engine */ {
+    static_assert(std::is_same_v<char, typename Config::char_type>,
+                  "char_type must be char. Others are unsupported for now.");
+
+    return cli::Engine{
+      Config{},
+      cli::AnsiDisplay{&::cli::sim::dtl::write, constant<NumLines>{}},
+      std::forward<Commands>(commands)...
+    };
+  }
 } // namespace cli::sim
 
 #endif

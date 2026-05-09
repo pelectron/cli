@@ -26,6 +26,56 @@
 #endif
 
 namespace cli {
+
+  namespace dtl {
+    template<typename T, typename... Ts>
+    constexpr T max(T t, Ts... ts) {
+      if constexpr (sizeof...(Ts) == 0)
+        return t;
+      else {
+        const auto m = max(ts...);
+        if (t > m)
+          return t;
+        else
+          return m;
+      }
+    }
+
+    template<std::unsigned_integral T, std::unsigned_integral U>
+    std::common_type_t<T, U> min(T t, U u) {
+      if (t < u)
+        return t;
+      return u;
+    }
+
+    template<std::signed_integral T, std::unsigned_integral U>
+    std::make_signed_t<std::common_type_t<T, U>> min(T t, U u) {
+      if (t < 0)
+        return t;
+      else if (static_cast<U>(t) < u)
+        return t;
+      else
+        return u;
+    }
+
+    template<std::unsigned_integral T, std::signed_integral U>
+    std::make_signed_t<std::common_type_t<T, U>> min(T t, U u) {
+      if (u < 0)
+        return u;
+      else if (static_cast<T>(u) < t)
+        return u;
+      else
+        return t;
+    }
+
+    template<std::signed_integral T, std::signed_integral U>
+    std::common_type_t<T, U> min(T t, U u) {
+      if (t < u)
+        return t;
+      return u;
+    }
+  } // namespace dtl
+
   template<class>
   inline constexpr bool always_false = false;
   template<auto V>
@@ -117,19 +167,20 @@ namespace cli {
     static constexpr std::size_t value = 1;
   };
 
-  template<concepts::Command C>
+  template<concepts::Command... C>
   inline constexpr std::size_t num_cmds_v =
-    num_cmds<C, typename C::sub_command_list>::value;
+    dtl::max(num_cmds<C, typename C::sub_command_list>::value...);
 
   template<class T, class L>
   struct num_levels;
+
   template<class T, template<class...> class L, class... SubCmds>
   struct num_levels<T, L<SubCmds...>> {
     static constexpr std::size_t value =
-      1 +
-      std::max(
-        {num_levels<SubCmds, typename SubCmds::sub_command_list>::value...});
+      1 + dtl::max(
+            num_levels<SubCmds, typename SubCmds::sub_command_list>::value...);
   };
+
   template<class T, template<class...> class L>
   struct num_levels<T, L<>> {
     static constexpr std::size_t value = 0;
@@ -151,55 +202,6 @@ namespace cli {
   struct max_name_length<T, L<>> {
     static constexpr std::size_t value = T::name.size();
   };
-
-  namespace dtl {
-    template<typename T, typename... Ts>
-    constexpr T max(T t, Ts... ts) {
-      if constexpr (sizeof...(Ts) == 0)
-        return t;
-      else {
-        const auto m = max(ts...);
-        if (t > m)
-          return t;
-        else
-          return m;
-      }
-    }
-
-    template<std::unsigned_integral T, std::unsigned_integral U>
-    std::common_type_t<T, U> min(T t, U u) {
-      if (t < u)
-        return t;
-      return u;
-    }
-
-    template<std::signed_integral T, std::unsigned_integral U>
-    std::make_signed_t<std::common_type_t<T, U>> min(T t, U u) {
-      if (t < 0)
-        return t;
-      else if (static_cast<U>(t) < u)
-        return t;
-      else
-        return u;
-    }
-
-    template<std::unsigned_integral T, std::signed_integral U>
-    std::make_signed_t<std::common_type_t<T, U>> min(T t, U u) {
-      if (u < 0)
-        return u;
-      else if (static_cast<T>(u) < t)
-        return u;
-      else
-        return t;
-    }
-
-    template<std::signed_integral T, std::signed_integral U>
-    std::common_type_t<T, U> min(T t, U u) {
-      if (t < u)
-        return t;
-      return u;
-    }
-  } // namespace dtl
 
   template<class T, class L>
   struct minimum_line_length;

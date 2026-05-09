@@ -113,6 +113,7 @@ if (not build_tests.disabled())
     'tests/command.cpp',
     'tests/command_tree.cpp',
     'tests/ctti.cpp',
+    'tests/display.cpp',
     'tests/event.cpp',
     'tests/exec_result.cpp',
     'tests/history.cpp',

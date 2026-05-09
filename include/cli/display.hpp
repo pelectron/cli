@@ -30,6 +30,9 @@
 #include "cli/string.hpp"
 #include "cli/util.hpp"
 
+#include <concepts>
+#include <cstddef>
+#include <limits>
 #include <type_traits>
 
 namespace cli {
@@ -146,6 +149,32 @@ namespace cli {
       static constexpr bool value = D::is_multiline_display;
     };
 
+    template<typename D>
+    struct number_of_lines;
+
+    template<typename D>
+      requires(not is_multiline_display<D>::value)
+    struct number_of_lines<D> {
+      static constexpr std::size_t value = 1;
+    };
+
+    template<typename D>
+      requires(is_multiline_display<D>::value) and requires() {
+        { D::number_of_lines } -> std::convertible_to<std::size_t>;
+      }
+    struct number_of_lines<D> {
+      static constexpr std::size_t value = D::number_of_lines;
+    };
+
+    template<typename D>
+      requires(is_multiline_display<D>::value) and (not requires() {
+                { D::number_of_lines } -> std::convertible_to<std::size_t>;
+              })
+    struct number_of_lines<D> {
+      static constexpr std::size_t value =
+        std::numeric_limits<std::size_t>::max();
+    };
+
   } // namespace dtl
 
   /**
@@ -165,6 +194,13 @@ namespace cli {
   inline constexpr bool is_multiline_display_v =
     dtl::is_multiline_display<D>::value;
 
+  template<typename D>
+  inline constexpr std::size_t number_of_lines_v =
+    dtl::number_of_lines<D>::value;
+
+  inline constexpr std::size_t unlimited_lines =
+    std::numeric_limits<std::size_t>::max();
+
   /**
    * @brief The AnsiDisplay represents an ANSI compliant display. It uses an
    * Output to write characters and supports cursor movement.
@@ -175,14 +211,19 @@ namespace cli {
    * @ingroup Display
    * @tparam Out the type to output characters.
    */
-  template<concepts::Output Out>
+  template<concepts::Output Out, std::size_t NumLines = unlimited_lines>
   class AnsiDisplay {
   public:
     using char_type = get_output_char_type_t<Out>;
     static constexpr bool is_multiline_display = true;
+    static constexpr std::size_t number_of_lines = NumLines;
 
     template<concepts::Output O>
     constexpr explicit AnsiDisplay(O &&output)
+      : out_(std::forward<O>(output)) {}
+
+    template<concepts::Output O, auto NLines>
+    constexpr explicit AnsiDisplay(O &&output, constant<NLines>)
       : out_(std::forward<O>(output)) {}
 
     template<typename... Args>
@@ -293,6 +334,10 @@ namespace cli {
 
   template<typename Out>
   AnsiDisplay(Out &&) -> AnsiDisplay<std::decay_t<Out>>;
+
+  template<typename Out, auto NumLines>
+  AnsiDisplay(Out &&, constant<NumLines>)
+    -> AnsiDisplay<std::decay_t<Out>, static_cast<std::size_t>(NumLines)>;
 
 } // namespace cli
 

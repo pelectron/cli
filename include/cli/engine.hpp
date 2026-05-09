@@ -1,9 +1,12 @@
 #ifndef CLI_ENGINE_HPP
 #define CLI_ENGINE_HPP
 
+#include "cli/command.hpp"
 #include "cli/command_tree.hpp"
 #include "cli/concepts.hpp"
+#include "cli/display.hpp"
 #include "cli/enums.hpp"
+#include "cli/event.hpp"
 #include "cli/history.hpp"
 #include "cli/input.hpp"
 #include "cli/line.hpp"
@@ -13,6 +16,15 @@
 #include <type_traits>
 
 namespace cli {
+
+  template<typename CharT, bool PrintNeedsIncrementalData>
+  struct PrintData {
+    const CommandNode<CharT> *current = nullptr;
+    std::size_t indent{0};
+  };
+
+  template<typename CharT>
+  struct PrintData<CharT, false> {};
 
   /**
    * @brief The Engine is the interface for CLI. It contains the @ref Input,
@@ -102,12 +114,50 @@ namespace cli {
     }
 
     constexpr void print() {
-      print(*commands_.root(), 0);
-      display_.newline();
+      if constexpr (needs_incremental_print) {
+        print_data_.current = nullptr;
+        print_data_.indent = 0;
+        line_.reset();
+        print_one();
+      } else {
+        print(*commands_.root(), 0);
+        display_.newline();
+      }
     }
 
   private:
     constexpr Error process_event(const event_type &ev) {
+      if constexpr (needs_incremental_print) {
+        if (print_data_.current) {
+          // is printing
+          // cursor left and right still work
+          // cursor down and enter will progress the print operation
+          // any other event will cancel print
+          switch (ev.type()) {
+            case Control::cursor_left:
+              display_.cursor_left(ev.param());
+              return Error::none;
+            case Control::cursor_right:
+              display_.cursor_right(ev.param());
+              return Error::none;
+            case Control::cursor_down:
+              [[fallthrough]];
+            case Control::enter:
+              print_one();
+              if (print_data_.current == nullptr) {
+                // print finished
+                display_.newline();
+              }
+              return Error::none;
+            default:
+              // print is cancelled
+              print_data_.current = nullptr;
+              print_data_.indent = 0;
+              display_.newline();
+          }
+        }
+      }
+
       switch (ev.type()) {
         case Control::character:
           return line_.on_char(ev.as_char());
@@ -168,6 +218,44 @@ namespace cli {
       return line_.execute(out_buf);
     }
 
+    constexpr void print_one() {
+      if (print_data_.current == nullptr) {
+        // print first lines
+        print_data_.current = root();
+        print_data_.indent = 0;
+        for (std::size_t i = 0; i < cli::number_of_lines_v<Display>; ++i) {
+          print_one();
+        }
+      } else {
+        // print current
+        display_.newline();
+        for (std::size_t i = 0; i < 2 * print_data_.indent; ++i)
+          display_.write(' ');
+        display_.write(print_data_.current->name);
+        display_.write(' ');
+        display_.write('[');
+        display_.write(print_data_.current->type);
+        display_.write(']');
+        display_.write(':');
+        display_.write(' ');
+        display_.write(print_data_.current->description);
+
+        // get next
+        if (print_data_.current->subcommand) {
+          // go down one level
+          ++print_data_.indent;
+          print_data_.current = print_data_.current->subcommand;
+        } else if (print_data_.current->next) {
+          // stay on curent level
+          print_data_.current = print_data_.current->next;
+        } else {
+          // go up one level
+          print_data_.current = print_data_.current->parent->next;
+          --print_data_.indent;
+        }
+      }
+    }
+
     constexpr void print(const CommandNode<char_type> &c, std::size_t indent) {
       display_.newline();
       if (indent == 0) {
@@ -206,11 +294,16 @@ namespace cli {
     using CommandTree_t =
       CommandTree<Engine<Cfg, Display, Commands...>, Commands...>;
 
+    static constexpr bool needs_incremental_print =
+      (num_cmds_v<Commands> + ...) > number_of_lines_v<Display>;
+
     CLI_NO_UNIQUE_ADDRESS CommandTree_t commands_;
     CLI_NO_UNIQUE_ADDRESS Display display_;
     CLI_NO_UNIQUE_ADDRESS Line<Cfg, Display> line_;
     CLI_NO_UNIQUE_ADDRESS input_type input_{};
     CLI_NO_UNIQUE_ADDRESS History<Cfg> history_{};
+    CLI_NO_UNIQUE_ADDRESS
+    PrintData<char_type, needs_incremental_print> print_data_;
     char_type buffer_[config::output_size_v<Cfg>]{};
   };
 
