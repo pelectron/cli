@@ -174,6 +174,17 @@ namespace cli {
         { output(s) } -> std::same_as<void>;
       };
 
+    template<class O>
+    concept AnyStringOutput =
+      StringOutput<O, char> or StringOutput<O, unsigned char> or
+      StringOutput<O, signed char> or StringOutput<O, char8_t> or
+      StringOutput<O, char16_t> or StringOutput<O, char32_t>;
+
+    template<class O>
+    concept AnyCharOutput =
+      CharOutput<O, char> or CharOutput<O, unsigned char> or
+      CharOutput<O, signed char> or CharOutput<O, char8_t> or
+      CharOutput<O, char16_t> or CharOutput<O, char32_t>;
     /**
      * A BasicOutput is used to write raw characters to an unbuffered
      * output stream. A BasicOutput must satisfy the CharOutput or the

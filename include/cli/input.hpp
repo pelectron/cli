@@ -16,9 +16,7 @@
 #include "cli/event.hpp"
 #include "cli/format.hpp"
 #include "cli/ring_buffer.hpp"
-#include "enums.hpp"
 
-#include <cassert>
 #include <cstdint>
 #include <type_traits>
 
@@ -86,8 +84,9 @@ namespace cli {
           return handle_escape_param(c);
         case State::delimiter:
           return handle_delimiter(c);
+        default:
+          CLI_ASSERT(false);
       }
-      return Error::implementation_error;
     }
 
     constexpr Error on_control(Control ctrl, std::uint8_t param = 1) {
@@ -109,19 +108,19 @@ namespace cli {
           else
             return push_char(0x09);
         case 0x0A: // linefeed
-          if (config::input_delimiter_v<Cfg> == Delimiter::lf)
+          if constexpr (config::input_delimiter_v<Cfg> == Delimiter::lf)
             return push_control(Control::enter, 1);
           else
             return push_char(c);
         case 0x0D: // carriage return
-          switch (config::input_delimiter_v<Cfg>) {
-            case Delimiter::cr:
-              return push_control(Control::enter, 1);
-            case Delimiter::lf:
-              return push_char(c);
-            case Delimiter::crlf:
-              state_ = State::delimiter;
-              return Error::none;
+          if constexpr (config::input_delimiter_v<Cfg> == Delimiter::lf) {
+            return push_char(c);
+          } else if constexpr (config::input_delimiter_v<Cfg> ==
+                               Delimiter::cr) {
+            return push_control(Control::enter, 1);
+          } else {
+            state_ = State::delimiter;
+            return Error::none;
           }
         case 0x1B: // escape
           state_ = State::escape_start;
@@ -139,11 +138,14 @@ namespace cli {
         state_ = State::escape_bracket;
         return Error::none;
       }
-      if (Error e = push_char(static_cast<char_type>(0x1B)); e != Error::none)
-        return e;
-      if (Error e = push_char(c); e != Error::none)
-        return e;
+
       state_ = State::normal;
+
+      if (buffer_.remaining_size() < 2)
+        return Error::buffer_overflow;
+
+      buffer_.push_back(static_cast<char_type>(0x1B));
+      buffer_.push_back(c);
       return Error::none;
     }
 
@@ -166,7 +168,7 @@ namespace cli {
         default:
           if (c >= '0' and c <= '9') {
             state_ = State::escape_param;
-            param_ = static_cast<uint32_t>(c - '0');
+            param_ = static_cast<std::uint8_t>(c - '0');
             return Error::none;
           }
           return print_escape(c);
@@ -213,52 +215,52 @@ namespace cli {
           }
           return print_param(c);
       }
+      return Error::none;
     }
 
     constexpr Error handle_delimiter(char_type c) {
       state_ = State::normal;
-      if (c == '\n') {
+      if (c == '\n')
         return push_control(Control::enter, 1);
-      } else {
-        // did not have \r\n
-        Error e = push_char('\r');
-        if (e != Error::none)
-          return e;
-        return push_char(c);
-      }
-    }
 
-    constexpr Error print_escape() {
-      if (Error e = push_char(static_cast<char_type>(0x1B)); e != Error::none)
-        return e;
-      return push_char(static_cast<char_type>('['));
+      // did not have \r\n
+      if (buffer_.remaining_size() < 2)
+        return Error::buffer_overflow;
+
+      buffer_.push_back('\r');
+      buffer_.push_back(c);
+
+      return Error::none;
     }
 
     constexpr Error print_escape(char_type c) {
-      if (Error e = push_char(static_cast<char_type>(0x1B)); e != Error::none)
-        return e;
-      if (Error e = push_char(static_cast<char_type>('[')); e != Error::none)
-        return e;
-      return push_char(c);
+      if (buffer_.remaining_size() < 3)
+        return Error::buffer_overflow;
+
+      buffer_.push_back(static_cast<char_type>(0x1B));
+      buffer_.push_back(static_cast<char_type>('['));
+      buffer_.push_back(c);
+      return Error::none;
     }
 
     constexpr Error print_param(char_type end) {
       char_type buf[10]{};
       cli::format::Int<std::uint8_t, char_type> fmt;
       cli::format::FormatResult res = fmt({buf, 10}, param_);
-      if (not res) {
-        // implementation_error
-        return Error::implementation_error;
-      }
+      CLI_ASSERT(res);
 
-      if (Error e = print_escape(); e != Error::none)
-        return e;
+      if (buffer_.remaining_size() < 3 + res.size_written)
+        return Error::buffer_overflow;
+
+      buffer_.push_back(static_cast<char_type>(0x1B));
+      buffer_.push_back(static_cast<char_type>('['));
 
       for (std::size_t i = 0; i < res.size_written; ++i) {
-        if (Error e = push_char(buf[i]); e != Error::none)
-          return e;
+        buffer_.push_back(buf[i]);
       }
-      return push_char(end);
+
+      buffer_.push_back(end);
+      return Error::none;
     }
 
     enum class State : std::uint8_t {
@@ -295,19 +297,5 @@ namespace cli {
     Param_t param_{0};
     RingBuffer<event_t, config::input_size_v<Cfg>> buffer_{};
   };
-
-  namespace dtl {
-    template<typename T, typename = void>
-    struct get_input_type {
-      using type = cli::Input<T>;
-    };
-    template<typename T>
-    struct get_input_type<T, std::void_t<typename T::input_type>> {
-      using type = typename T::input_type;
-    };
-  } // namespace dtl
-
-  template<concepts::Config Cfg>
-  using get_input_type = typename dtl::get_input_type<Cfg>::type;
 } // namespace cli
 #endif

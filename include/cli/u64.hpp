@@ -1,6 +1,5 @@
 #ifndef CLI_U64_HPP
 #define CLI_U64_HPP
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
 
@@ -53,7 +52,7 @@ namespace cli {
           Q(i) := 1
         end
     */
-      assert(b.h or b.l);
+      CLI_ASSERT(b.h or b.l);
       u64 Q{};
       u64 R{};
       for (int i = 63; i >= 0; --i) {

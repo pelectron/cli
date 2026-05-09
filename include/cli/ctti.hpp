@@ -1674,10 +1674,8 @@ namespace cli::ctti {
       if (e == value)
         return s;
     }
-    return string_constant<CharT, '<'>{} + name<E, CharT>() +
-           string_constant<CharT,
-                           ':',
-                           ':',
+    return string_constant<CharT,
+                           '<',
                            'u',
                            'n',
                            'k',
@@ -1703,17 +1701,16 @@ namespace cli::ctti {
       if (value == e)
         return s;
     }
-    return string_constant<CharT, '<'>{} + name<E>() +
-           string_constant<CharT,
-                           ':',
-                           ':',
+    return string_constant<CharT,
+                           '<',
                            'u',
                            'n',
                            'k',
                            'n',
                            'o',
                            'w',
-                           'n'>{};
+                           'n',
+                           '>'>{};
   }
 
   /**

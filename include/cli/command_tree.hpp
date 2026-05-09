@@ -4,7 +4,6 @@
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
 #include "cli/help.hpp"
-#include "command.hpp"
 
 #include <tuple>
 #include <utility>
@@ -46,11 +45,6 @@ namespace cli {
     /**
      * returns the root command
      */
-    constexpr command_node *root() noexcept { return cmds_.data(); }
-
-    /**
-     * returns the root command
-     */
     constexpr const command_node *root() const noexcept { return cmds_.data(); }
 
     /**
@@ -59,34 +53,8 @@ namespace cli {
      */
     constexpr const command_node *
     get_command(View<const char_type> cmd_path) const {
-      if (cmd_path.size() == 0)
-        return nullptr;
-
-      const command_node *node = root();
-      auto end = cmd_path.find_first_of(config_type::access_separator);
-      while (end != View<const char_type>::npos) {
-        auto s = cmd_path.substr(0, end);
-        bool found = false;
-        for (const auto &sub : *node) {
-          if (sub.name == s) {
-            node = &sub;
-            cmd_path = cmd_path.substr(end + 1);
-            end = cmd_path.find_last_of(config_type::access_separator);
-            found = true;
-            break;
-          }
-        }
-        if (not found)
-          return nullptr;
-      }
-
-      for (const auto &sub : *node) {
-        if (sub.name == cmd_path) {
-          return &sub;
-        }
-      }
-
-      return nullptr;
+      return cli::get_command(
+        cmd_path, cmds_[0], config_type::access_separator);
     }
 
   private:

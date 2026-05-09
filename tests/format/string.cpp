@@ -128,3 +128,34 @@ TEST_CASE("format::String") {
     }
   }
 }
+
+TEST_CASE("format View<const CharT>") {
+  char buffer[32]{};
+  cli::format::Format<cli::View<const char>, char> format;
+  cli::format::FormatResult res = format({buffer, 32}, "hello");
+  REQUIRE(res);
+  REQUIRE(res.size_written == 5);
+  REQUIRE(cli::View{buffer, 5} == cli::View{"hello"});
+  REQUIRE(buffer[6] == 0);
+
+  SECTION("buffer too small") {
+    res = format({buffer, 4}, "hello");
+    REQUIRE_FALSE(res);
+  }
+}
+
+TEST_CASE("format View<CharT>") {
+  char buffer[32]{};
+  char input[]{"hello"};
+  cli::format::Format<cli::View<const char>, char> format;
+  cli::format::FormatResult res = format({buffer, 32}, {input, 5});
+  REQUIRE(res);
+  REQUIRE(res.size_written == 5);
+  REQUIRE(cli::View{buffer, 5} == cli::View{"hello"});
+  REQUIRE(buffer[6] == 0);
+
+  SECTION("buffer too small") {
+    res = format({buffer, 4}, {input, 5});
+    REQUIRE_FALSE(res);
+  }
+}

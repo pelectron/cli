@@ -394,7 +394,7 @@ namespace cli {
       : s{Cs..., 0} {}
 
     constexpr StringLiteral(View<CharT> str) {
-      assert(str.size() < N);
+      CLI_ASSERT(str.size() < N);
       for (std::size_t i = 0; i < str.size(); ++i)
         s[i] = str[i];
     }

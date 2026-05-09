@@ -282,7 +282,7 @@ static std::string mappings() {
   // clang-format off
   return  "\nMappings:\n"
           "  Ctrl+L clears the current line\n"
-          "  Ctrl+J clears the screen\n";
+          "  Ctrl+J clears the screen\n"
           "  Ctrl+K clears line from cursor to the end\n"
           "  Ctrl+U clears line from cursor to the start\n"
           "  Ctrl+H prints the mappings\n";

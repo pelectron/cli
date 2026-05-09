@@ -1,3 +1,4 @@
+#include "catch2/catch_test_macros.hpp"
 #include "cli/enums.hpp"
 #include "cli/format.hpp"
 #include "common.hpp"
@@ -89,6 +90,17 @@ std::string min_string(cli::Fmt fmt = cli::Fmt::normal) {
 
 #define TV1(value)                                                             \
   FmtIntTestVector<TestType> { static_cast<TestType>(value), #value }
+
+TEST_CASE("format::Int not enough space") {
+  cli::format::Int<int, char> fmt1;
+  char buf[2];
+  cli::format::FormatResult res = fmt1(cli::View<char>{buf, std::size_t{0}}, 0);
+  REQUIRE_FALSE(res);
+
+  cli::format::Int<int, char, cli::Fmt::normal, true> fmt2;
+  res = fmt2({buf, 1}, 0);
+  REQUIRE_FALSE(res);
+}
 
 TEMPLATE_TEST_CASE(
   "format::Int<TestType, Fmt::normal, UseSignForPositive=false>",

@@ -38,7 +38,7 @@ namespace cli {
   public:
     constexpr Event() {}
 
-    constexpr explicit Event(CharT c)
+    constexpr Event(CharT c)
       : type_(Control::character), payload_{c} {}
 
     constexpr Event(Control type)

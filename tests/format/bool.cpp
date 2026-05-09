@@ -1,3 +1,5 @@
+#include "catch2/catch_test_macros.hpp"
+#include "cli/enums.hpp"
 #include "cli/format.hpp"
 #include "common.hpp"
 
@@ -18,5 +20,15 @@ TEST_CASE("format::Format<bool>") {
     REQUIRE(res);
     REQUIRE(res.size_written == 5);
     REQUIRE(std::string((const char *)buffer) == "false");
+  }
+  SECTION("not enough space for true") {
+    auto res = format({buffer, 3}, true);
+    REQUIRE_FALSE(res);
+    REQUIRE(res.error == cli::Error::buffer_overflow);
+  }
+  SECTION("not enough space for false") {
+    auto res = format({buffer, 4}, false);
+    REQUIRE_FALSE(res);
+    REQUIRE(res.error == cli::Error::buffer_overflow);
   }
 }

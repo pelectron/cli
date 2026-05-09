@@ -1,7 +1,7 @@
 #ifndef CLI_UTIL_HPP
 #define CLI_UTIL_HPP
+
 #include <algorithm>
-#include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -174,7 +174,7 @@ namespace cli {
     }
 
     template<std::signed_integral T, std::unsigned_integral U>
-    std::common_type_t<T, U> min(T t, U u) {
+    std::make_signed_t<std::common_type_t<T, U>> min(T t, U u) {
       if (t < 0)
         return t;
       else if (static_cast<U>(t) < u)
@@ -184,7 +184,7 @@ namespace cli {
     }
 
     template<std::unsigned_integral T, std::signed_integral U>
-    std::common_type_t<T, U> min(T t, U u) {
+    std::make_signed_t<std::common_type_t<T, U>> min(T t, U u) {
       if (u < 0)
         return u;
       else if (static_cast<T>(u) < t)

@@ -24,6 +24,10 @@ struct F2 {
   F1 f1_struct;
 };
 
+namespace ns {
+  struct F3 {};
+} // namespace ns
+
 using F1Info = cli::ctti::StructInfo<F1>;
 
 using F2Info = cli::ctti::StructInfo<F2>;
@@ -31,9 +35,11 @@ using F2Info = cli::ctti::StructInfo<F2>;
 using cli::operator""_sc;
 
 TEST_CASE("ctti::name") {
-  REQUIRE(cli::ctti::name<F1>() == "F1"_sc);
-  REQUIRE(cli::ctti::name<F2>() == "F2"_sc);
-  REQUIRE(cli::ctti::name<S4<int>>() == "S4<int>"_sc);
+  CHECK(cli::ctti::name<F1>() == "F1"_sc);
+  CHECK(cli::ctti::name<F2>() == "F2"_sc);
+  CHECK(cli::ctti::name<S4<int>>() == "S4<int>"_sc);
+  CHECK(cli::ctti::name<cli::Error>() == "cli::Error"_sc);
+  CHECK(cli::ctti::name<ns::F3>() == "ns::F3"_sc);
 }
 
 TEST_CASE("ctti::dtl::member_name") {
@@ -48,6 +54,13 @@ TEST_CASE("ctti::to_tuple") {
   REQUIRE(std::get<0>(t).value == 5);
   REQUIRE(std::get<1>(t).value == 'k');
   REQUIRE(std::get<2>(t).value.a == 10);
+}
+
+TEST_CASE("cli::enum_name") {
+  REQUIRE(cli::ctti::enum_name(cli::Error::none) == "none");
+  REQUIRE(cli::ctti::enum_name(static_cast<cli::Error>(300)) == "<unknown>");
+  REQUIRE(cli::ctti::enum_name(F::A) == "A");
+  REQUIRE(cli::ctti::enum_name(F::A | F::B) == "<unknown>");
 }
 
 // template<class Field, class... Fields>

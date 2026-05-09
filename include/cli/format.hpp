@@ -65,7 +65,6 @@
 #include "cli/u64.hpp"
 #include "cli/util.hpp"
 
-#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
@@ -266,7 +265,7 @@ namespace cli::format {
   struct Int {
     static constexpr std::size_t num_dec_digits() {
       using traits = traits::integer_traits<T>;
-      if constexpr (traits::is_signed) {
+      if constexpr (not traits::is_signed) {
         if constexpr (traits::max >= uint64_t{10'000'000'000'000'000'000u})
           return 21;
         else if constexpr (traits::max >= uint64_t{1'000'000'000'000'000'000u})
@@ -287,30 +286,29 @@ namespace cli::format {
           return 13;
         else if constexpr (traits::max >= uint64_t{10'000'000'000u})
           return 12;
-        else if constexpr (traits::max >= uint64_t{1'000'000'000u})
+        else if constexpr (traits::max >= uint32_t{1'000'000'000u})
           return 11;
-        else if constexpr (traits::max >= uint64_t{100'000'000u})
+        else if constexpr (traits::max >= uint32_t{100'000'000u})
           return 10;
-        else if constexpr (traits::max >= uint64_t{10'000'000u})
+        else if constexpr (traits::max >= uint32_t{10'000'000u})
           return 9;
-        else if constexpr (traits::max >= uint64_t{1'000'000u})
+        else if constexpr (traits::max >= uint32_t{1'000'000u})
           return 8;
-        else if constexpr (traits::max >= uint64_t{100'000u})
+        else if constexpr (traits::max >= uint32_t{100'000u})
           return 7;
-        else if constexpr (traits::max >= uint64_t{10'000u})
+        else if constexpr (traits::max >= uint32_t{10'000u})
           return 6;
-        else if constexpr (traits::max >= uint64_t{1'000u})
+        else if constexpr (traits::max >= uint32_t{1'000u})
           return 5;
-        else if constexpr (traits::max >= uint64_t{100u})
+        else if constexpr (traits::max >= uint32_t{100u})
           return 4;
-        else if constexpr (traits::max >= uint64_t{10u})
+        else if constexpr (traits::max >= uint32_t{10u})
           return 3;
-        else if constexpr (traits::max >= uint64_t{1u})
+        else if constexpr (traits::max >= uint32_t{1u})
           return 2;
         else
           static_assert(always_false<T>, "Cannot use Format for T");
       } else {
-
         if constexpr (traits::max >= int64_t{1'000'000'000'000'000'000} or
                       traits::min <= int64_t{-1'000'000'000'000'000'000})
           return 20;
@@ -424,7 +422,7 @@ namespace cli::format {
               break;
           for (; pow10 > 0; pow10 /= 10) {
             const auto digit = u_value / pow10;
-            buffer[size++] = static_cast<char>(digit + '0');
+            buffer[size++] = static_cast<CharT>(digit + '0');
             u_value = static_cast<UnsignedT>(u_value - digit * pow10);
           }
 
@@ -460,7 +458,7 @@ namespace cli::format {
 
           for (; pow10 > 0; pow10 /= 10) {
             const auto digit = value / pow10;
-            buffer[size++] = static_cast<char>(digit + u'0');
+            buffer[size++] = static_cast<CharT>(digit + u'0');
             value = static_cast<T>(value - digit * pow10);
           }
 
@@ -496,7 +494,7 @@ namespace cli::format {
         }
         for (; nibble >= 0 and nibble <= max_nibble; --nibble) {
           const auto digit =
-            static_cast<char>(0x0Fu & (u_value >> (nibble * 4u)));
+            static_cast<CharT>(0x0Fu & (u_value >> (nibble * 4u)));
           if (digit >= 0 and digit <= 9)
             buffer[size++] = static_cast<CharT>(digit + '0');
           else if (digit >= 10 and digit <= 15)

@@ -705,7 +705,6 @@ namespace cli {
       if (start_of_args_ < size_)
         return Error::none;
 
-      const auto line = view();
       if (size_ == 0 or last_access_separator_ == size_ - 1) {
         if (command_->subcommand == nullptr)
           return Error::none;
@@ -966,7 +965,7 @@ namespace cli {
     }
 
     constexpr Error on_autocomplete() {
-      assert(root_.subcommand);
+      CLI_ASSERT(root_.subcommand);
 
       if (size_ == 0)
         return write(root_.subcommand->name);
@@ -1278,7 +1277,7 @@ namespace cli {
         end = cmd_name.find_first_of(Cfg::access_separator, begin);
       }
 
-      assert(begin <= cursor_ and end >= cursor_);
+      CLI_ASSERT(begin <= cursor_ and end >= cursor_);
 
       View cmdlet = cmd_name.substr(begin, end - begin);
       View cursor_let = cmd_name.substr(begin, cursor_);

@@ -55,6 +55,11 @@ namespace cli {
     constexpr std::size_t size() const { return size_; }
 
     /**
+     * returns capacity() - size()
+     */
+    constexpr std::size_t remaining_size() const { return capacity_ - size_; }
+
+    /**
      * returns the maximum amount of elements that can be stored
      */
     constexpr std::size_t capacity() const { return capacity_; }

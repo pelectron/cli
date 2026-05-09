@@ -26,7 +26,6 @@
 #define CLI_DISPLAY_HPP
 
 #include "cli/concepts.hpp"
-#include "cli/enums.hpp"
 #include "cli/format.hpp"
 #include "cli/string.hpp"
 #include "cli/util.hpp"
@@ -40,80 +39,98 @@ namespace cli {
     struct get_output_char_type;
 
     template<typename Char>
-    struct get_output_char_type<Error (*)(Char)> {
+    struct get_output_char_type<void (*)(Char)> {
       using type = std::remove_const_t<Char>;
     };
 
     template<typename Char>
-    struct get_output_char_type<Error (*)(Char) noexcept> {
+    struct get_output_char_type<void (*)(Char) noexcept> {
       using type = std::remove_const_t<Char>;
     };
 
     template<typename Char>
-    struct get_output_char_type<Error (&)(Char)> {
+    struct get_output_char_type<void (&)(Char)> {
       using type = std::remove_const_t<Char>;
     };
 
     template<typename Char>
-    struct get_output_char_type<Error (&)(Char) noexcept> {
+    struct get_output_char_type<void (&)(Char) noexcept> {
       using type = std::remove_const_t<Char>;
     };
 
     template<typename Char>
-    struct get_output_char_type<Error (*)(View<const Char>)> {
+    struct get_output_char_type<void (*)(View<const Char>)> {
       using type = Char;
     };
 
     template<typename Char>
-    struct get_output_char_type<Error (*)(View<const Char>) noexcept> {
+    struct get_output_char_type<void (*)(View<const Char>) noexcept> {
       using type = Char;
     };
 
     template<typename Char>
-    struct get_output_char_type<Error (&)(View<const Char>)> {
+    struct get_output_char_type<void (&)(View<const Char>)> {
       using type = std::remove_const_t<Char>;
     };
 
     template<typename Char>
-    struct get_output_char_type<Error (&)(View<const Char>) noexcept> {
+    struct get_output_char_type<void (&)(View<const Char>) noexcept> {
       using type = std::remove_const_t<Char>;
+    };
+
+    template<concepts::AnyCharOutput T>
+      requires(not concepts::AnyStringOutput<T>)
+    struct get_output_char_type<T> {
+      using type = std::remove_cvref_t<
+        type_list::type_at_t<0, typename function_traits<T>::arguments>>;
+    };
+
+    template<concepts::AnyStringOutput T>
+      requires(not concepts::AnyCharOutput<T>)
+    struct get_output_char_type<T> {
+      using type = typename std::remove_cvref_t<
+        type_list::type_at_t<0, typename function_traits<T>::arguments>>::
+        value_type;
     };
 
     template<typename T>
-      requires concepts::CharOutput<T, char> or concepts::StringOutput<T, char>
+      requires(concepts::CharOutput<T, char> and
+               concepts::StringOutput<T, char>)
     struct get_output_char_type<T> {
       using type = char;
     };
 
     template<typename T>
-      requires concepts::CharOutput<T, signed char> or
-               concepts::StringOutput<T, signed char>
-    struct get_output_char_type<T> {};
+      requires(concepts::CharOutput<T, signed char> and
+               concepts::StringOutput<T, signed char>)
+    struct get_output_char_type<T> {
+      using type = signed char;
+    };
 
     template<typename T>
-      requires concepts::CharOutput<T, unsigned char> or
-               concepts::StringOutput<T, unsigned char>
+      requires(concepts::CharOutput<T, unsigned char> and
+               concepts::StringOutput<T, unsigned char>)
     struct get_output_char_type<T> {
       using type = unsigned char;
     };
 
     template<typename T>
-      requires concepts::CharOutput<T, char8_t> or
-               concepts::StringOutput<T, char8_t>
+      requires(concepts::CharOutput<T, char8_t> and
+               concepts::StringOutput<T, char8_t>)
     struct get_output_char_type<T> {
       using type = char8_t;
     };
 
     template<typename T>
-      requires concepts::CharOutput<T, char16_t> or
-               concepts::StringOutput<T, char16_t>
+      requires(concepts::CharOutput<T, char16_t> and
+               concepts::StringOutput<T, char16_t>)
     struct get_output_char_type<T> {
       using type = char16_t;
     };
 
     template<typename T>
-      requires concepts::CharOutput<T, char32_t> or
-               concepts::StringOutput<T, char32_t>
+      requires(concepts::CharOutput<T, char32_t> and
+               concepts::StringOutput<T, char32_t>)
     struct get_output_char_type<T> {
       using type = char32_t;
     };
@@ -225,7 +242,8 @@ namespace cli {
 
     /// clears the entire screen and moves the cursor to the home position
     constexpr void clear_screen() {
-      write(string_constant<char_type, '\x1B', '[', '2', 'J', '\x1B', 'H'>{});
+      write(
+        string_constant<char_type, '\x1B', '[', '2', 'J', '\x1B', '[', 'H'>{});
     }
 
     /// writes a new line
@@ -238,10 +256,12 @@ namespace cli {
      *e
      */
     constexpr void cursor_left(std::size_t n) {
+      if (n == 0)
+        return;
       char_type buffer[32]{};
       const cli::format::Format<std::size_t, char_type> fmt;
       const cli::format::FormatResult res = fmt({buffer, 32}, n);
-      assert(res);
+      CLI_ASSERT(res);
 
       write('\x1B');
       write('[');
@@ -255,10 +275,12 @@ namespace cli {
      * @param n how mch to move
      */
     constexpr void cursor_right(std::size_t n) {
+      if (n == 0)
+        return;
       char_type buffer[32]{};
       const cli::format::Format<std::size_t, char_type> fmt;
       const cli::format::FormatResult res = fmt({buffer, 32}, n);
-      assert(res);
+      CLI_ASSERT(res);
       write('\x1B');
       write('[');
       write({buffer, res.size_written});

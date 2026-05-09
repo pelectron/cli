@@ -29,7 +29,7 @@ namespace cli {
   public:
     using config_type = Cfg;
     using char_type = typename config_type::char_type;
-    using input_type = get_input_type<config_type>;
+    using input_type = config::input_type_t<config_type>;
     using event_type = Event<char_type>;
 
     static_assert(concepts::Input<input_type, char_type>,
