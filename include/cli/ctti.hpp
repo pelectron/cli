@@ -21,18 +21,26 @@
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+  #define CTTI_VALUE_PREFIX "CharView cli::ctti::dtl::value_impl() [D = "
+  #define CTTI_VALUE_SUFFIX "]"
 #elif defined(__GNUC__) && !defined(__clang__)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "; cli::CharView = cli::View<const char>]"
+  #define CTTI_VALUE_PREFIX "consteval cli::CharView cli::ctti::dtl::value_impl() [with auto D = "
+  #define CTTI_VALUE_SUFFIX "; cli::CharView = cli::View<const char>]"
 #elif defined(_MSC_VER)
   #if defined(__clang__)
-  #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
+    #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
     #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
+    #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+    #define CTTI_VALUE_PREFIX "CharView cli::ctti::dtl::name_impl() [D = "
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
   #else
   #define CLI_FUNCTION_NAME __FUNCSIG__
-    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class cli::View<char const > __cdecl cli::ctti::dtl::name_impl<"
+    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class cliV::View<char const > __cdecl cli::ctti::dtl::name_impl<"
+    #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
+    #define CTTI_VALUE_PREFIX "class cliV::View<char const > __cdecl cli::ctti::dtl::value_impl<"
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
   #endif
 #else
@@ -44,6 +52,8 @@
   (sizeof(CTTI_TYPE_PRETTY_FUNCTION_PREFIX) - 1)
 #define CTTI_TYPE_PRETTY_FUNCTION_RIGHT                                        \
   (sizeof(CTTI_TYPE_PRETTY_FUNCTION_SUFFIX) - 1)
+#define CTTI_VALUE_LEFT (sizeof(CTTI_VALUE_PREFIX) - 1)
+#define CTTI_VALUE_RIGHT (sizeof(CTTI_VALUE_SUFFIX) - 1)
 
 namespace cli::ctti {
 
@@ -68,29 +78,21 @@ namespace cli::ctti {
       constexpr CharView name{CLI_FUNCTION_NAME};
       constexpr auto size = name.size() - CTTI_TYPE_PRETTY_FUNCTION_LEFT -
                             CTTI_TYPE_PRETTY_FUNCTION_RIGHT;
-      // static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
-#if defined(__clang__) and not defined(_MSC_VER)
-      return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
-#elif defined(__GNUC__) and !defined(__clang__)
+      static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
+#if defined(__clang__) or defined(__GNUC__)
       return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
 #elif defined(_MSC_VER)
-#if defined(__clang__)
-      return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
-      const auto split = name.substr(0, name.find_last_of("]"));
-      return split.substr(split.find_last_of(" ") + 1);
-#else
       const auto split = name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
       const auto idx = split.find(' ');
       if (idx == CharView::npos)
         return split;
       return split.substr(idx + 1);
 #endif
-#endif
     }
 
     template<typename T, typename CharT = char>
     consteval auto name() {
-      if constexpr (cli::dtl::is_view_v<T>) {
+      if constexpr (concepts::String<T> or concepts::StringView<T>) {
         return string_constant<CharT, 's', 't', 'r', 'i', 'n', 'g'>{};
       } else {
         return []<std::size_t... Is>(std::index_sequence<Is...>) {
@@ -98,6 +100,51 @@ namespace cli::ctti {
         }(std::make_index_sequence<name_impl<T>().size()>());
       }
     }
+
+    template<auto D>
+    consteval CharView value_impl() {
+#if (defined(__clang__) and not defined(_MSC_VER)) or defined(__GNUC__)
+      constexpr CharView name{CLI_FUNCTION_NAME};
+      static_assert(name.starts_with(CTTI_VALUE_PREFIX));
+      constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
+      return name.substr(CTTI_VALUE_LEFT, size);
+
+#elif defined(_MSC_VER)
+      constexpr CharView name{std::source_location{}.function_name()};
+      static_assert(name.starts_with(CTTI_VALUE_PREFIX));
+      constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
+      name.substr(CTTI_VALUE_LEFT, size);
+#endif
+    }
+
+    template<typename T, typename CharT = char>
+    struct value {
+      template<auto D>
+      static consteval auto get() {
+        return []<std::size_t... Is>(std::index_sequence<Is...>) {
+          return string_constant<CharT, value_impl<D>().data()[Is]...>{};
+        }(std::make_index_sequence<value_impl<D>().size()>());
+      }
+    };
+
+    template<typename Ch, typename CharT, auto... Cs>
+    struct value<cli::string_constant<Ch, Cs...>, CharT> {
+      template<auto D>
+      static consteval auto get() {
+        return cli::string_constant<CharT, '"', Cs..., '"'>{};
+      }
+    };
+
+    template<typename String, typename CharT>
+      requires concepts::String<String> or concepts::StringView<String>
+    struct value<String, CharT> {
+      template<auto D>
+      static consteval auto get() {
+        return []<std::size_t... Is>(std::index_sequence<Is...>) {
+          return string_constant<CharT, '"', D.data()[Is]..., '"'>{};
+        }(std::make_index_sequence<D.size()>());
+      }
+    };
 
     struct any_type {
       template<class T>
@@ -201,6 +248,13 @@ namespace cli::ctti {
     }
 
     template<auto V, typename CharT = char>
+    consteval auto value_name() {
+      return dtl::value<std::remove_reference_t<decltype(V)>,
+                        CharT>::template get<V>();
+    }
+
+    template<auto V, typename CharT = char>
+      requires std::is_enum_v<std::remove_reference_t<decltype(V)>>
     consteval auto value_name() {
       return []<std::size_t... Is>(std::index_sequence<Is...>) {
         return string_constant<CharT, value_name_impl<V>().data()[Is]...>{};

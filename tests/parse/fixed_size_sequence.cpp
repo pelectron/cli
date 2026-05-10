@@ -86,7 +86,7 @@ TEST_CASE("parse::FixedSizeSequence") {
     SeqTestVector vector[]{
       {.input = {},                         .output{cli::Error::too_few_characters}     },
       {.input = "[",                        .output{cli::Error::too_few_sequence_values}},
-      {.input = "a",                        .output{cli::Error::expected_open_bracket}  },
+      {.input = "a",                        .output{cli::Error::expected_lbracket}      },
       {.input = "[]",                       .output{cli::Error::too_few_sequence_values}},
       {.input = "[1,2,3]",                  .output{cli::Error::too_few_sequence_values}},
       {.input = "[1 2,3]",                  .output{cli::Error::expected_delimiter}     },
@@ -94,8 +94,7 @@ TEST_CASE("parse::FixedSizeSequence") {
        .output{cli::Error::too_many_sequence_values}                                    },
       {.input = "[0,1,2,3,4,5,6,7,8,b]",
        .output{cli::Error::invalid_sequence_value}                                      },
-      {.input = "[0,1,2,3,4,5,6,7,8,9",
-       .output{cli::Error::expected_closing_bracket}                                    },
+      {.input = "[0,1,2,3,4,5,6,7,8,9",     .output{cli::Error::expected_rbracket}      },
       {.input = "[1,2,3",                   .output{cli::Error::expected_delimiter}     },
     };
     for (const auto &tv : vector) {

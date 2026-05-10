@@ -48,6 +48,13 @@ namespace cli {
           break;
         case validation_error:
           index_ = o.index_;
+          break;
+        case format_error:
+          [[fallthrough]];
+        case set_error:
+          [[fallthrough]];
+        case get_error:
+          [[fallthrough]];
         default:
           break;
       }

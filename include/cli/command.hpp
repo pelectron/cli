@@ -175,6 +175,9 @@ namespace cli {
            concepts::Command... SubCommands>
   class CommandBase {
   public:
+    static_assert(Id<Name>,
+                  "Name must be a valid identifier. Name can't contain "
+                  "whitespace, or any of the characters (){},='\"");
     using char_type = typename Name::char_type;
     using sub_command_list = TypeList<SubCommands...>;
     using name_type = Name;
@@ -255,6 +258,10 @@ namespace cli {
     friend class CommandTree;
 
   public:
+    static_assert(Id<CmdName>,
+                  "Name must be a valid identifier. Name can't contain "
+                  "whitespace, or any of the characters (){},='\"");
+
     using char_type = typename CmdName::char_type;
     using sub_command_list = TypeList<>;
     static constexpr CmdName name{};
@@ -289,18 +296,6 @@ namespace cli {
   };
 
   template<typename CharT>
-  constexpr SplitResult<CharT> split_line(View<const CharT> line,
-                                          CharT access_separator) {
-    if (line.size() == 0)
-      return {nullptr};
-
-    std::size_t pos =
-      line.find_first_of(string_constant<CharT, ' ', '(', '='>{});
-    const View<const CharT> rest = parse::skip_ws(line.substr(pos));
-    return {nullptr, rest};
-  }
-
-  template<typename CharT>
   constexpr const CommandNode<CharT> *
   get_command(View<const CharT> command,
               const CommandNode<CharT> *root,
@@ -310,7 +305,7 @@ namespace cli {
       return nullptr;
 
     std::size_t pos = command.find_first_of(
-      View<const CharT>{string_constant<CharT, ' ', '(', '='>{}});
+      View<const CharT>{string_constant<CharT, ' ', '(', '=', ')'>{}});
 
     if (pos == 0)
       return {};
@@ -358,7 +353,7 @@ namespace cli {
       return {};
 
     std::size_t pos = line.find_first_of(
-      View<const CharT>{string_constant<CharT, ' ', '(', '='>{}});
+      View<const CharT>{string_constant<CharT, ' ', '(', '=', ')'>{}});
 
     if (pos == 0)
       return {};

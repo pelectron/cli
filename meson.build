@@ -35,7 +35,9 @@ cli_term.disable_if(
 deps = []
 
 if (not simulation.disabled())
-  deps += dependency('cpp-terminal', required: true)
+  deps += dependency('cpp-terminal', 
+                     required: true,
+                     default_options:['warning_level=0'])
 endif
 
 cli_dep = declare_dependency(include_directories: inc, dependencies: deps)
@@ -60,6 +62,7 @@ if (not build_examples.disabled())
 
   if (not simulation.disabled())
     executable('cli', 'examples/cli.cpp', dependencies: cli_dep)
+    executable('cli-singleline', 'examples/cli-singleline.cpp', dependencies: cli_dep)
   endif
 
   # executable('led-example',
@@ -72,13 +75,26 @@ endif
 if (not build_tests.disabled())
   catch_dep = dependency(
     'catch2',
-    default_options: ['tests=false'],
+    default_options: ['tests=false','warning_level=0'],
     fallback: ['catch2', 'catch2_with_main_dep'],
     version: '>=3.4.0',
     required: true,
   )
 
   test_inc = include_directories('tests')
+
+  if cpp.get_id() == 'clang' or cpp.get_id() == 'gcc'
+    exclude_warnings = [
+      '-Wno-abi-tag',
+      '-Wno-effc++',
+      '-Wno-ctor-dtor-privacy',
+      '-Wno-padded',
+      '-Wno-shadow',
+      '-Wno-unknown-warning-option',
+    ]
+  else 
+    exclude_warnings = []
+  endif
 
   ut = executable(
     'unit-test',
@@ -118,6 +134,7 @@ if (not build_tests.disabled())
     'tests/exec_result.cpp',
     'tests/history.cpp',
     'tests/input.cpp',
+    'tests/help.cpp',
     'tests/line.cpp',
     'tests/param.cpp',
     'tests/ring_buffer.cpp',
@@ -125,6 +142,7 @@ if (not build_tests.disabled())
     'tests/util.cpp',
     'tests/validate.cpp',
     include_directories: test_inc,
+    cpp_args: exclude_warnings,
     dependencies: [cli_dep, catch_dep],
   )
 

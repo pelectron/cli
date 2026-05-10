@@ -56,11 +56,16 @@ TEST_CASE("ctti::to_tuple") {
   REQUIRE(std::get<2>(t).value.a == 10);
 }
 
-TEST_CASE("cli::enum_name") {
+TEST_CASE("ctti::enum_name") {
   REQUIRE(cli::ctti::enum_name(cli::Error::none) == "none");
   REQUIRE(cli::ctti::enum_name(static_cast<cli::Error>(300)) == "<unknown>");
   REQUIRE(cli::ctti::enum_name(F::A) == "A");
   REQUIRE(cli::ctti::enum_name(F::A | F::B) == "<unknown>");
+}
+
+TEST_CASE("ctti::value_name") {
+  STATIC_REQUIRE(cli::ctti::value_name<1>() == "1"_sc);
+  STATIC_REQUIRE(cli::ctti::value_name<0xFFFF>() == "65535"_sc);
 }
 
 // template<class Field, class... Fields>

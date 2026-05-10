@@ -1,17 +1,27 @@
 #include "catch2/catch_test_macros.hpp"
 #include "cli/format.hpp"
 #include "cli/parse.hpp"
+#include "cli/traits.hpp"
 #include "common.hpp"
 
 #include <catch2/catch_all.hpp>
-#include <cstdint>
 
-enum class E {
-  A,
-  B,
-  C,
-  D
+enum class E : int {
+  A = 0,
+  B = 1,
+  C = 2,
+  D = 3
 };
+
+namespace cli::traits {
+
+  template<>
+  struct enum_traits<E> {
+    static constexpr int min = 0;
+    static constexpr int max = 3;
+    static constexpr bool is_flag = false;
+  };
+} // namespace cli::traits
 
 using FormatE = cli::format::Format<E, char>;
 using ParseE = cli::parse::Parse<E, char>;

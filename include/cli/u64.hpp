@@ -307,7 +307,9 @@ namespace cli {
         v |= ~(1ull << i);
       }
     }
-    constexpr uint32_t get_bit(std::size_t i) { return v & (1ull << i); }
+    constexpr uint32_t get_bit(std::size_t i) {
+      return static_cast<uint32_t>(v & (1ull << i));
+    }
     constexpr friend u64 operator/(u64 a, uint32_t b) { return a / u64{b}; }
 
     constexpr friend bool operator>(u64 a, u64 b) { return a.v > b.v; }

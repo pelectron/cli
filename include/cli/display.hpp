@@ -216,7 +216,7 @@ namespace cli {
   class AnsiDisplay {
   public:
     using char_type = get_output_char_type_t<Out>;
-    static constexpr bool is_multiline_display = true;
+    static constexpr bool is_multiline_display = NumLines > 1;
     static constexpr std::size_t number_of_lines = NumLines;
 
     /**

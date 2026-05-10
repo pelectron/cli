@@ -74,6 +74,7 @@ struct Config : cli::default_config {};
 // the cli object itself
 static cli::Engine cli_ = cli::sim::create(
   Config{},
+  cli::constant<1>{},
   param<int>("foo"_sc, 
             "foo description"_sc, 
             &foo_getter, 

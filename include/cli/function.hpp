@@ -66,17 +66,18 @@ namespace cli::funcs {
                           Description,
                           identity<T>,
                           constant<DefaultValue>,
-                          P &&parse,
-                          V &&validate)
-      : parse(std::forward<P>(parse)), validate(std::forward<V>(validate)) {}
+                          P &&parse_,
+                          V &&validate_)
+      : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
     constexpr FunctionArg(
-      Name, Description, constant<DefaultValue>, P &&parse, V &&validate)
-      : parse(std::forward<P>(parse)), validate(std::forward<V>(validate)) {}
+      Name, Description, constant<DefaultValue>, P &&parse_, V &&validate_)
+      : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
+
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
-    constexpr FunctionArg(Name, Description, P &&parse, V &&validate)
-      : parse(std::forward<P>(parse)), validate(std::forward<V>(validate)) {}
+    constexpr FunctionArg(Name, Description, P &&parse_, V &&validate_)
+      : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     CLI_NO_UNIQUE_ADDRESS Name name;
     CLI_NO_UNIQUE_ADDRESS Description description;
@@ -140,15 +141,15 @@ namespace cli::funcs {
 
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
     constexpr FunctionArgWithoutDefault(
-      Name, Description, identity<T>, P &&parse, V &&validate)
-      : parse(std::forward<P>(parse)), validate(std::forward<V>(validate)) {}
+      Name, Description, identity<T>, P &&parse_, V &&validate_)
+      : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
     constexpr FunctionArgWithoutDefault(Name,
                                         Description,
-                                        P &&parse,
-                                        V &&validate)
-      : parse(std::forward<P>(parse)), validate(std::forward<V>(validate)) {}
+                                        P &&parse_,
+                                        V &&validate_)
+      : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     CLI_NO_UNIQUE_ADDRESS Name name;
     CLI_NO_UNIQUE_ADDRESS Description description;
@@ -284,7 +285,9 @@ namespace cli::funcs {
         &) {
       using CharT = typename Name::char_type;
       return Name{} + string_constant<CharT, ':', ' '>{} +
-             ctti::name<T, CharT>() + string_constant<CharT, '?'>{};
+             ctti::name<T, CharT>() +
+             string_constant<CharT, '?', ' ', '=', ' '>{} +
+             ctti::dtl::value<T>::template get<DefaultValue>();
     }
 
     template<FuncArg A, FuncArg... As>
@@ -308,9 +311,9 @@ namespace cli::funcs {
     template<typename CharT, Callable F, FuncArg... Args>
     constexpr auto pretty_signature_name(const std::tuple<Args...> &args) {
       return []<std::size_t... Is>(std::index_sequence<Is...>,
-                                   const std::tuple<Args...> &args) {
+                                   const std::tuple<Args...> &args_) {
         return string_constant<CharT, '('>{} +
-               make_pretty_signature_name(std::get<Is>(args)...) +
+               make_pretty_signature_name(std::get<Is>(args_)...) +
                string_constant<CharT, ')', '-', '>'>{} +
                ctti::name<typename function_traits<F>::return_type, CharT>();
       }(std::make_index_sequence<sizeof...(Args)>(), args);
@@ -1040,7 +1043,7 @@ namespace cli::funcs {
 
       if (res.rest.size() != 0)
         return ExecResult<char_type>::make_parse_error(
-          Error::unexpected_characters, res.rest.data());
+          Error::unexpected_characters_after_closing_paren, res.rest.data());
 
       return [&tuple = res.value, &out, this]<std::size_t... Is>(
                std::index_sequence<Is...>) -> ExecResult<char_type> {
@@ -1050,6 +1053,7 @@ namespace cli::funcs {
             validate_res.index);
 
         if constexpr (std::is_same_v<void, Ret>) {
+          (void)out;
           func_(std::get<Is>(tuple).value...);
           return ExecResult<char_type>::make_success();
         } else {
@@ -1085,13 +1089,32 @@ namespace cli::funcs {
     }
 
   private:
+    template<Id N,
+             SC D,
+             class T,
+             auto DefaultValue,
+             parse::Parser P,
+             validate::Validator V>
+    static constexpr auto
+    pretty_arg_type(const FunctionArg<N, D, T, DefaultValue, P, V> &) {
+      return ctti::name<T>() +
+             string_constant<typename Name::char_type, '?', ' ', '=', ' '>{} +
+             ctti::dtl::value<T>::template get<DefaultValue>();
+    }
+
+    template<Id N, SC D, class T, parse::Parser P, validate::Validator V>
+    static constexpr auto
+    pretty_arg_type(const FunctionArgWithoutDefault<N, D, T, P, V> &) {
+      using CharT = typename Name::char_type;
+      return ctti::name<T, CharT>();
+    }
+
     template<std::size_t I, std::size_t... Is>
     View<const char_type> get_help(View<const char_type> arg,
                                    std::index_sequence<I, Is...>) const {
-      using Arg = std::remove_reference_t<decltype(std::get<I>(args_))>;
       if (arg == std::get<I>(args_).name) {
         return string_constant<char_type, '['>{} +
-               ctti::name<typename Arg::type>() +
+               pretty_arg_type(std::get<I>(args_)) +
                string_constant<char_type, ']', ':', ' '>{} +
                std::get<I>(args_).description;
       } else {
@@ -1162,6 +1185,11 @@ namespace cli::funcs {
           if (rest[0] != ')') {
             return ExecResult<char_type>::make_parse_error(
               Error::invalid_argument, args.begin());
+          }
+          View end = rest.substr(1);
+          if (end.size() != 0) {
+            return ExecResult<char_type>::make_parse_error(
+              Error::unexpected_characters_after_closing_paren, end.begin());
           }
         } else {
           return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
@@ -1651,15 +1679,15 @@ namespace cli::funcs {
                              Description,
                              Help,
                              Function mem_fun_ptr,
-                             const Args &...args) noexcept
-      : f(mem_fun_ptr), args(args...) {}
+                             const Args &...arguments) noexcept
+      : f(mem_fun_ptr), args(arguments...) {}
 
     constexpr MemberFunction(Name,
                              Description,
                              Help,
                              Function mem_fun_ptr,
-                             const std::tuple<Args...> &args) noexcept
-      : f(mem_fun_ptr), args(args) {}
+                             const std::tuple<Args...> &arguments) noexcept
+      : f(mem_fun_ptr), args(arguments) {}
   };
 
   template<Id Name, SC Description, SC Help, class Function>

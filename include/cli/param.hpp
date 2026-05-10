@@ -284,7 +284,7 @@ namespace cli::params {
           args = parse::skip_ws(args);
         } else {
           return ExecResult<char_type>::make_parse_error(
-            Error::expected_assignment, nullptr);
+            Error::expected_assignment, args.begin());
         }
 
         if (args.size() == 0)
@@ -319,7 +319,7 @@ namespace cli::params {
           return ExecResult<char_type>::make_success();
       }
 
-      constexpr ExecResult<char_type> get_value(View<char_type> &out) {
+      constexpr ExecResult<char_type> get_value(View<char_type> out) {
         value_type t{};
         if (Error err = get_(t); err != Error::none)
           return ExecResult<char_type>::make_get_error(err);

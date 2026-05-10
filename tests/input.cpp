@@ -58,7 +58,7 @@ TEMPLATE_TEST_CASE("Input::on_char", "", non_volatile_cfg, volatile_cfg) {
 
   SECTION("a full input can't accept more than input_size") {
     for (std::size_t i = 0; i < cli::config::input_size_v<TestType>; ++i) {
-      REQUIRE(input.on_char((uint8_t)('a' + i)) == cli::Error::none);
+      REQUIRE(input.on_char(static_cast<char>('a' + i)) == cli::Error::none);
     }
     REQUIRE(input.on_char('A') == cli::Error::buffer_overflow);
     REQUIRE(input.on_control(cli::Control::backspace) ==
@@ -91,7 +91,7 @@ TEMPLATE_TEST_CASE("Input::pop_event", "", non_volatile_cfg, volatile_cfg) {
 
   SECTION("events are popped in FIFO order") {
     for (std::size_t i = 0; i < cli::config::input_size_v<TestType>; ++i) {
-      input.on_char('a' + i);
+      input.on_char(static_cast<char>('a' + i));
     }
 
     Event ev;
@@ -121,8 +121,9 @@ TEST_CASE("Input::reset") {
   input.on_char('K');
   input.pop_event(ev);
   REQUIRE(ev.type() == cli::Control::clear_line_to_end);
-  REQUIRE(ev.param() == 1);
+  REQUIRE(ev.param() == 1u);
 }
+
 TEMPLATE_TEST_CASE("Input escape sequences",
                    "",
                    non_volatile_cfg,
@@ -190,7 +191,8 @@ TEMPLATE_TEST_CASE("Input unrecginized sequences are printed as is",
                                                          "\x1B[256A",
                                                          "\x1B[3K",
                                                          "\r",
-                                                         "\eABC"};
+                                                         "\x1B"
+                                                         "ABC"};
 
   for (const auto &seq : esc_sequences) {
     for (const char &ch : seq)

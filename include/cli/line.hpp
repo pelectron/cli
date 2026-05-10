@@ -251,19 +251,16 @@ namespace cli {
              typename Index,
              typename Display>
     Error print_result(const ExecResult<CharT> &exec_result,
-                       Line &line,
+                       [[maybe_unused]] Line &line,
                        const CharT *data_,
                        Index size_,
-                       Display &display_,
-                       bool is_help) {
+                       Display &display_) {
       if constexpr (cli::is_multiline_display_v<Display>) {
-        if constexpr (config::use_help_v<Cfg>) {
-          if (not is_help)
-            display_.newline();
-        } else {
-          display_.newline();
-        }
+        display_.newline();
       }
+
+      constexpr View<const CharT> expected_str =
+        string_constant<CharT, 'e', 'x', 'p', 'e', 'c', 't', 'e', 'd', ' '>{};
 
       switch (exec_result.type()) {
         case ExecResult<CharT>::success: {
@@ -300,12 +297,134 @@ namespace cli {
                                          ':',
                                          ' '>{});
 
-          display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
+          switch (exec_result.error()) {
+            case Error::expected_assignment:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write('=');
+              display_.write('\'');
+              break;
+            case Error::expected_delimiter:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write(',');
+              display_.write('\'');
+              break;
+            case Error::expected_endquote:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write('"');
+              display_.write('\'');
+              break;
+            case Error::expected_lparen:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write('(');
+              display_.write('\'');
+              break;
+            case Error::expected_rparen:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write(')');
+              display_.write('\'');
+              break;
+            case Error::expected_lbrace:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write('{');
+              display_.write('\'');
+              break;
+            case Error::expected_rbrace:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write('}');
+              display_.write('\'');
+              break;
+            case Error::expected_lbracket:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write('[');
+              display_.write('\'');
+              break;
+            case Error::expected_rbracket:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write(']');
+              display_.write('\'');
+              break;
+            case Error::expected_another_field:
+              display_.write(expected_str);
+              display_.write(string_constant<CharT,
+                                             'a',
+                                             'n',
+                                             'o',
+                                             't',
+                                             'h',
+                                             'e',
+                                             'r',
+                                             ' ',
+                                             'f',
+                                             'i',
+                                             'e',
+                                             'l',
+                                             'd'>{});
+              break;
+            case Error::expected_another_arg:
+              display_.write(expected_str);
+              display_.write(string_constant<CharT,
+                                             'a',
+                                             'n',
+                                             'o',
+                                             't',
+                                             'h',
+                                             'e',
+                                             'r',
+                                             ' ',
+                                             'a',
+                                             'r',
+                                             'g'>{});
+              break;
+            case Error::expected_field:
+              display_.write(expected_str);
+              display_.write(string_constant<CharT, 'f', 'i', 'e', 'l', 'd'>{});
+              break;
+            case Error::expected_args:
+              display_.write(expected_str);
+              display_.write(string_constant<CharT, 'a', 'r', 'g', 's'>{});
+              break;
+            case Error::unexpected_characters_after_closing_paren:
+              display_.write(string_constant<CharT,
+                                             'c',
+                                             'h',
+                                             'a',
+                                             'r',
+                                             'a',
+                                             'c',
+                                             't',
+                                             'e',
+                                             'r',
+                                             's',
+                                             ' ',
+                                             'a',
+                                             'f',
+                                             't',
+                                             'e',
+                                             'r',
+                                             ' ',
+                                             '\'',
+                                             ')',
+                                             '\''>{});
+              break;
+            default:
+              display_.write(
+                ctti::enum_name<Error, CharT>(exec_result.error()));
+          }
+
           display_.write(string_constant<CharT, ' ', 'a', 't', ' '>{});
 
           const CharT *err_loc = exec_result.error_location();
           std::size_t error_location =
-            err_loc == nullptr ? size_ : err_loc - data_;
+            (err_loc == nullptr ? size_ : err_loc - data_) + 1;
 
           CharT buffer[20]{};
           format::Int<std::size_t, CharT> format;
@@ -381,7 +500,17 @@ namespace cli {
                                          'm',
                                          ':',
                                          ' '>{});
-          display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
+          switch (exec_result.error()) {
+            case Error::expected_assignment:
+              display_.write(expected_str);
+              display_.write('\'');
+              display_.write('=');
+              display_.write('\'');
+              break;
+            default:
+              display_.write(
+                ctti::enum_name<Error, CharT>(exec_result.error()));
+          }
         } break;
         case ExecResult<CharT>::get_error: {
           if constexpr (not cli::is_multiline_display_v<Display>) {
@@ -442,18 +571,10 @@ namespace cli {
         return Error::invalid_cmd;
       }
 
-      const bool is_help = [&res] {
-        if constexpr (config::use_help_v<Cfg>)
-          return res.command->name ==
-                 string_constant<CharT, 'h', 'e', 'l', 'p'>{};
-        else
-          return false;
-      }();
       // execute the command
       ExecResult<CharT> exec_result = res.command->execute(res.args, out);
 
-      Error e =
-        print_result<Cfg>(exec_result, line, data_, size_, display_, is_help);
+      Error e = print_result<Cfg>(exec_result, line, data_, size_, display_);
       // reset line data
       size_ = 0;
       return e;
@@ -630,6 +751,8 @@ namespace cli {
         case '=':
           [[fallthrough]];
         case '(':
+          [[fallthrough]];
+        case ')':
           start_of_args_ = size_;
           data_[size_++] = c;
           display_.write(c);
@@ -842,16 +965,8 @@ namespace cli {
       ExecResult<CharT> exec_result =
         command_->execute(view().substr(start_of_args_), out);
 
-      const bool is_help = [cmd = this->command_] {
-        if constexpr (config::use_help_v<Cfg>) {
-          return cmd->name == string_constant<CharT, 'h', 'e', 'l', 'p'>{};
-        } else {
-          return false;
-        }
-      }();
-
-      Error e = dtl::print_result<Cfg>(
-        exec_result, *this, data_, size_, display_, is_help);
+      Error e =
+        dtl::print_result<Cfg>(exec_result, *this, data_, size_, display_);
 
       // reset line data
       size_ = 0;

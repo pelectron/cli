@@ -55,6 +55,7 @@ namespace cli {
     using char_type = typename config_type::char_type;
     using input_type = config::input_type_t<config_type>;
     using event_type = Event<char_type>;
+    using display_type = Display;
 
     static_assert(concepts::Input<input_type, char_type>,
                   "The input_type of your config does not satisfy the Input "

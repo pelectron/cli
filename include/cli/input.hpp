@@ -204,7 +204,7 @@ namespace cli {
         default:
           if (c >= '0' and c <= '9') {
             std::uint8_t new_param =
-              param_ * 10u + static_cast<std::uint8_t>(c - '0');
+              static_cast<std::uint8_t>(param_ * 10u + c - '0');
             if (new_param < param_) {
               // overflow
               return print_param(c);

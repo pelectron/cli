@@ -8,10 +8,8 @@
 using cli::operator""_sc;
 constexpr auto name = "name"_sc;
 constexpr auto description = "description"_sc;
-constexpr auto get = [](int &i) -> cli::Error { return cli::Error::none; };
-constexpr auto set = [](const int &i) -> cli::Error {
-  return cli::Error::none;
-};
+constexpr auto get = [](int &) -> cli::Error { return cli::Error::none; };
+constexpr auto set = [](const int &) -> cli::Error { return cli::Error::none; };
 
 constexpr auto parse =
   [](cli::View<const char>) -> cli::parse::ParseResult<int, char> { return 0; };

@@ -3,6 +3,7 @@
 
 #include "cli/command.hpp"
 #include "cli/config.hpp"
+#include "cli/display.hpp"
 #include "cli/function.hpp"
 #include "cli/string.hpp"
 
@@ -62,6 +63,11 @@ namespace cli {
                       'b',
                       'l',
                       'e'>{}};
+
+    constexpr void write(View<const char_type> s) const {
+      engine.display_.write(s);
+    }
+
     /**
      * returns the description of cmd
      *
@@ -72,10 +78,10 @@ namespace cli {
       engine.display_.newline();
       if (cmd.size() == 0) {
         if (arg.size() != 0)
-          return engine.display_.write(cmd_not_found);
+          return write(cmd_not_found);
 
         if constexpr (not config::empty_help_prints_commands_v<config_type>)
-          return engine.display_.write(cmd_not_found);
+          return write(cmd_not_found);
 
         return engine.print();
       }
@@ -84,7 +90,7 @@ namespace cli {
         get_command(cmd, engine.root(), config_type::access_separator);
 
       if (cmd_node == nullptr)
-        return engine.display_.write(cmd_not_found);
+        return write(cmd_not_found);
 
       if (arg.size() == 0) {
         engine.display_.write('[');
@@ -93,16 +99,16 @@ namespace cli {
           View<const char_type>{string_constant<char_type, ']', ':', ' '>{}});
 
         if (cmd_node->description.size() == 0)
-          return engine.display_.write(no_desc_available);
+          return write(no_desc_available);
         else
-          return engine.display_.write(cmd_node->description);
+          return write(cmd_node->description);
       }
 
       const View context_help = cmd_node->help_context(arg);
       if (context_help.size() == 0)
-        engine.display_.write(no_desc_available);
+        write(no_desc_available);
       else
-        engine.display_.write(context_help);
+        write(context_help);
     }
 
     Engine &engine;
@@ -112,6 +118,18 @@ namespace cli {
   constexpr auto create_help_cmd(Engine &engine) {
     return funcs::func(
       string_constant<typename Engine::char_type, 'h', 'e', 'l', 'p'>{},
+      string_constant<typename Engine::char_type,
+                      'p',
+                      'r',
+                      'i',
+                      'n',
+                      't',
+                      's',
+                      ' ',
+                      'h',
+                      'e',
+                      'l',
+                      'p'>{},
       cli::Help<Engine>{engine},
       funcs::arg<cli::View<const typename Engine::char_type>,
                  string_constant<typename Engine::char_type>{}>(

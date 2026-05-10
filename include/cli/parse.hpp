@@ -281,11 +281,11 @@ namespace cli::parse {
                                                      std::size_t offset) {
       constexpr auto to_hex = [](uint8_t c) -> uint8_t {
         if (c >= '0' and c <= '9') {
-          return c - '0';
+          return static_cast<CharT>(c - '0');
         } else if (c >= 'A' and c <= 'F') {
-          return c - 'A' + 10;
+          return static_cast<CharT>(c - 'A' + 10);
         } else if (c >= 'a' and c <= 'f') {
-          return c - 'a' + 10;
+          return static_cast<CharT>(c - 'a' + 10);
         } else {
           return 0xFFu;
         }
@@ -891,15 +891,23 @@ namespace cli::parse {
           }
         }
       } else {
+        T val{};
+        View<const CharT> val_name{};
+        bool has_val = false;
         for (const auto &[e, name] : ctti::dtl::enum_name_map<T>) {
           if (str.starts_with(name)) {
-            return {from_value, e, str.substr(name.size())};
+            val = e;
+            val_name = name;
+            has_val = true;
           }
         }
 
-        if constexpr (not AllowNumbers)
+        if (has_val)
+          return {from_value, val, str.substr(val_name.size())};
+
+        if constexpr (not AllowNumbers) {
           return {from_error, Error::invalid_value, str};
-        else {
+        } else {
           using Parser = Int<std::underlying_type_t<T>, CharT>;
           auto res = Parser{}(str);
           if (not res or
@@ -927,12 +935,12 @@ namespace cli::parse {
         return {Error::too_few_characters, str};
 
       if (str[0] != '[')
-        return {Error::expected_open_bracket, str};
+        return {Error::expected_lbracket, str};
 
       View s = skip_ws(str.substr(1));
 
       if (s.size() == 0)
-        return {Error::expected_closing_bracket, str};
+        return {Error::expected_rbracket, str};
 
       if (s[0] == ']')
         return {T{}, s.substr(1)};
@@ -954,7 +962,7 @@ namespace cli::parse {
         s = skip_ws(res.rest);
 
         if (s.size() == 0)
-          return {Error::expected_closing_bracket, str};
+          return {Error::expected_rbracket, str};
 
         if (s[0] == ']')
           return {sequence, s.substr(1)};
@@ -964,7 +972,7 @@ namespace cli::parse {
         else
           s = skip_ws(s.substr(1));
       }
-      return {Error::expected_closing_bracket, str};
+      return {Error::expected_rbracket, str};
     }
   };
 
@@ -986,7 +994,7 @@ namespace cli::parse {
         return Error::too_few_characters;
 
       if (str[0] != '[')
-        return {Error::expected_open_bracket, str};
+        return {Error::expected_lbracket, str};
 
       View s = skip_ws(str.substr(1));
 
@@ -1019,7 +1027,7 @@ namespace cli::parse {
 
         if (s.size() == 0) {
           if (size == sequence.size())
-            return {Error::expected_closing_bracket, str};
+            return {Error::expected_rbracket, str};
           else
             return {Error::expected_delimiter, str};
         }
@@ -1035,7 +1043,7 @@ namespace cli::parse {
         else
           s = skip_ws(s.substr(1));
       }
-      return {Error::expected_closing_bracket, str};
+      return {Error::expected_rbracket, str};
     }
   };
 
@@ -1278,8 +1286,13 @@ namespace cli::parse {
       if (str.size() == 0) {
         if constexpr ((Fields::has_default and ...))
           return s.fields;
-        else
-          return Error::too_few_characters;
+        else if constexpr (Prefix == '(') {
+          return {Error::expected_lparen, str};
+        } else if constexpr (Prefix == '{') {
+          return {Error::expected_lbrace, str};
+        } else {
+          return {Error::too_few_characters, str};
+        }
       }
 
       View sv = str;
@@ -1289,13 +1302,25 @@ namespace cli::parse {
         if (sv[0] == Prefix) {
           sv = skip_ws(sv.substr(1));
         } else {
-          return {Error::expected_group_opening, str};
+          if constexpr (Prefix == '(') {
+            return {Error::expected_lparen, str};
+          } else if constexpr (Prefix == '{') {
+            return {Error::expected_lbrace, str};
+          } else {
+            return {Error::expected_group_opening, str};
+          }
         }
       }
 
-      if (sv.size() == 0)
-        return Error::too_few_characters;
-
+      if (sv.size() == 0) {
+        if constexpr (Prefix == '(') {
+          return {Error::expected_rparen};
+        } else if constexpr (Prefix == '{') {
+          return {Error::expected_rbrace};
+        } else {
+          return {Error::expected_group_closing};
+        }
+      }
       for_each(
         [](const auto &f, State &self) {
           using F = std::remove_cvref_t<decltype(f)>;
@@ -1315,7 +1340,10 @@ namespace cli::parse {
           reset_state();
           return {std::move(res), sv.substr(1)};
         }
-        return {Error::expected_field, str};
+        if constexpr (Postfix == ')')
+          return {Error::expected_args, sv};
+        else
+          return {Error::expected_field, sv};
       }
 
       std::size_t pos_index = 0;
@@ -1389,11 +1417,23 @@ namespace cli::parse {
           } else {
             if (sv.size() == 0) {
               reset_state();
-              return {Error::expected_group_closing, sv};
+              if constexpr (Postfix == ')') {
+                return {Error::expected_rparen, str};
+              } else if constexpr (Postfix == '}') {
+                return {Error::expected_rbrace, str};
+              } else {
+                return {Error::expected_group_opening, str};
+              }
             }
             if (sv[0] != Postfix) {
               reset_state();
-              return {Error::expected_group_closing, sv};
+              if constexpr (Postfix == ')') {
+                return {Error::expected_rparen, str};
+              } else if constexpr (Postfix == '}') {
+                return {Error::expected_rbrace, str};
+              } else {
+                return {Error::expected_group_opening, str};
+              }
             } else {
               auto fields = s.fields;
               reset_state();
@@ -1410,7 +1450,10 @@ namespace cli::parse {
           }
 
           reset_state();
-          return {Error::expected_another_field, sv};
+          if constexpr (Postfix == ')')
+            return {Error::expected_another_arg, sv};
+          else
+            return {Error::expected_another_field, sv};
         }
 
         if (sv[0] == Postfix and s.all_fields_have_a_value()) {

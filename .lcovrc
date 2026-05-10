@@ -1,0 +1,4 @@
+ignore_errors = inconsistent
+ignore_erors = unused
+ignore_erors = unknown
+exclude = *subprojects/*

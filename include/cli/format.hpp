@@ -493,7 +493,7 @@ namespace cli::format {
           else
             break;
         }
-        for (; nibble >= 0 and nibble <= max_nibble; --nibble) {
+        for (; nibble <= max_nibble; --nibble) {
           const auto digit =
             static_cast<CharT>(0x0Fu & (u_value >> (nibble * 4u)));
           if (digit >= 0 and digit <= 9)
@@ -527,7 +527,7 @@ namespace cli::format {
         std::size_t size = 2;
         const auto max_bit = sizeof(UnsignedT) * 8 - 1;
         unsigned bit = max_bit - std::countl_zero(u_value);
-        for (; bit >= 0 and bit <= max_bit; --bit) {
+        for (; bit <= max_bit; --bit) {
           const auto digit = (u_value >> bit) & 1u;
           buffer[size++] = static_cast<CharT>(digit + '0');
         }

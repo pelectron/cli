@@ -37,11 +37,7 @@ namespace cli {
     invalid_esc_seq,      //< an invalid escape sequence has been encountered
     invalid_state,        //< an invalid sate has been encountered
     expected_value,       //< expected a value but none has been given
-    unexpected_characters_after_closing_paren, //< characters after closing
-                                               //< parentheses
-    expected_rparen,                           //< expected closing parentheses
-    expected_lparen,
-    //
+
     // parse errors
     too_few_characters,    //< expected more characters
     unexpected_characters, //< unexpected or too many characters
@@ -49,16 +45,23 @@ namespace cli {
     too_many_sequence_values,
     too_few_sequence_values,
     invalid_sequence_value,
-    expected_open_bracket,
-    expected_closing_bracket,
-    expected_delimiter,
     expected_group_opening,
     expected_group_closing,
-    expected_another_field,
-    expected_field,
     expected_struct_value,
     expected_assignment,
+    expected_delimiter,
     expected_endquote,
+    expected_rparen, //< expected closing parentheses
+    expected_lparen,
+    expected_lbrace,
+    expected_rbrace,
+    expected_lbracket,
+    expected_rbracket,
+    expected_another_field,
+    expected_another_arg,
+    expected_field,
+    expected_args,
+    unexpected_characters_after_closing_paren,
 
     // validation errors
     invalid_value, //< encountered an invalid value

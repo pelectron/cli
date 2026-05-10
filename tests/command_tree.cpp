@@ -5,35 +5,6 @@
 
 #include <catch2/catch_all.hpp>
 
-template<cli::concepts::Command... Commands>
-struct MockEngine {
-  using config_type = cli::default_config;
-  using char_type = typename config_type::char_type;
-
-  constexpr MockEngine(Commands... commands)
-    : tree(*this, commands...) {}
-
-  constexpr MockEngine(std::tuple<Commands...> &&commands)
-    : tree(*this, std::move(commands)) {}
-
-  constexpr MockEngine(const std::tuple<Commands...> &commands)
-    : tree(*this, commands) {}
-
-  constexpr void print() { print_called = true; }
-
-  constexpr const cli::CommandNode<char_type> *root() const {
-    return tree.root();
-  }
-
-  bool print_called = false;
-  cli::CommandTree<MockEngine<Commands...>, Commands...> tree;
-  struct {
-    void write(cli::View<const char>) {}
-    void write(char) {}
-    void newline() {}
-  } display_;
-};
-
 using cli::operator""_sc;
 
 static constinit int i{0};

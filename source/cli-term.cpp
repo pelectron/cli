@@ -373,6 +373,7 @@ class ConnectionI : public std::enable_shared_from_this<ConnectionI> {
     do_write(asio::const_buffer{write_buf, wr_size},
              [self = this->shared_from_this()](std::error_code ec,
                                                std::size_t n) mutable {
+               (void)n;
                self->on_error(ec);
              });
   }

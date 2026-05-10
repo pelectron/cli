@@ -50,25 +50,22 @@ namespace cli {
     constexpr Event(const Event &o)
       : type_(o.type_), payload_(o.payload_) {}
 
+    // Event(const volatile Event &o)
+    //   : type_(o.type_), payload_(o.payload_) {}
+
     constexpr Event &operator=(const Event &o) {
       type_ = o.type_;
       payload_ = o.payload_;
       return *this;
     }
 
-    constexpr Event &operator=(Event &&o) {
-      type_ = o.type_;
-      payload_ = o.payload_;
-      return *this;
-    }
+    // constexpr Event &operator=(Event &&o) {
+    //   type_ = o.type_;
+    //   payload_ = o.payload_;
+    //   return *this;
+    // }
 
     volatile Event &operator=(const volatile Event &o) volatile {
-      type_ = o.type_;
-      payload_ = o.payload_;
-      return *this;
-    }
-
-    volatile Event &operator=(volatile Event &&o) volatile {
       type_ = o.type_;
       payload_ = o.payload_;
       return *this;

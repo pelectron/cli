@@ -145,10 +145,10 @@ TEMPLATE_TEST_CASE("parse::Sequence", "", Seq1, Seq2) {
   SECTION("invalid sequences") {
     SeqTestVector<Seq> vectors[]{
       FAIL_TV("", cli::Error::too_few_characters, ""),
-      FAIL_TV("[", cli::Error::expected_closing_bracket, "["),
-      FAIL_TV("[ ", cli::Error::expected_closing_bracket, "[ "),
-      FAIL_TV("]", cli::Error::expected_open_bracket, "]"),
-      FAIL_TV("[1,2,3", cli::Error::expected_closing_bracket, "[1,2,3"),
+      FAIL_TV("[", cli::Error::expected_rbracket, "["),
+      FAIL_TV("[ ", cli::Error::expected_rbracket, "[ "),
+      FAIL_TV("]", cli::Error::expected_lbracket, "]"),
+      FAIL_TV("[1,2,3", cli::Error::expected_rbracket, "[1,2,3"),
       FAIL_TV("[1,2 3", cli::Error::expected_delimiter, "3"),
     };
     for (const auto &tv : vectors) {

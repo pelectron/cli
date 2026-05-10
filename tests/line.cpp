@@ -2,79 +2,11 @@
 #include "cli/concepts.hpp"
 #include "cli/enums.hpp"
 #include "cli/string.hpp"
+#include "common.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <string>
 #include <vector>
-
-struct Display {
-  std::size_t cursor = 0;
-  std::string data{};
-  std::vector<std::string> past;
-
-  void write(char c) {
-    if (cursor == data.size()) {
-      data.push_back(c);
-      ++cursor;
-    } else {
-      data.insert(data.begin() + cursor, c);
-      ++cursor;
-      data.erase(data.begin() + cursor);
-    }
-  }
-
-  void write(cli::View<const char> s) {
-    for (const char &ch : s) {
-      data.insert(data.begin() + cursor, ch);
-      ++cursor;
-    }
-    if (cursor != data.size())
-      data.erase(cursor, s.size());
-  }
-
-  void backspace(std::size_t n) {
-    data.erase(data.begin() + (n >= cursor ? 0 : cursor - n),
-               data.begin() + cursor);
-    if (n >= cursor)
-      cursor = 0;
-    else
-      cursor -= n;
-  }
-
-  void clear_line() {
-    data.clear();
-    cursor = 0;
-  }
-
-  void clear_screen() {
-    data.clear();
-    cursor = 0;
-  }
-
-  void newline() {
-    past.push_back(std::move(data));
-    cursor = 0;
-    data.clear();
-  }
-
-  void delete_char() { data.erase(data.begin() + cursor); }
-
-  void cursor_left(std::size_t n) {
-    if (n >= cursor)
-      n = cursor;
-    cursor -= n;
-  }
-
-  void cursor_right(std::size_t n) {
-    if (n + cursor > data.size())
-      n = data.size() - cursor;
-    cursor += n;
-  }
-};
-
-struct MultilineDisplay : Display {
-  static constexpr bool is_multiline_display = true;
-};
 
 TEST_CASE("Display") {
   Display d;
@@ -196,22 +128,22 @@ static_assert(cli::concepts::Display<Display, char>);
 
 #define DEFINE_COMMANDS()                                                      \
   cli::CommandNode<char> root;                                                 \
-  cli::CommandNode<char> c1{                                                   \
-    .name = "c1",                                                              \
-    .description = {},                                                         \
-    .this_ = &root,                                                            \
-    .exec_ = +[](void *,                                                       \
-                 cli::View<const char>,                                        \
-                 cli::View<char> buf) -> cli::ExecResult<char> {               \
-      return cli::ExecResult<char>::make_success();                            \
-    }};                                                                        \
+  cli::CommandNode<char> c1{.name = "c1",                                      \
+                            .description = {},                                 \
+                            .this_ = &root,                                    \
+                            .exec_ =                                           \
+                              +[](void *,                                      \
+                                  cli::View<const char>,                       \
+                                  cli::View<char>) -> cli::ExecResult<char> {  \
+                              return cli::ExecResult<char>::make_success();    \
+                            }};                                                \
   cli::CommandNode<char> c2{                                                   \
     .name = "c2",                                                              \
     .description = {},                                                         \
     .this_ = &root,                                                            \
     .exec_ = +[](void *,                                                       \
                  cli::View<const char>,                                        \
-                 cli::View<char> buf) -> cli::ExecResult<char> {               \
+                 cli::View<char>) -> cli::ExecResult<char> {                   \
       return cli::ExecResult<char>::make_success("hello");                     \
     }};                                                                        \
   cli::CommandNode<char> c3{.name = "c3",                                      \
@@ -311,14 +243,14 @@ TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
     SECTION("parse_error from execute") {
       line.set_data("c2.c3 args");
       REQUIRE(line.execute(out) == cli::Error::none);
-      REQUIRE(d.data == "parse error: dual_separators at 5");
+      REQUIRE(d.data == "parse error: dual_separators at 6");
       REQUIRE(d.past == std::vector<std::string>{"c2.c3 args"});
     }
 
     SECTION("set_error from execute") {
       line.set_data("c4long args");
       REQUIRE(line.execute(out) == cli::Error::none);
-      REQUIRE(d.data == "can't set param: expected_assignment");
+      REQUIRE(d.data == "can't set param: expected '='");
       REQUIRE(d.past == std::vector<std::string>{"c4long args"});
     }
 
@@ -389,16 +321,15 @@ TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
       REQUIRE(line.execute(out) == cli::Error::none);
       REQUIRE(d.data.empty());
       REQUIRE(d.past == std::vector<std::string>{
-                          "c2.c3 args", "parse error: dual_separators at 5"});
+                          "c2.c3 args", "parse error: dual_separators at 6"});
     }
 
     SECTION("set_error from execute") {
       line.set_data("c4long args");
       REQUIRE(line.execute(out) == cli::Error::none);
       REQUIRE(d.data.empty());
-      REQUIRE(d.past ==
-              std::vector<std::string>{"c4long args",
-                                       "can't set param: expected_assignment"});
+      REQUIRE(d.past == std::vector<std::string>{
+                          "c4long args", "can't set param: expected '='"});
     }
 
     SECTION("get_error from execute") {
