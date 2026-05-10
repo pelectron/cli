@@ -6,6 +6,7 @@
 #include "cli/config.hpp"
 #include "cli/display.hpp"
 #include "cli/enums.hpp"
+#include "cli/exec_result.hpp"
 #include "cli/format.hpp"
 #include "cli/string.hpp"
 #include "cli/util.hpp"
@@ -259,289 +260,302 @@ namespace cli {
         display_.newline();
       }
 
-      constexpr View<const CharT> expected_str =
-        string_constant<CharT, 'e', 'x', 'p', 'e', 'c', 't', 'e', 'd', ' '>{};
+      const auto print_success = [&exec_result, &display_]() {
+        View<const CharT> result = exec_result.result();
+        if (result.size() != 0) {
+          if constexpr (not cli::is_multiline_display_v<Display>) {
+            display_.newline();
+          }
+          // print the result
+          display_.write(result);
 
-      switch (exec_result.type()) {
-        case ExecResult<CharT>::success: {
-          View<const CharT> result = exec_result.result();
-          if (result.size() != 0) {
+          if constexpr (cli::is_multiline_display_v<Display>) {
+            display_.newline();
+          }
+        }
+        return Error::none;
+      };
+
+      if constexpr (config::use_detailed_error_messages_v<Cfg>) {
+        constexpr View<const CharT> expected_str =
+          string_constant<CharT, 'e', 'x', 'p', 'e', 'c', 't', 'e', 'd', ' '>{};
+
+        switch (exec_result.type()) {
+          case ExecResult<CharT>::success:
+            return print_success();
+          case ExecResult<CharT>::parse_error: {
             if constexpr (not cli::is_multiline_display_v<Display>) {
               display_.newline();
             }
-            // print the result
-            display_.write(result);
+            display_.write(string_constant<CharT,
+                                           'p',
+                                           'a',
+                                           'r',
+                                           's',
+                                           'e',
+                                           ' ',
+                                           'e',
+                                           'r',
+                                           'r',
+                                           'o',
+                                           'r',
+                                           ':',
+                                           ' '>{});
 
-            if constexpr (cli::is_multiline_display_v<Display>) {
+            switch (exec_result.error()) {
+              case Error::expected_assignment:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write('=');
+                display_.write('\'');
+                break;
+              case Error::expected_delimiter:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write(',');
+                display_.write('\'');
+                break;
+              case Error::expected_endquote:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write('"');
+                display_.write('\'');
+                break;
+              case Error::expected_lparen:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write('(');
+                display_.write('\'');
+                break;
+              case Error::expected_rparen:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write(')');
+                display_.write('\'');
+                break;
+              case Error::expected_lbrace:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write('{');
+                display_.write('\'');
+                break;
+              case Error::expected_rbrace:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write('}');
+                display_.write('\'');
+                break;
+              case Error::expected_lbracket:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write('[');
+                display_.write('\'');
+                break;
+              case Error::expected_rbracket:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write(']');
+                display_.write('\'');
+                break;
+              case Error::expected_another_field:
+                display_.write(expected_str);
+                display_.write(string_constant<CharT,
+                                               'a',
+                                               'n',
+                                               'o',
+                                               't',
+                                               'h',
+                                               'e',
+                                               'r',
+                                               ' ',
+                                               'f',
+                                               'i',
+                                               'e',
+                                               'l',
+                                               'd'>{});
+                break;
+              case Error::expected_another_arg:
+                display_.write(expected_str);
+                display_.write(string_constant<CharT,
+                                               'a',
+                                               'n',
+                                               'o',
+                                               't',
+                                               'h',
+                                               'e',
+                                               'r',
+                                               ' ',
+                                               'a',
+                                               'r',
+                                               'g'>{});
+                break;
+              case Error::expected_field:
+                display_.write(expected_str);
+                display_.write(
+                  string_constant<CharT, 'f', 'i', 'e', 'l', 'd'>{});
+                break;
+              case Error::expected_args:
+                display_.write(expected_str);
+                display_.write(string_constant<CharT, 'a', 'r', 'g', 's'>{});
+                break;
+              case Error::unexpected_characters_after_closing_paren:
+                display_.write(string_constant<CharT,
+                                               'c',
+                                               'h',
+                                               'a',
+                                               'r',
+                                               'a',
+                                               'c',
+                                               't',
+                                               'e',
+                                               'r',
+                                               's',
+                                               ' ',
+                                               'a',
+                                               'f',
+                                               't',
+                                               'e',
+                                               'r',
+                                               ' ',
+                                               '\'',
+                                               ')',
+                                               '\''>{});
+                break;
+              default:
+                display_.write(
+                  ctti::enum_name<Error, CharT>(exec_result.error()));
+            }
+
+            display_.write(string_constant<CharT, ' ', 'a', 't', ' '>{});
+
+            const CharT *err_loc = exec_result.error_location();
+            std::size_t error_location =
+              (err_loc == nullptr ? size_ : err_loc - data_) + 1;
+
+            CharT buffer[20]{};
+            format::Int<std::size_t, CharT> format;
+            format::FormatResult fmt_res = format({buffer, 20}, error_location);
+            CLI_ASSERT(fmt_res);
+            display_.write({buffer, fmt_res.size_written});
+          } break;
+          case ExecResult<CharT>::format_error: {
+            if constexpr (not cli::is_multiline_display_v<Display>) {
               display_.newline();
             }
-          }
-          return Error::none;
+            display_.write(string_constant<CharT,
+                                           'f',
+                                           'o',
+                                           'r',
+                                           'm',
+                                           'a',
+                                           't',
+                                           ' ',
+                                           'e',
+                                           'r',
+                                           'r',
+                                           'o',
+                                           'r',
+                                           ':',
+                                           ' '>{});
+
+            display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
+          } break;
+          case ExecResult<CharT>::validation_error: {
+            if constexpr (not cli::is_multiline_display_v<Display>) {
+              display_.newline();
+            }
+            display_.write(string_constant<CharT, 'a', 'r', 'g', ' '>{});
+            CharT buffer[20]{};
+            format::Int<std::size_t, CharT> format;
+            format::FormatResult fmt_res =
+              format({buffer, 20}, exec_result.index());
+            CLI_ASSERT(fmt_res);
+            display_.write({buffer, fmt_res.size_written});
+            display_.write(string_constant<CharT,
+                                           ' ',
+                                           'i',
+                                           's',
+                                           ' ',
+                                           'i',
+                                           'n',
+                                           'v',
+                                           'a',
+                                           'l',
+                                           'i',
+                                           'd'>{});
+          } break;
+          case ExecResult<CharT>::set_error: {
+            if constexpr (not cli::is_multiline_display_v<Display>) {
+              display_.newline();
+            }
+            display_.write(string_constant<CharT,
+                                           'c',
+                                           'a',
+                                           'n',
+                                           '\'',
+                                           't',
+                                           ' ',
+                                           's',
+                                           'e',
+                                           't',
+                                           ' ',
+                                           'p',
+                                           'a',
+                                           'r',
+                                           'a',
+                                           'm',
+                                           ':',
+                                           ' '>{});
+            switch (exec_result.error()) {
+              case Error::expected_assignment:
+                display_.write(expected_str);
+                display_.write('\'');
+                display_.write('=');
+                display_.write('\'');
+                break;
+              default:
+                display_.write(
+                  ctti::enum_name<Error, CharT>(exec_result.error()));
+            }
+          } break;
+          case ExecResult<CharT>::get_error: {
+            if constexpr (not cli::is_multiline_display_v<Display>) {
+              display_.newline();
+            }
+            display_.write(string_constant<CharT,
+                                           'c',
+                                           'a',
+                                           'n',
+                                           '\'',
+                                           't',
+                                           ' ',
+                                           'g',
+                                           'e',
+                                           't',
+                                           ' ',
+                                           'p',
+                                           'a',
+                                           'r',
+                                           'a',
+                                           'm',
+                                           ':',
+                                           ' '>{});
+            display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
+          } break;
         }
-        case ExecResult<CharT>::parse_error: {
-          if constexpr (not cli::is_multiline_display_v<Display>) {
-            display_.newline();
-          }
-          display_.write(string_constant<CharT,
-                                         'p',
-                                         'a',
-                                         'r',
-                                         's',
-                                         'e',
-                                         ' ',
-                                         'e',
-                                         'r',
-                                         'r',
-                                         'o',
-                                         'r',
-                                         ':',
-                                         ' '>{});
 
-          switch (exec_result.error()) {
-            case Error::expected_assignment:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write('=');
-              display_.write('\'');
-              break;
-            case Error::expected_delimiter:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write(',');
-              display_.write('\'');
-              break;
-            case Error::expected_endquote:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write('"');
-              display_.write('\'');
-              break;
-            case Error::expected_lparen:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write('(');
-              display_.write('\'');
-              break;
-            case Error::expected_rparen:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write(')');
-              display_.write('\'');
-              break;
-            case Error::expected_lbrace:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write('{');
-              display_.write('\'');
-              break;
-            case Error::expected_rbrace:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write('}');
-              display_.write('\'');
-              break;
-            case Error::expected_lbracket:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write('[');
-              display_.write('\'');
-              break;
-            case Error::expected_rbracket:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write(']');
-              display_.write('\'');
-              break;
-            case Error::expected_another_field:
-              display_.write(expected_str);
-              display_.write(string_constant<CharT,
-                                             'a',
-                                             'n',
-                                             'o',
-                                             't',
-                                             'h',
-                                             'e',
-                                             'r',
-                                             ' ',
-                                             'f',
-                                             'i',
-                                             'e',
-                                             'l',
-                                             'd'>{});
-              break;
-            case Error::expected_another_arg:
-              display_.write(expected_str);
-              display_.write(string_constant<CharT,
-                                             'a',
-                                             'n',
-                                             'o',
-                                             't',
-                                             'h',
-                                             'e',
-                                             'r',
-                                             ' ',
-                                             'a',
-                                             'r',
-                                             'g'>{});
-              break;
-            case Error::expected_field:
-              display_.write(expected_str);
-              display_.write(string_constant<CharT, 'f', 'i', 'e', 'l', 'd'>{});
-              break;
-            case Error::expected_args:
-              display_.write(expected_str);
-              display_.write(string_constant<CharT, 'a', 'r', 'g', 's'>{});
-              break;
-            case Error::unexpected_characters_after_closing_paren:
-              display_.write(string_constant<CharT,
-                                             'c',
-                                             'h',
-                                             'a',
-                                             'r',
-                                             'a',
-                                             'c',
-                                             't',
-                                             'e',
-                                             'r',
-                                             's',
-                                             ' ',
-                                             'a',
-                                             'f',
-                                             't',
-                                             'e',
-                                             'r',
-                                             ' ',
-                                             '\'',
-                                             ')',
-                                             '\''>{});
-              break;
-            default:
-              display_.write(
-                ctti::enum_name<Error, CharT>(exec_result.error()));
-          }
-
-          display_.write(string_constant<CharT, ' ', 'a', 't', ' '>{});
-
-          const CharT *err_loc = exec_result.error_location();
-          std::size_t error_location =
-            (err_loc == nullptr ? size_ : err_loc - data_) + 1;
-
-          CharT buffer[20]{};
-          format::Int<std::size_t, CharT> format;
-          format::FormatResult fmt_res = format({buffer, 20}, error_location);
-          CLI_ASSERT(fmt_res);
-          display_.write({buffer, fmt_res.size_written});
-        } break;
-        case ExecResult<CharT>::format_error: {
-          if constexpr (not cli::is_multiline_display_v<Display>) {
-            display_.newline();
-          }
-          display_.write(string_constant<CharT,
-                                         'f',
-                                         'o',
-                                         'r',
-                                         'm',
-                                         'a',
-                                         't',
-                                         ' ',
-                                         'e',
-                                         'r',
-                                         'r',
-                                         'o',
-                                         'r',
-                                         ':',
-                                         ' '>{});
-
-          display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
-        } break;
-        case ExecResult<CharT>::validation_error: {
-          if constexpr (not cli::is_multiline_display_v<Display>) {
-            display_.newline();
-          }
-          display_.write(string_constant<CharT, 'a', 'r', 'g', ' '>{});
-          CharT buffer[20]{};
-          format::Int<std::size_t, CharT> format;
-          format::FormatResult fmt_res =
-            format({buffer, 20}, exec_result.index());
-          CLI_ASSERT(fmt_res);
-          display_.write({buffer, fmt_res.size_written});
-          display_.write(string_constant<CharT,
-                                         ' ',
-                                         'i',
-                                         's',
-                                         ' ',
-                                         'i',
-                                         'n',
-                                         'v',
-                                         'a',
-                                         'l',
-                                         'i',
-                                         'd'>{});
-        } break;
-        case ExecResult<CharT>::set_error: {
-          if constexpr (not cli::is_multiline_display_v<Display>) {
-            display_.newline();
-          }
-          display_.write(string_constant<CharT,
-                                         'c',
-                                         'a',
-                                         'n',
-                                         '\'',
-                                         't',
-                                         ' ',
-                                         's',
-                                         'e',
-                                         't',
-                                         ' ',
-                                         'p',
-                                         'a',
-                                         'r',
-                                         'a',
-                                         'm',
-                                         ':',
-                                         ' '>{});
-          switch (exec_result.error()) {
-            case Error::expected_assignment:
-              display_.write(expected_str);
-              display_.write('\'');
-              display_.write('=');
-              display_.write('\'');
-              break;
-            default:
-              display_.write(
-                ctti::enum_name<Error, CharT>(exec_result.error()));
-          }
-        } break;
-        case ExecResult<CharT>::get_error: {
-          if constexpr (not cli::is_multiline_display_v<Display>) {
-            display_.newline();
-          }
-          display_.write(string_constant<CharT,
-                                         'c',
-                                         'a',
-                                         'n',
-                                         '\'',
-                                         't',
-                                         ' ',
-                                         'g',
-                                         'e',
-                                         't',
-                                         ' ',
-                                         'p',
-                                         'a',
-                                         'r',
-                                         'a',
-                                         'm',
-                                         ':',
-                                         ' '>{});
-          display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
-        } break;
+      } else {
+        switch (exec_result.type()) {
+          case ExecResult<CharT>::success:
+            return print_success();
+          default:
+            display_.write(string_constant<CharT, 'e', 'r', 'r', 'o', 'r'>{});
+        }
       }
 
       if (cli::is_multiline_display_v<Display>) {
         display_.newline();
       }
-
       return Error::none;
     }
 
@@ -944,7 +958,7 @@ namespace cli {
 
     constexpr Error on_cursor_right(std::size_t) { return Error::none; }
 
-    constexpr Error on_clear_line_to_end(std::size_t) { return Error::none; }
+    constexpr Error on_clear_line_to_end() { return Error::none; }
 
     constexpr Error on_clear_line_to_begin() { return clear(); }
 

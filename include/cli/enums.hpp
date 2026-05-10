@@ -26,16 +26,8 @@ namespace cli {
     cant_set_param,       //< cant set a parameter
     cant_read_param,      //< cant read a parameter
     invalid_cmd,          //< an invalid command has been entered
-    too_many_splits,
-    dual_separators,
     buffer_overflow,      //< a buffer would overflow
-    buffer_underflow,     //< a buffer would underflow
-    incorrect_num_params, //< an incorrect number of parameters/arguments has
-                          //< been provided
-    too_many_argments,    //< too many arguments have been provided
     too_few_arguments,    //< too few arguments have been provided
-    invalid_esc_seq,      //< an invalid escape sequence has been encountered
-    invalid_state,        //< an invalid sate has been encountered
     expected_value,       //< expected a value but none has been given
 
     // parse errors
@@ -47,7 +39,6 @@ namespace cli {
     invalid_sequence_value,
     expected_group_opening,
     expected_group_closing,
-    expected_struct_value,
     expected_assignment,
     expected_delimiter,
     expected_endquote,
@@ -65,10 +56,7 @@ namespace cli {
 
     // validation errors
     invalid_value, //< encountered an invalid value
-    out_of_range,
-    value_too_small,
-    value_too_large,
-    unknown //< unkown error
+    unknown        //< unkown error
   };
 
   /**

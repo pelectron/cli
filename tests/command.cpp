@@ -15,17 +15,14 @@ TEST_CASE("CommandNode::add_sub ") {
   SECTION("add to empty") {
     root.add_sub(abcd);
     REQUIRE(root.subcommand == &abcd);
-    REQUIRE(root.last_subcommand == &abcd);
   }
 
   SECTION("add at the end") {
     root.add_sub(abcd);
     root.add_sub(abcde);
     REQUIRE(abcd.next == &abcde);
-    REQUIRE(root.last_subcommand == &abcde);
     root.add_sub(abcdef);
     REQUIRE(abcde.next == &abcdef);
-    REQUIRE(root.last_subcommand == &abcdef);
   }
 
   SECTION("add in the beginning") {
@@ -33,22 +30,18 @@ TEST_CASE("CommandNode::add_sub ") {
     root.add_sub(abcd);
     REQUIRE(root.subcommand == &abcd);
     REQUIRE(abcd.next == &abcde);
-    REQUIRE(root.last_subcommand == &abcde);
   }
 
   SECTION("add in the middle") {
     root.add_sub(abcd);
     root.add_sub(abcdefg);
     REQUIRE(root.subcommand == &abcd);
-    REQUIRE(root.last_subcommand == &abcdefg);
     root.add_sub(abcde);
     REQUIRE(root.subcommand == &abcd);
-    REQUIRE(root.last_subcommand == &abcdefg);
     REQUIRE(abcd.next == &abcde);
     REQUIRE(abcde.next == &abcdefg);
     root.add_sub(abcdef);
     REQUIRE(root.subcommand == &abcd);
-    REQUIRE(root.last_subcommand == &abcdefg);
     REQUIRE(abcd.next == &abcde);
     REQUIRE(abcde.next == &abcdef);
     REQUIRE(abcdef.next == &abcdefg);

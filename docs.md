@@ -2,7 +2,7 @@
 
 `CLI` consists of the following main components:
 
-- [cli::Engine](#engine)
+- [cli::Engine](#engine): the interface of `CLI`
 - [cli::concepts::Config](#config): configuration for the `cli::Engine`
 - [cli::concepts::Input](#input) and [cli::Input](#input-class-template):
   used to receive characters
@@ -268,6 +268,9 @@ left out because `CLI` uses a default value if they are not specified. Entries
 with name `X` of a configuration type `C` can be retrieved with
 `cli::config::X_v<C>` (for members) and `cli::config::X_t<C>` (for typedefs).
 
+Note that the size increases given are for a 32-bit Cortex-M processor,
+compiled with GCC, optimized for size and NDEBUG defined.
+
 - **input_type**: a typedef satisfying the [input concept](#input).
   Defaults to [cli::Input](#input). You must leave this entry out if you want
   to use the default.
@@ -281,9 +284,15 @@ with name `X` of a configuration type `C` can be retrieved with
   false.
 - **output_size**: of type `std::size_t`. Specifies how big the buffer for
   outputting characters is. The default is `max_line_length`.
-- **empty_help_prints_commands**: of type `bool`. If true, then the help command
-  will print all commands when it is given no argument. Else it will print "no
-  such command". Defaults to false.
+- **use_help**: of type `bool`. If true, a [help command](#help-command) is
+  available. Default is false. This will add 2Kb to the executable's size.
+- **empty_help_prints_commands**: of type `bool`. If true, then the help
+  command will print all commands when it is given no argument. Else it will
+  print "no such command". Defaults to false. This will add roughly 200B to the
+  executable's size.
+- **use_detailed_error_messages**: of type `bool`. If true, then `CLI` will
+  print a detailed description when an invalid command is entered. Else it will
+  just print display "error". Defaults to false. Enabling this will add 1kB.
 
 ### Config Example
 

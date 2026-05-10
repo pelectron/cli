@@ -1,0 +1,38 @@
+[binaries]
+c = 'arm-none-eabi-gcc'
+cpp = 'arm-none-eabi-g++'
+ar = 'arm-none-eabi-ar'
+strip = 'arm-none-eabi-strip'
+nm = 'arm-none-eabi-nm'
+ld = 'arm-none-eabi-ld'
+exe_wrapper = '' # Leave empty for bare metal targets
+
+[host_machine]
+system = 'none'         # 'none' for bare metal
+cpu_family = 'arm'
+cpu = 'cortex-m4'       # Update to your specific CPU (e.g., cortex-m0, cortex-m7)
+endian = 'little'
+
+[built-in options]
+cpp_eh = 'none'
+c_args = [
+    '-DNDEBUG',
+    '-U_FILE_OFFSET_BITS',
+    '-mcpu=cortex-m4',
+    '-Os',
+    '-mthumb',
+    '-mfloat-abi=hard',
+    '-mfpu=fpv4-sp-d16',
+    '--specs=nosys.specs'
+  ]
+
+cpp_args = c_args + ['-fno-exceptions']
+
+c_link_args = [
+    '-mcpu=cortex-m4',
+    '-mthumb',
+    '-mfloat-abi=hard',
+    '-mfpu=fpv4-sp-d16',
+    '--specs=nosys.specs'
+  ]
+cpp_link_args = c_link_args

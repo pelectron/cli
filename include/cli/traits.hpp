@@ -1,9 +1,11 @@
 #ifndef CLI_TRAITS_HPP
 #define CLI_TRAITS_HPP
+#include "cli/enums.hpp"
 #include "cli/string.hpp"
 #include "cli/vector.hpp"
 
 #include <array>
+#include <cstdint>
 #include <limits>
 #include <type_traits>
 
@@ -137,5 +139,11 @@ namespace cli::traits {
     static constexpr bool is_flag = true;
   };
 
+  template<>
+  struct enum_traits<Error> {
+    static constexpr uint32_t min = 0;
+    static constexpr uint32_t max = static_cast<uint32_t>(Error::unknown);
+    static constexpr bool is_flag = false;
+  };
 } // namespace cli::traits
 #endif

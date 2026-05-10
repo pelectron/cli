@@ -104,6 +104,18 @@ namespace cli {
         static constexpr bool value = C::use_help;
       };
 
+      template<concepts::Config C, typename = void>
+      struct use_detailed_error_messages : std::false_type {};
+
+      template<concepts::Config C>
+      struct use_detailed_error_messages<
+        C,
+        std::enable_if_t<
+          std::is_convertible_v<decltype(C::use_detailed_error_messages),
+                                bool>>> {
+        static constexpr bool value = C::use_detailed_error_messages;
+      };
+
       template<concepts::Config C, typename Display>
       struct display_fits_config : std::false_type {};
 
@@ -185,13 +197,17 @@ namespace cli {
       dtl::empty_help_prints_commands<C>::value;
 
     /**
-     * is true if C specifies that help fucntionality shoudl be used.
+     * is true if C specifies that help functionality shoudl be used.
      *
      * @ingroup config
      * @tparam C the configuration
      */
     template<concepts::Config C>
     inline constexpr bool use_help_v = dtl::use_help<C>::value;
+
+    template<concepts::Config C>
+    inline constexpr bool use_detailed_error_messages_v =
+      dtl::use_detailed_error_messages<C>::value;
 
     /**
      * checks if the config C and the Display fit together.
@@ -216,11 +232,11 @@ namespace cli {
     static constexpr bool use_help = true;
     static constexpr bool use_history = true;
     static constexpr std::size_t history_depth = 16;
-    static constexpr std::size_t max_line_length = 256;
+    static constexpr std::size_t max_line_length = 32;
     static constexpr Delimiter input_delimiter = Delimiter::lf;
     static constexpr std::size_t input_size = 16;
     static constexpr bool use_volatile_input_buffer = false;
-    static constexpr std::size_t output_size = 256;
+    static constexpr std::size_t output_size = 32;
     static constexpr bool empty_help_prints_commands = true;
   };
 

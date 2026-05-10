@@ -10,6 +10,201 @@
 
 namespace cli {
 
+  namespace dtl {
+    static constexpr std::size_t npos = std::numeric_limits<std::size_t>::max();
+
+    template<typename CharT>
+    constexpr std::size_t strlen(const CharT *s) {
+      if (not s)
+        return 0;
+
+      std::size_t i = 0;
+      while (s[i] != 0) {
+        ++i;
+      }
+      return i;
+    }
+
+    template<typename CharT>
+    constexpr bool op_equal(const CharT *str,
+                            std::size_t size,
+                            const CharT *other_str,
+                            std::size_t other_size) {
+      if (other_size != size)
+        return false;
+      if (str == nullptr and other_str == nullptr)
+        return true;
+      for (std::size_t i = 0; i < size; ++i)
+        if (str[i] != other_str[i])
+          return false;
+      return true;
+    }
+
+    template<typename CharT>
+    constexpr bool op_less_than(const CharT *str,
+                                std::size_t size,
+                                const CharT *other_str,
+                                std::size_t other_size) {
+
+      const auto s = size > other_size ? other_size : size;
+      for (std::size_t i = 0; i < s; ++i)
+        if (str[i] == other_str[i])
+          continue;
+        else if (str[i] < other_str[i])
+          return true;
+        else
+          return false;
+
+      // substrings are equal-> if this is shorter than other, this is "less
+      // than" other
+      if (size < other_size)
+        return true;
+
+      return false;
+    }
+
+    template<typename CharT>
+    constexpr bool op_greater_than(const CharT *str,
+                                   std::size_t size,
+                                   const CharT *other_str,
+                                   std::size_t other_size) {
+      const auto s = std::min(size, other_size);
+      for (std::size_t i = 0; i < s; ++i)
+        if (str[i] == other_str[i])
+          continue;
+        else if (str[i] > other_str[i])
+          return true;
+        else
+          return false;
+
+      // substrings are equal-> if this is longer than other, this is "greater
+      // than" other
+      if (size > other_size)
+        return true;
+
+      return false;
+    }
+
+    template<typename CharT>
+    constexpr bool starts_with(const CharT *str,
+                               std::size_t size,
+                               const CharT *other_str,
+                               std::size_t other_size) {
+      if (size < other_size or other_size == 0)
+        return false;
+      for (std::size_t i = 0; i < other_size; ++i)
+        if (other_str[i] != str[i])
+          return false;
+      return true;
+    }
+
+    template<typename CharT>
+    constexpr std::size_t find_first_of(const CharT *str,
+                                        std::size_t size,
+                                        const CharT *other_str,
+                                        std::size_t other_size,
+                                        std::size_t pos) {
+      for (std::size_t i = pos; i < size; ++i)
+        for (std::size_t j = 0; j < other_size; ++j)
+          if (other_str[j] == str[i])
+            return i;
+      return npos;
+    }
+
+    template<typename CharT>
+    constexpr std::size_t find_first_not_of(const CharT *str,
+                                            std::size_t size,
+                                            const CharT *other_str,
+                                            std::size_t other_size,
+                                            std::size_t pos) {
+      for (std::size_t i = pos; i < size; ++i) {
+        std::size_t cnt{0};
+        for (std::size_t j = 0; j < other_size; ++j) {
+          if (other_str[j] != str[i]) {
+            cnt++;
+          } else {
+            break;
+          }
+          if (cnt == other_size)
+            return i;
+        }
+      }
+      return npos;
+    }
+
+    template<typename CharT>
+    constexpr std::size_t find_last_of(const CharT *str,
+                                       std::size_t size,
+                                       const CharT *other_str,
+                                       std::size_t other_size,
+                                       std::size_t pos) {
+      if (size == 0)
+        return npos;
+
+      const std::size_t init = (pos < size - 1) ? pos : size - 1;
+      for (std::size_t i = init; i < size; --i)
+        for (std::size_t j = 0; j < other_size; ++j)
+          if (other_str[j] == str[i])
+            return i;
+      return npos;
+    }
+
+    template<typename CharT>
+    constexpr std::size_t
+    find(const CharT *str, std::size_t size, CharT c, std::size_t pos) {
+      for (std::size_t i = pos; i < size; ++i)
+        if (c == str[i])
+          return i;
+      return npos;
+    }
+
+    template<typename CharT>
+    constexpr std::size_t find(const CharT *str,
+                               std::size_t size,
+                               const CharT *other_str,
+                               std::size_t other_size,
+                               std::size_t pos) {
+      for (std::size_t i = pos; i < size; ++i)
+        for (std::size_t j = 0; (i + other_size) <= size and j < other_size;
+             ++j)
+          if (str[i + j] != other_str[j])
+            break;
+          else if (j + 1 == other_size)
+            return i;
+      return npos;
+    }
+
+    template<typename CharT>
+    constexpr std::size_t find_last_not_of(const CharT *str,
+                                           std::size_t size,
+                                           const CharT *other_str,
+                                           std::size_t other_size,
+                                           std::size_t pos) {
+      if (size == 0)
+        return npos;
+
+      const std::size_t init = (pos < size - 1) ? pos : size - 1;
+      for (std::size_t i = init; i < size; --i)
+        if (find<CharT>(other_str, other_size, str[i], 0) == npos)
+          return i;
+      return npos;
+    }
+
+    template<typename CharT>
+    constexpr std::size_t find_last_not_of(const CharT *str,
+                                           std::size_t size,
+                                           CharT c,
+                                           std::size_t pos) {
+      if (size == 0)
+        return npos;
+
+      const std::size_t init = (pos < size - 1) ? pos : size - 1;
+      for (std::size_t i = init; i < size; --i)
+        if (c != str[i])
+          return i;
+      return npos;
+    }
+  } // namespace dtl
   /**
    * A view of characters, kinda like std::span.
    *
@@ -73,188 +268,96 @@ namespace cli {
     }
 
     constexpr bool operator==(const View &other) const noexcept {
-      if (other.size_ != size_)
-        return false;
-      if (str_ == nullptr and other.str_ == nullptr)
-        return true;
-      for (std::size_t i = 0; i < size_; ++i)
-        if (str_[i] != other.str_[i])
-          return false;
-      return true;
+      return dtl::op_equal<value_type>(str_, size_, other.str_, other.size_);
     }
 
-    // template <typename C>
-    // constexpr bool operator==(const View<C> &other) const noexcept {
-    //   if (other.size_ != size_)
-    //     return false;
-    //   if (str_ == nullptr and other.str_ == nullptr)
-    //     return true;
-    //   for (std::size_t i = 0; i < size_; ++i)
-    //     if (str_[i] != other.str_[i])
-    //       return false;
-    //   return true;
-    // }
-    //
     constexpr bool operator<(const View &other) const noexcept {
-      const auto s = std::min(size_, other.size_);
-      for (std::size_t i = 0; i < s; ++i)
-        if (str_[i] == other.str_[i])
-          continue;
-        else if (str_[i] < other.str_[i])
-          return true;
-        else
-          return false;
-
-      // substrings are equal-> if this is shorter than other, this is "less
-      // than" other
-      if (size_ < other.size_)
-        return true;
-
-      return false;
+      return dtl::op_less_than<value_type>(
+        str_, size_, other.str_, other.size_);
     }
 
     constexpr bool operator>(const View &other) const noexcept {
-      const auto s = std::min(size_, other.size_);
-      for (std::size_t i = 0; i < s; ++i)
-        if (str_[i] == other.str_[i])
-          continue;
-        else if (str_[i] > other.str_[i])
-          return true;
-        else
-          return false;
-
-      // substrings are equal-> if this is longer than other, this is "greater
-      // than" other
-      if (size_ > other.size_)
-        return true;
-
-      return false;
+      return dtl::op_greater_than<value_type>(
+        str_, size_, other.str_, other.size_);
     }
 
     constexpr bool starts_with(const value_type *s) const noexcept {
-      return starts_with(View{s});
+      return dtl::starts_with(str_, size_, s, dtl::strlen(s));
     }
 
     template<typename Ch>
     constexpr bool starts_with(View<Ch> s) const noexcept {
-      if (size_ < s.size_ or s.size_ == 0)
-        return false;
-      for (std::size_t i = 0; i < s.size_; ++i)
-        if (s.str_[i] != str_[i])
-          return false;
-      return true;
+      return dtl::starts_with(str_, size_, s.str_, s.size_);
     }
 
     constexpr std::size_t find_first_of(value_type c,
                                         std::size_t pos = 0) const noexcept {
-      for (std::size_t i = pos; i < size_; ++i)
-        if (c == str_[i])
-          return i;
-      return npos;
+      return dtl::find_first_of<value_type>(str_, size_, &c, 1, pos);
     }
 
     constexpr std::size_t find_first_of(const value_type *s,
                                         std::size_t pos = 0) const noexcept {
-      return find_first_of(View{s}, pos);
+      return dtl::find_first_of<value_type>(
+        str_, size_, s, dtl::strlen(s), pos);
     }
 
     template<typename Ch>
     constexpr std::size_t find_first_of(View<Ch> s,
                                         std::size_t pos = 0) const noexcept {
-      for (std::size_t i = pos; i < size_; ++i)
-        for (std::size_t j = 0; j < s.size_; ++j)
-          if (s.str_[j] == str_[i])
-            return i;
-      return npos;
+      return dtl::find_first_of<value_type>(str_, size_, s.str_, s.size_, pos);
     }
 
     constexpr std::size_t
     find_first_not_of(value_type c, std::size_t pos = 0) const noexcept {
-      for (std::size_t i = pos; i < size_; ++i)
-        if (c != str_[i])
-          return i;
-      return npos;
+      return dtl::find_first_not_of<value_type>(str_, size_, &c, 1, pos);
     }
 
-    constexpr std::size_t find_first_not_of(const value_type *c,
+    constexpr std::size_t find_first_not_of(const value_type *s,
                                             std::size_t pos = 0) noexcept {
-      return find_first_not_of(View{c}, pos);
+      return dtl::find_first_not_of<value_type>(
+        str_, size_, s, dtl::strlen(s), pos);
     }
 
     template<typename Ch>
     constexpr std::size_t
     find_first_not_of(View<Ch> s, std::size_t pos = 0) const noexcept {
-      for (std::size_t i = pos; i < size_; ++i) {
-        std::size_t cnt{0};
-        for (std::size_t j = 0; j < s.size_; ++j) {
-          if (s.str_[j] != str_[i]) {
-            cnt++;
-          } else {
-            break;
-          }
-          if (cnt == s.size_)
-            return i;
-        }
-      }
-      return npos;
+      return dtl::find_first_not_of<value_type>(
+        str_, size_, s.str_, s.size_, pos);
     }
 
     constexpr std::size_t find_last_of(value_type c,
                                        std::size_t pos = npos) const noexcept {
-      if (size_ == 0)
-        return npos;
-
-      for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
-        if (c == str_[i])
-          return i;
-      return npos;
+      return dtl::find_last_of<value_type>(str_, size_, &c, 1, pos);
     }
 
-    constexpr std::size_t find_last_of(const value_type *c,
+    constexpr std::size_t find_last_of(const value_type *s,
                                        std::size_t pos = npos) const noexcept {
-      return find_last_of(View{c}, pos);
+      return dtl::find_last_of<value_type>(str_, size_, s, dtl::strlen(s), pos);
     }
 
     template<typename Ch>
     constexpr std::size_t find_last_of(View<Ch> s,
                                        std::size_t pos = npos) const noexcept {
-      if (size_ == 0)
-        return npos;
-
-      for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
-        for (std::size_t j = 0; j < s.size_; ++j)
-          if (s.str_[j] == str_[i])
-            return i;
-      return npos;
+      return dtl::find_last_of<value_type>(str_, size_, s.str_, s.size_, pos);
     }
 
     constexpr std::size_t
     find_last_not_of(value_type c, std::size_t pos = npos) const noexcept {
-      if (size_ == 0)
-        return npos;
-
-      for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
-        if (c != str_[i])
-          return i;
-      return npos;
+      return dtl::find_last_not_of<value_type>(str_, size_, c, pos);
     }
 
     constexpr std::size_t
-    find_last_not_of(const value_type *c,
+    find_last_not_of(const value_type *s,
                      std::size_t pos = npos) const noexcept {
-      return find_last_not_of(View{c}, pos);
+      return dtl::find_last_not_of<value_type>(
+        str_, size_, s, dtl::strlen(s), pos);
     }
 
     template<typename Ch>
     constexpr std::size_t
     find_last_not_of(View<Ch> s, std::size_t pos = npos) const noexcept {
-      if (size_ == 0)
-        return npos;
-
-      for (std::size_t i = std::min(size_ - 1, pos); i < size_; --i)
-        if (s.find(str_[i]) == npos)
-          return i;
-      return npos;
+      return dtl::find_last_not_of<value_type>(
+        str_, size_, s.str_, s.size_, pos);
     }
 
     constexpr View substr(std::size_t offset,
@@ -275,18 +378,12 @@ namespace cli {
 
     constexpr std::size_t find(const value_type *s,
                                std::size_t pos = 0) const noexcept {
-      return find(View{s}, pos);
+      return dtl::find<value_type>(str_, size_, s, dtl::strlen(s), pos);
     }
 
     template<typename Ch>
     constexpr std::size_t find(View<Ch> s, std::size_t pos = 0) const noexcept {
-      for (std::size_t i = pos; i < size_; ++i)
-        for (std::size_t j = 0; (i + s.size_) <= size_ and j < s.size_; ++j)
-          if (str_[i + j] != s[j])
-            break;
-          else if (j + 1 == s.size_)
-            return i;
-      return npos;
+      return dtl::find<value_type>(str_, size_, s.str_, s.size_, pos);
     }
 
     constexpr CharType &back() noexcept { return str_[size_ - 1]; }

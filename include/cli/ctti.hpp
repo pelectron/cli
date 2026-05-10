@@ -35,13 +35,13 @@
     #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
     #define CTTI_VALUE_PREFIX "CharView cli::ctti::dtl::name_impl() [D = "
-    #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+    #define CTTI_VALUE_SUFFIX "]"
   #else
   #define CLI_FUNCTION_NAME __FUNCSIG__
-    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class cliV::View<char const > __cdecl cli::ctti::dtl::name_impl<"
+    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class cli::View<char const > __cdecl cli::ctti::dtl::name_impl<"
     #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
-    #define CTTI_VALUE_PREFIX "class cliV::View<char const > __cdecl cli::ctti::dtl::value_impl<"
-    #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
+    #define CTTI_VALUE_PREFIX "class cli::View<char const > __cdecl cli::ctti::dtl::value_impl<"
+    #define CTTI_VALUE_SUFFIX ">(void)"
   #endif
 #else
   #error "No support for this compiler."
@@ -101,21 +101,23 @@ namespace cli::ctti {
       }
     }
 
+#if (defined(__clang__) and not defined(_MSC_VER)) or defined(__GNUC__)
     template<auto D>
     consteval CharView value_impl() {
-#if (defined(__clang__) and not defined(_MSC_VER)) or defined(__GNUC__)
       constexpr CharView name{CLI_FUNCTION_NAME};
       static_assert(name.starts_with(CTTI_VALUE_PREFIX));
       constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
       return name.substr(CTTI_VALUE_LEFT, size);
-
+    }
 #elif defined(_MSC_VER)
-      constexpr CharView name{std::source_location{}.function_name()};
+    template<auto D>
+    consteval CharView value_impl() {
+      constexpr CharView name{CLI_FUNCTION_NAME};
       static_assert(name.starts_with(CTTI_VALUE_PREFIX));
       constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
-      name.substr(CTTI_VALUE_LEFT, size);
-#endif
+      return name.substr(CTTI_VALUE_LEFT, size);
     }
+#endif
 
     template<typename T, typename CharT = char>
     struct value {
@@ -248,13 +250,6 @@ namespace cli::ctti {
     }
 
     template<auto V, typename CharT = char>
-    consteval auto value_name() {
-      return dtl::value<std::remove_reference_t<decltype(V)>,
-                        CharT>::template get<V>();
-    }
-
-    template<auto V, typename CharT = char>
-      requires std::is_enum_v<std::remove_reference_t<decltype(V)>>
     consteval auto value_name() {
       return []<std::size_t... Is>(std::index_sequence<Is...>) {
         return string_constant<CharT, value_name_impl<V>().data()[Is]...>{};

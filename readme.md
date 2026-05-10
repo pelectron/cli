@@ -7,6 +7,25 @@ and call functions on the embedded device.
 In addition, `CLI` also provides the command line executable `cli-term` to
 connect to systems running `CLI` over serial port or ethernet.
 
+## Library Features
+
+- C++20
+- header only
+- easy to use
+- completely constexpr
+- type safe
+- macro free
+- customizable
+- fully documented with doxygen and handwritten [markdown docs](docs.md)
+- opt in functionality:
+  - autocomplete
+  - cursor movement
+  - help command
+  - detailed errors
+- smallish code size, depending on configuration
+  - example: autocomplete, cursor movement, help, and detailed errors are
+    disabled -> library code size is about 3.5kB on an arm Cortex-M3
+
 ## Contents
 
 - [Short Example](#a-short-example)

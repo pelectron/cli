@@ -357,7 +357,7 @@ namespace cli {
   };
 
   template<typename Out>
-  AnsiDisplay(Out &&) -> AnsiDisplay<std::decay_t<Out>>;
+  AnsiDisplay(Out &&) -> AnsiDisplay<std::decay_t<Out>, unlimited_lines>;
 
   template<typename Out, auto NumLines>
   AnsiDisplay(Out &&, constant<NumLines>)

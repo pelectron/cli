@@ -74,29 +74,6 @@ namespace cli {
       else
         return idx;
     }
-    Index post_incr(Index &idx) const noexcept {
-      auto ret = idx;
-      ++idx;
-      if (idx == Cfg::history_depth)
-        idx = 0;
-      else
-        idx;
-      return ret;
-    }
-
-    Index decr(Index &idx) const noexcept {
-      if (idx == 0)
-        return idx = Cfg::history_depth - 1;
-      else
-        return --idx;
-    }
-
-    Index decr_c(Index idx) const noexcept {
-      if (idx == 0)
-        return idx = Cfg::history_depth - 1;
-      else
-        return --idx;
-    }
 
     void copy_into(Line &line, Str str) noexcept {
       line.size = 0;
@@ -195,9 +172,7 @@ namespace cli {
   class History<Cfg> {
   public:
     using Str = View<const typename Cfg::char_type>;
-    constexpr void push_cmd(Str) {}
-    constexpr Str cursor_up(std::size_t) {}
-    constexpr Str cursor_down(std::size_t) {}
+    constexpr void push(Str) {}
     constexpr void reset() {}
   };
 } // namespace cli

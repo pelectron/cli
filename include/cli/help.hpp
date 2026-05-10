@@ -80,10 +80,10 @@ namespace cli {
         if (arg.size() != 0)
           return write(cmd_not_found);
 
-        if constexpr (not config::empty_help_prints_commands_v<config_type>)
+        if constexpr (config::empty_help_prints_commands_v<config_type>)
+          return engine.print();
+        else
           return write(cmd_not_found);
-
-        return engine.print();
       }
 
       const CommandNode<char_type> *cmd_node =

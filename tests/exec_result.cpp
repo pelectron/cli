@@ -25,7 +25,7 @@ TEST_CASE("ExecResult::make_success(result)") {
 TEST_CASE("ExecResult::make_parse_error") {
   cli::View<const char> s{"hello world"};
   Result r =
-    Result::make_parse_error(cli::Error::dual_separators, s.data() + 5);
+    Result::make_parse_error(cli::Error::invalid_argument, s.data() + 5);
   REQUIRE_FALSE(r);
   REQUIRE(r.type() == Result::parse_error);
   REQUIRE(r.error_location() == s.data() + 5);

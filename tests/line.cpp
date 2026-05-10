@@ -146,16 +146,16 @@ static_assert(cli::concepts::Display<Display, char>);
                  cli::View<char>) -> cli::ExecResult<char> {                   \
       return cli::ExecResult<char>::make_success("hello");                     \
     }};                                                                        \
-  cli::CommandNode<char> c3{.name = "c3",                                      \
-                            .description = {},                                 \
-                            .this_ = &root,                                    \
-                            .exec_ =                                           \
-                              +[](void *,                                      \
-                                  cli::View<const char> buf,                   \
-                                  cli::View<char>) -> cli::ExecResult<char> {  \
-                              return cli::ExecResult<char>::make_parse_error(  \
-                                cli::Error::dual_separators, buf.data());      \
-                            }};                                                \
+  cli::CommandNode<char> c3{                                                   \
+    .name = "c3",                                                              \
+    .description = {},                                                         \
+    .this_ = &root,                                                            \
+    .exec_ = +[](void *,                                                       \
+                 cli::View<const char> buf,                                    \
+                 cli::View<char>) -> cli::ExecResult<char> {                   \
+      return cli::ExecResult<char>::make_parse_error(cli::Error::invalid_cmd,  \
+                                                     buf.data());              \
+    }};                                                                        \
   cli::CommandNode<char> c4{.name = "c4long",                                  \
                             .description = {},                                 \
                             .this_ = &root,                                    \
@@ -243,7 +243,7 @@ TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
     SECTION("parse_error from execute") {
       line.set_data("c2.c3 args");
       REQUIRE(line.execute(out) == cli::Error::none);
-      REQUIRE(d.data == "parse error: dual_separators at 6");
+      REQUIRE(d.data == "parse error: invalid_cmd at 6");
       REQUIRE(d.past == std::vector<std::string>{"c2.c3 args"});
     }
 
@@ -321,7 +321,7 @@ TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
       REQUIRE(line.execute(out) == cli::Error::none);
       REQUIRE(d.data.empty());
       REQUIRE(d.past == std::vector<std::string>{
-                          "c2.c3 args", "parse error: dual_separators at 6"});
+                          "c2.c3 args", "parse error: invalid_cmd at 6"});
     }
 
     SECTION("set_error from execute") {

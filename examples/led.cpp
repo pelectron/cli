@@ -50,7 +50,7 @@ void LedSetColor(RGB color) { (void)color; }
 void LedSetFlashingInterval(Milliseconds interval) { (void)interval; }
 /// @}
 
-cli::Error write_char(char c);
+void write_char(char c);
 
 static RGB color{};
 static Milliseconds interval;
@@ -95,22 +95,30 @@ cli::Error set_flashing(bool enabled) {
   return cli::Error::none;
 }
 
-using config = cli::default_config;
+struct config : cli::default_config {
+  static constexpr bool use_autocomplete = true;
+  static constexpr bool use_history = false;
+  static constexpr bool use_cursor = true;
+  static constexpr bool use_help = true;
+  static constexpr bool empty_help_prints_commands = true;
+  static constexpr bool use_detailed_error_messages = true;
+};
+
 using cli::operator""_sc;
 
 // clang-format off
-static cli::Engine control{
+static constinit cli::Engine control{
   config{}, 
   cli::AnsiDisplay(&write_char),
-  cli::param("color"_sc, 
+  /*cli::param("color"_sc, 
              "the led color"_sc, 
              color, 
-             set_color),
+             set_color),*/
   cli::param<bool>("enable"_sc, 
                    "turn the led on or off"_sc,
                    &get_enable,
                    &set_enable),
-  cli::param("flashing"_sc, 
+  /*cli::param("flashing"_sc, 
              "enable or disable LED flashing"_sc,
              flashing_enabled,
              &set_flashing),
@@ -119,7 +127,7 @@ static cli::Engine control{
              interval,
              &get_interval,
              &set_interval,
-             &validate_interval)
+             &validate_interval)*/
 };
 // clang-format on
 
@@ -132,10 +140,9 @@ char UartGetChar() { return 0; }
 
 void UartTransmit(char c) { (void)c; }
 
-cli::Error write_char(char c) {
+void write_char(char c) {
   // transmit c over uart
   UartTransmit(c);
-  return cli::Error::none;
 }
 
 int main() {

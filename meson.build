@@ -35,9 +35,7 @@ cli_term.disable_if(
 deps = []
 
 if (not simulation.disabled())
-  deps += dependency('cpp-terminal', 
-                     required: true,
-                     default_options:['warning_level=0'])
+  deps += dependency('cpp-terminal', required: true, default_options: ['warning_level=0'])
 endif
 
 cli_dep = declare_dependency(include_directories: inc, dependencies: deps)
@@ -65,17 +63,17 @@ if (not build_examples.disabled())
     executable('cli-singleline', 'examples/cli-singleline.cpp', dependencies: cli_dep)
   endif
 
-  # executable('led-example',
-  #   'examples/led.cpp',
-  #   dependencies: cli_dep
-  # )
+endif
 
+if get_option('led-example').enabled()
+  executable('led-example', 'examples/led.cpp', 'examples/syscalls.cpp', dependencies: cli_dep)
+  executable('empty', 'examples/empty.cpp', 'examples/syscalls.cpp', dependencies: cli_dep)
 endif
 
 if (not build_tests.disabled())
   catch_dep = dependency(
     'catch2',
-    default_options: ['tests=false','warning_level=0'],
+    default_options: ['tests=false', 'warning_level=0'],
     fallback: ['catch2', 'catch2_with_main_dep'],
     version: '>=3.4.0',
     required: true,
@@ -92,7 +90,7 @@ if (not build_tests.disabled())
       '-Wno-shadow',
       '-Wno-unknown-warning-option',
     ]
-  else 
+  else
     exclude_warnings = []
   endif
 
@@ -163,14 +161,6 @@ if (not cli_term.disabled())
   executable(
     'cli-term',
     'source/cli-term.cpp',
-    dependencies: deps,
-    include_directories: inc,
-    cpp_args: ['-DASIO_NO_DEPRECATED'],
-  )
-
-  executable(
-    'cli-term-mock',
-    'source/cli-term-mock.cpp',
     dependencies: deps,
     include_directories: inc,
     cpp_args: ['-DASIO_NO_DEPRECATED'],

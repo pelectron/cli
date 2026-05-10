@@ -55,8 +55,6 @@ namespace cli {
     CommandNode *next = nullptr;
     /// pointers to the first sub command
     CommandNode *subcommand = nullptr;
-    /// pointers to the last sub command
-    CommandNode *last_subcommand = nullptr;
 
     class iterator {
       friend struct CommandNode;
@@ -127,20 +125,14 @@ namespace cli {
       c.parent = this;
       c.next = nullptr;
       c.subcommand = nullptr;
-      c.last_subcommand = nullptr;
       CommandNode *sub = subcommand;
       if (sub == nullptr) {
         // empty
         subcommand = &c;
-        last_subcommand = &c;
       } else if (c.name < sub->name) {
         // c should be inserted as first
         subcommand = &c;
         c.next = sub;
-      } else if (c.name > last_subcommand->name) {
-        // c should be inserted as last
-        last_subcommand->next = &c;
-        last_subcommand = &c;
       } else {
         // c should be inserted somewhere in the middle
         CommandNode *last_sub = sub;
@@ -149,11 +141,12 @@ namespace cli {
           if (c.name < sub->name) {
             last_sub->next = &c;
             c.next = sub;
-            break;
+            return;
           }
           last_sub = sub;
           sub = sub->next;
         }
+        last_sub->next = &c;
       }
     }
   };

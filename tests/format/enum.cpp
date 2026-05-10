@@ -1,3 +1,4 @@
+#include "cli/enums.hpp"
 #include "cli/format.hpp"
 #include "common.hpp"
 
@@ -54,21 +55,15 @@ TEST_CASE("format::Enum") {
       TV1(cant_set_param),
       TV1(cant_read_param),
       TV1(invalid_cmd),
-      TV1(too_many_splits),
-      TV1(dual_separators),
       TV1(buffer_overflow),
-      TV1(buffer_underflow),
-      TV1(incorrect_num_params),
-      TV1(too_many_argments),
       TV1(too_few_arguments),
-      TV1(invalid_esc_seq),
-      TV1(invalid_state),
       TV1(expected_value),
       TV1(unexpected_characters_after_closing_paren),
       TV1(expected_rparen),
       TV1(too_few_characters),
       TV1(invalid_character),
-      TV1(invalid_value)};
+      TV1(invalid_value),
+      TV1(unknown)};
     for (auto &tv : vectors) {
       test(tv);
     }

@@ -64,8 +64,8 @@ TEST_CASE("ctti::enum_name") {
 }
 
 TEST_CASE("ctti::value_name") {
-  STATIC_REQUIRE(cli::ctti::value_name<1>() == "1"_sc);
-  STATIC_REQUIRE(cli::ctti::value_name<0xFFFF>() == "65535"_sc);
+  REQUIRE(cli::ctti::dtl::value_impl<1>() == "1");
+  REQUIRE(cli::ctti::value_name<0xFFFF>() == "65535"_sc);
 }
 
 // template<class Field, class... Fields>

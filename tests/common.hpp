@@ -5,6 +5,7 @@
 #include "cli/ctti.hpp"
 #include "cli/enums.hpp"
 #include "cli/event.hpp"
+#include "cli/string.hpp"
 #include "cli/traits.hpp"
 // #include "fixpoint.hpp"
 #include <catch2/catch_tostring.hpp>
@@ -74,6 +75,12 @@ namespace cli {
     if (str.size() == 0)
       return os;
     return os << std::string_view{str.data(), str.size()};
+  }
+
+  template<char... C>
+  std::ostream &operator<<(std::ostream &os, string_constant<char, C...>) {
+    ((os << C), ...);
+    return os;
   }
 
   inline std::ostream &operator<<(std::ostream &os, const Control &ctrl) {
