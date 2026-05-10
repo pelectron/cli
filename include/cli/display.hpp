@@ -202,7 +202,7 @@ namespace cli {
     std::numeric_limits<std::size_t>::max();
 
   /**
-   * @brief The AnsiDisplay represents an ANSI compliant display. It uses an
+   * @brief The AnsiDisplay represents an ANSI display. It uses an
    * Output to write characters and supports cursor movement.
    *
    * This class satisfies the @ref cli::concepts::DisplayWithCursor
@@ -216,7 +216,9 @@ namespace cli {
   class AnsiDisplay {
   public:
     using char_type = get_output_char_type_t<Out>;
+    // this is a multiline display if NumLines is greater than one
     static constexpr bool is_multiline_display = NumLines > 1;
+    // the number of lines in the display
     static constexpr std::size_t number_of_lines = NumLines;
 
     /**
@@ -225,7 +227,8 @@ namespace cli {
      * @param output  the output
      */
     template<concepts::Output O>
-    constexpr explicit AnsiDisplay(O &&output)
+    constexpr explicit AnsiDisplay(O &&output) noexcept(
+      std::is_nothrow_constructible_v<Out, O &&>)
       : out_(std::forward<O>(output)) {}
 
     /**
@@ -240,7 +243,8 @@ namespace cli {
      * @param NLines the number of lines
      */
     template<concepts::Output O, auto NLines>
-    constexpr AnsiDisplay(O &&output, constant<NLines>)
+    constexpr AnsiDisplay(O &&output, constant<NLines>) noexcept(
+      std::is_nothrow_constructible_v<Out, O &&>)
       : out_(std::forward<O>(output)) {}
 
     /**
@@ -251,7 +255,8 @@ namespace cli {
      * @return
      */
     template<typename... Args>
-    constexpr AnsiDisplay(Args &&...args)
+    constexpr AnsiDisplay(Args &&...args) noexcept(
+      std::is_nothrow_constructible_v<Out, Args &&...>)
       : out_(std::forward<Args>(args)...) {}
 
     /**
@@ -259,7 +264,7 @@ namespace cli {
      *
      * @param c the character
      */
-    constexpr void write(char_type c) {
+    constexpr void write(char_type c) noexcept {
       if constexpr (concepts::CharOutput<Out, char_type>) {
         out_(c);
       } else {
@@ -272,7 +277,7 @@ namespace cli {
      *
      * @param s the string
      */
-    constexpr void write(View<const char_type> s) {
+    constexpr void write(View<const char_type> s) noexcept {
       if constexpr (concepts::StringOutput<Out, char_type>) {
         out_(s);
       } else {
@@ -287,13 +292,13 @@ namespace cli {
      *
      * @param n the number of characters to delete
      */
-    constexpr void backspace(std::size_t n) {
+    constexpr void backspace(std::size_t n) noexcept {
       for (std::size_t i = 0; i < n; ++i)
         write(string_constant<char_type, '\b', ' ', '\b'>{});
     }
 
     /// clears the currently displayed line
-    constexpr void clear_line() {
+    constexpr void clear_line() noexcept {
       return write(string_constant<char_type,
                                    '\x1B',
                                    '[',
@@ -306,13 +311,13 @@ namespace cli {
     }
 
     /// clears the entire screen and moves the cursor to the home position
-    constexpr void clear_screen() {
+    constexpr void clear_screen() noexcept {
       write(
         string_constant<char_type, '\x1B', '[', '2', 'J', '\x1B', '[', 'H'>{});
     }
 
     /// writes a new line
-    constexpr void newline() { write('\n'); }
+    constexpr void newline() noexcept { write('\n'); }
 
     /**
      * moves the cursor n positions to the left.
@@ -320,7 +325,7 @@ namespace cli {
      * @param n how much to move
      *e
      */
-    constexpr void cursor_left(std::size_t n) {
+    constexpr void cursor_left(std::size_t n) noexcept {
       if (n == 0)
         return;
       char_type buffer[32]{};
@@ -339,7 +344,7 @@ namespace cli {
      *
      * @param n how mch to move
      */
-    constexpr void cursor_right(std::size_t n) {
+    constexpr void cursor_right(std::size_t n) noexcept {
       if (n == 0)
         return;
       char_type buffer[32]{};

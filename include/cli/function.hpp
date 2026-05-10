@@ -67,16 +67,19 @@ namespace cli::funcs {
                           identity<T>,
                           constant<DefaultValue>,
                           P &&parse_,
-                          V &&validate_)
+                          V &&validate_) noexcept
       : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
-    constexpr FunctionArg(
-      Name, Description, constant<DefaultValue>, P &&parse_, V &&validate_)
+    constexpr FunctionArg(Name,
+                          Description,
+                          constant<DefaultValue>,
+                          P &&parse_,
+                          V &&validate_) noexcept
       : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
-    constexpr FunctionArg(Name, Description, P &&parse_, V &&validate_)
+    constexpr FunctionArg(Name, Description, P &&parse_, V &&validate_) noexcept
       : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     CLI_NO_UNIQUE_ADDRESS Name name;
@@ -141,14 +144,14 @@ namespace cli::funcs {
 
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
     constexpr FunctionArgWithoutDefault(
-      Name, Description, identity<T>, P &&parse_, V &&validate_)
+      Name, Description, identity<T>, P &&parse_, V &&validate_) noexcept
       : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     template<parse::ParserOf<T, char_type> P, validate::Validator V>
     constexpr FunctionArgWithoutDefault(Name,
                                         Description,
                                         P &&parse_,
-                                        V &&validate_)
+                                        V &&validate_) noexcept
       : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
     CLI_NO_UNIQUE_ADDRESS Name name;
@@ -202,7 +205,7 @@ namespace cli::funcs {
              parse::Parser P,
              validate::Validator V>
     constexpr auto
-    deduce_arg(const FunctionArgWithoutDefault<N, D, T, P, V> &arg) {
+    deduce_arg(const FunctionArgWithoutDefault<N, D, T, P, V> &arg) noexcept {
       using args = typename function_traits<F>::arguments;
       using arg_type = std::remove_cvref_t<type_list::type_at_t<I, args>>;
       static_assert(parse::ParserOf<P, T, typename N::char_type>);
@@ -221,7 +224,8 @@ namespace cli::funcs {
              auto DV,
              parse::Parser P,
              validate::Validator V>
-    constexpr auto deduce_arg(const FunctionArg<N, D, T, DV, P, V> &arg) {
+    constexpr auto
+    deduce_arg(const FunctionArg<N, D, T, DV, P, V> &arg) noexcept {
       using args = typename function_traits<F>::arguments;
       using arg_type = std::remove_cvref_t<type_list::type_at_t<I, args>>;
       static_assert(parse::ParserOf<P, T, typename N::char_type>);
@@ -234,7 +238,7 @@ namespace cli::funcs {
     }
 
     template<Callable F, std::size_t I, SC N, SC D>
-    constexpr auto deduce_arg(const UndeducedArg<N, D> &) {
+    constexpr auto deduce_arg(const UndeducedArg<N, D> &) noexcept {
       using args = typename function_traits<F>::arguments;
       using type = std::remove_cvref_t<type_list::type_at_t<I, args>>;
       if constexpr (std::is_same_v<D, string_constant<typename N::char_type>> or
@@ -255,7 +259,7 @@ namespace cli::funcs {
     }
 
     template<Callable F, class... Args>
-    constexpr auto deduce_args(const Args &...args) {
+    constexpr auto deduce_args(const Args &...args) noexcept {
       return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
         return std::tuple(deduce_arg<F, Is>(args)...);
       }(std::make_index_sequence<sizeof...(Args)>());
@@ -268,7 +272,7 @@ namespace cli::funcs {
              validate::Validator Validate>
     constexpr auto pretty_arg_name(
       const FunctionArgWithoutDefault<Name, Description, T, Parse, Validate>
-        &) {
+        &) noexcept {
       using CharT = typename Name::char_type;
       return Name{} + string_constant<CharT, ':', ' '>{} +
              ctti::name<T, CharT>();
@@ -282,7 +286,7 @@ namespace cli::funcs {
              validate::Validator Validate>
     constexpr auto pretty_arg_name(
       const FunctionArg<Name, Description, T, DefaultValue, Parse, Validate>
-        &) {
+        &) noexcept {
       using CharT = typename Name::char_type;
       return Name{} + string_constant<CharT, ':', ' '>{} +
              ctti::name<T, CharT>() +
@@ -291,7 +295,8 @@ namespace cli::funcs {
     }
 
     template<FuncArg A, FuncArg... As>
-    constexpr auto make_pretty_signature_name(const A &arg, const As &...args) {
+    constexpr auto make_pretty_signature_name(const A &arg,
+                                              const As &...args) noexcept {
       using CharT = typename A::char_type;
       if constexpr (sizeof...(As) == 0)
         return pretty_arg_name(arg);
@@ -301,7 +306,7 @@ namespace cli::funcs {
     }
 
     template<typename CharT, Callable F, FuncArg... Args>
-    constexpr auto pretty_signature_name(const Args &...args) {
+    constexpr auto pretty_signature_name(const Args &...args) noexcept {
       return string_constant<CharT, '('>{} +
              make_pretty_signature_name(args...) +
              string_constant<CharT, ')', '-', '>'>{} +
@@ -309,7 +314,8 @@ namespace cli::funcs {
     }
 
     template<typename CharT, Callable F, FuncArg... Args>
-    constexpr auto pretty_signature_name(const std::tuple<Args...> &args) {
+    constexpr auto
+    pretty_signature_name(const std::tuple<Args...> &args) noexcept {
       return []<std::size_t... Is>(std::index_sequence<Is...>,
                                    const std::tuple<Args...> &args_) {
         return string_constant<CharT, '('>{} +
@@ -332,7 +338,7 @@ namespace cli::funcs {
              validate::Validator Validate>
     constexpr auto parse_field_from_arg(
       const FunctionArg<Name, Description, T, DefaultValue, Parse, Validate>
-        &arg) {
+        &arg) noexcept {
       return parse::Field<typename Name::char_type, Name, DefaultValue, Parse>{
         DefaultValue, arg.parse};
     }
@@ -344,14 +350,15 @@ namespace cli::funcs {
              validate::Validator Validate>
     constexpr auto parse_field_from_arg(
       const FunctionArgWithoutDefault<Name, Description, T, Parse, Validate>
-        &arg) {
+        &arg) noexcept {
       return parse::
         FieldWithOutDefault<typename Name::char_type, Name, T, Parse>{
           T{}, arg.parse};
     }
 
     template<class... Args>
-    constexpr auto parse_field_from_args(const std::tuple<Args...> &args) {
+    constexpr auto
+    parse_field_from_args(const std::tuple<Args...> &args) noexcept {
       return [&args]<std::size_t... Is>(std::index_sequence<Is...>) {
         return std::tuple(parse_field_from_arg(std::get<Is>(args))...);
       }(std::make_index_sequence<sizeof...(Args)>{});
@@ -422,8 +429,10 @@ namespace cli::funcs {
            SC Description,
            parse::ParserOf<T, typename Name::char_type> Parse,
            validate::ValidatorOf<T> Validate>
-  constexpr auto
-  arg(Name name, Description description, Parse &&parse, Validate &&validate) {
+  constexpr auto arg(Name name,
+                     Description description,
+                     Parse &&parse,
+                     Validate &&validate) noexcept {
     (void)name;
     (void)description;
     return FunctionArg{Name{},
@@ -461,7 +470,8 @@ namespace cli::funcs {
            Id Name,
            SC Description,
            parse::ParserOf<T, typename Name::char_type> Parse>
-  constexpr auto arg(Name name, Description description, Parse &&parse) {
+  constexpr auto
+  arg(Name name, Description description, Parse &&parse) noexcept {
     (void)name;
     (void)description;
     return FunctionArg{Name{},
@@ -499,7 +509,8 @@ namespace cli::funcs {
            Id Name,
            SC Description,
            validate::ValidatorOf<T> Validate>
-  constexpr auto arg(Name name, Description description, Validate &&validate) {
+  constexpr auto
+  arg(Name name, Description description, Validate &&validate) noexcept {
     (void)name;
     (void)description;
     return FunctionArg{Name{},
@@ -531,7 +542,7 @@ namespace cli::funcs {
   */
   // clang-format on
   template<class T, auto DefaultValue, Id Name, SC Description>
-  constexpr auto arg(Name name, Description description) {
+  constexpr auto arg(Name name, Description description) noexcept {
     (void)name;
     (void)description;
     return FunctionArg{Name{},
@@ -562,7 +573,7 @@ namespace cli::funcs {
   */
   // clang-format on
   template<class T, auto DefaultValue, Id Name>
-  constexpr auto arg(Name name) {
+  constexpr auto arg(Name name) noexcept {
     (void)name;
     return FunctionArg{Name{},
                        NoDescription<typename Name::char_type>{},
@@ -600,8 +611,10 @@ namespace cli::funcs {
            SC Description,
            parse::Parser Parse,
            validate::Validator Validate>
-  constexpr auto
-  arg(Name name, Description description, Parse &&parse, Validate &&validate) {
+  constexpr auto arg(Name name,
+                     Description description,
+                     Parse &&parse,
+                     Validate &&validate) noexcept {
     (void)name;
     (void)description;
     return FunctionArg{Name{},
@@ -637,7 +650,8 @@ namespace cli::funcs {
            SC Description,
            parse::Parser Parse,
            validate::Validator Validate>
-  constexpr auto arg(Name name, Description description, Parse &&parse) {
+  constexpr auto
+  arg(Name name, Description description, Parse &&parse) noexcept {
     (void)name;
     (void)description;
     using T = parse::value_type_t<typename Name::char_type, Parse>;
@@ -674,7 +688,8 @@ namespace cli::funcs {
            Id Name,
            SC Description,
            validate::Validator Validate>
-  constexpr auto arg(Name name, Description description, Validate &&validate) {
+  constexpr auto
+  arg(Name name, Description description, Validate &&validate) noexcept {
     (void)name;
     (void)description;
     using T = validate::value_type_t<Validate>;
@@ -707,7 +722,7 @@ namespace cli::funcs {
  */
   // clang-format on
   template<auto DefaultValue, Id Name, SC Description>
-  constexpr auto arg(Name name, Description description) {
+  constexpr auto arg(Name name, Description description) noexcept {
     (void)name;
     (void)description;
     using T = std::decay_t<decltype(DefaultValue)>;
@@ -737,7 +752,7 @@ namespace cli::funcs {
  */
   // clang-format on
   template<auto DefaultValue, Id Name>
-  constexpr auto arg(Name name) {
+  constexpr auto arg(Name name) noexcept {
     (void)name;
     using T = std::decay_t<decltype(DefaultValue)>;
     return FunctionArg{Name{},
@@ -786,8 +801,10 @@ namespace cli::funcs {
            SC Description,
            parse::ParserOf<T, typename Name::char_type> Parse,
            validate::ValidatorOf<T> Validate>
-  constexpr auto
-  arg(Name name, Description description, Parse &&parse, Validate &&validate) {
+  constexpr auto arg(Name name,
+                     Description description,
+                     Parse &&parse,
+                     Validate &&validate) noexcept {
     (void)name;
     (void)description;
     return FunctionArgWithoutDefault{Name{},
@@ -817,7 +834,8 @@ namespace cli::funcs {
            Id Name,
            SC Description,
            parse::ParserOf<T, typename Name::char_type> Parse>
-  constexpr auto arg(Name name, Description description, Parse &&parse) {
+  constexpr auto
+  arg(Name name, Description description, Parse &&parse) noexcept {
     (void)name;
     (void)description;
     return FunctionArgWithoutDefault{Name{},
@@ -844,7 +862,8 @@ namespace cli::funcs {
    * @return a FunctionArg
    */
   template<class T, Id Name, SC Description, validate::ValidatorOf<T> Validate>
-  constexpr auto arg(Name name, Description description, Validate &&validate) {
+  constexpr auto
+  arg(Name name, Description description, Validate &&validate) noexcept {
     (void)name;
     (void)description;
     return FunctionArgWithoutDefault{
@@ -871,7 +890,7 @@ namespace cli::funcs {
    * @return a FunctionArg
    */
   template<class T, Id Name, SC Description>
-  constexpr auto arg(Name name, Description description) {
+  constexpr auto arg(Name name, Description description) noexcept {
     (void)name;
     (void)description;
     return FunctionArgWithoutDefault{
@@ -896,7 +915,7 @@ namespace cli::funcs {
    * @return a FunctionArg
    */
   template<class T, Id Name>
-  constexpr auto arg(Name name) {
+  constexpr auto arg(Name name) noexcept {
     (void)name;
     return FunctionArgWithoutDefault{
       Name{},
@@ -936,7 +955,7 @@ namespace cli::funcs {
    * @return a FunctionArg
    */
   template<Id Name, SC Description>
-  constexpr auto arg(Name name, Description description) {
+  constexpr auto arg(Name name, Description description) noexcept {
     (void)name;
     (void)description;
     return UndeducedArg<Name, Description>{};
@@ -956,7 +975,7 @@ namespace cli::funcs {
    * @return a FunctionArg
    */
   template<Id Name>
-  constexpr auto arg(Name name) {
+  constexpr auto arg(Name name) noexcept {
     (void)name;
     return UndeducedArg<Name, NoDescription<typename Name::char_type>>{};
   }
@@ -975,7 +994,7 @@ namespace cli::funcs {
    * @return arg(Name)
    */
   template<cli::StringLiteral Name>
-  constexpr auto operator""_arg() {
+  constexpr auto operator""_arg() noexcept {
     return arg([&]<std::size_t... Is>(std::index_sequence<Is...>) {
       return string_constant<typename decltype(Name)::char_type,
                              Name.s[Is]...>{};
@@ -1014,21 +1033,29 @@ namespace cli::funcs {
     using signature = typename traits::signature_type;
 
     template<Callable Func, FuncArg... A>
-    constexpr Function(Name, Description, Type, Func &&function, A &&...args)
+    constexpr Function(
+      Name, Description, Type, Func &&function, A &&...args) noexcept
       : func_(std::forward<Func>(function)), args_(std::forward<A>(args)...) {}
 
     template<Callable Func>
-    constexpr Function(
-      Name, Description, Type, Func &&function, const std::tuple<Args...> &args)
+    constexpr Function(Name,
+                       Description,
+                       Type,
+                       Func &&function,
+                       const std::tuple<Args...> &args) noexcept
       : func_(std::forward<Func>(function)), args_(args) {}
 
     template<Callable Func>
-    constexpr Function(
-      Name, Description, Type, Func &&function, std::tuple<Args...> &&args)
+    constexpr Function(Name,
+                       Description,
+                       Type,
+                       Func &&function,
+                       std::tuple<Args...> &&args) noexcept
       : func_(std::forward<Func>(function)), args_(std::move(args)) {}
 
     constexpr ExecResult<char_type>
-    execute(View<const char_type> args, [[maybe_unused]] View<char_type> out) {
+    execute(View<const char_type> args,
+            [[maybe_unused]] View<char_type> out) noexcept {
       using Ret = typename traits::return_type;
 
       Parser parse{dtl::parse_field_from_args(this->args_)};
@@ -1071,7 +1098,7 @@ namespace cli::funcs {
 
     template<std::size_t I, std::size_t... Is>
     static constexpr dtl::ValidateResult
-    validate(const auto &tuple, std::index_sequence<I, Is...>) {
+    validate(const auto &tuple, std::index_sequence<I, Is...>) noexcept {
       auto valid =
         typename type_list::type_at_t<I, TypeList<Args...>>::validator{}(
           std::get<I>(tuple).value);
@@ -1084,7 +1111,8 @@ namespace cli::funcs {
       }
     }
 
-    View<const char_type> help_context(View<const char_type> arg) const {
+    View<const char_type>
+    help_context(View<const char_type> arg) const noexcept {
       return get_help(arg, std::make_index_sequence<sizeof...(Args)>{});
     }
 
@@ -1096,7 +1124,7 @@ namespace cli::funcs {
              parse::Parser P,
              validate::Validator V>
     static constexpr auto
-    pretty_arg_type(const FunctionArg<N, D, T, DefaultValue, P, V> &) {
+    pretty_arg_type(const FunctionArg<N, D, T, DefaultValue, P, V> &) noexcept {
       return ctti::name<T>() +
              string_constant<typename Name::char_type, '?', ' ', '=', ' '>{} +
              ctti::dtl::value<T>::template get<DefaultValue>();
@@ -1104,14 +1132,15 @@ namespace cli::funcs {
 
     template<Id N, SC D, class T, parse::Parser P, validate::Validator V>
     static constexpr auto
-    pretty_arg_type(const FunctionArgWithoutDefault<N, D, T, P, V> &) {
+    pretty_arg_type(const FunctionArgWithoutDefault<N, D, T, P, V> &) noexcept {
       using CharT = typename Name::char_type;
       return ctti::name<T, CharT>();
     }
 
     template<std::size_t I, std::size_t... Is>
-    View<const char_type> get_help(View<const char_type> arg,
-                                   std::index_sequence<I, Is...>) const {
+    View<const char_type>
+    get_help(View<const char_type> arg,
+             std::index_sequence<I, Is...>) const noexcept {
       if (arg == std::get<I>(args_).name) {
         return string_constant<char_type, '['>{} +
                pretty_arg_type(std::get<I>(args_)) +
@@ -1152,11 +1181,12 @@ namespace cli::funcs {
     using signature = typename traits::signature_type;
 
     template<Callable Func>
-    constexpr Function(Name, Description, Type, Func &&function)
+    constexpr Function(Name, Description, Type, Func &&function) noexcept
       : func_(std::forward<Func>(function)) {}
 
     constexpr ExecResult<char_type>
-    execute(View<const char_type> args, [[maybe_unused]] View<char_type> out) {
+    execute(View<const char_type> args,
+            [[maybe_unused]] View<char_type> out) noexcept {
       using Ret = typename traits::return_type;
 
       args = parse::trim_ws(args);
@@ -1293,7 +1323,7 @@ namespace cli::funcs {
    */
   template<Id Name, SC Description, Callable F, class... Args>
   [[nodiscard]] constexpr auto
-  func(Name name, Description description, F &&f, Args &&...args) {
+  func(Name name, Description description, F &&f, Args &&...args) noexcept {
     (void)name;
     (void)description;
     static_assert(
@@ -1348,7 +1378,7 @@ namespace cli::funcs {
    * @return
    */
   template<Id Name, Callable F, class... Args>
-  [[nodiscard]] constexpr auto func(Name name, F &&f, Args &&...args) {
+  [[nodiscard]] constexpr auto func(Name name, F &&f, Args &&...args) noexcept {
     (void)name;
     static_assert(
       type_list::list_size_v<typename function_traits<F>::arguments> ==
@@ -1394,7 +1424,7 @@ namespace cli::funcs {
   template<Callable F, SC Description, class... Args>
     requires(not std::is_pointer_v<std::decay_t<F>>)
   [[nodiscard]] constexpr auto
-  func(F &&f, Description description, Args &&...args) {
+  func(F &&f, Description description, Args &&...args) noexcept {
     (void)description;
     static_assert(
       type_list::list_size_v<typename function_traits<F>::arguments> ==
@@ -1436,7 +1466,7 @@ namespace cli::funcs {
    */
   template<Callable F, class... Args>
     requires(not std::is_pointer_v<std::decay_t<F>>)
-  [[nodiscard]] constexpr auto func(F &&f, Args &&...args) {
+  [[nodiscard]] constexpr auto func(F &&f, Args &&...args) noexcept {
     // TODO: check that each args char_type if char, or extract the args
     // char_type
     static_assert(
@@ -1494,7 +1524,7 @@ namespace cli::funcs {
                                     Description description,
                                     T &t,
                                     MemberFunctionPointer mem_fun,
-                                    Args &&...args) {
+                                    Args &&...args) noexcept {
     (void)name;
     (void)description;
     static_assert(
@@ -1562,7 +1592,7 @@ namespace cli::funcs {
                                     Description description,
                                     const T &t,
                                     MemberFunctionPointer mem_fun,
-                                    Args &&...args) {
+                                    Args &&...args) noexcept {
     (void)name;
     (void)description;
     static_assert(
@@ -1619,8 +1649,10 @@ namespace cli::funcs {
   template<Id Name, class T, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer> and
              (not function_traits<MemberFunctionPointer>::is_const)
-  [[nodiscard]] constexpr auto
-  func(Name name, T &t, MemberFunctionPointer mem_fun, Args &&...args) {
+  [[nodiscard]] constexpr auto func(Name name,
+                                    T &t,
+                                    MemberFunctionPointer mem_fun,
+                                    Args &&...args) noexcept {
     return func(name,
                 NoDescription<typename Name::char_type>{},
                 t,
@@ -1653,8 +1685,10 @@ namespace cli::funcs {
   template<Id Name, class T, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer> and
              function_traits<MemberFunctionPointer>::is_const
-  [[nodiscard]] constexpr auto
-  func(Name name, const T &t, MemberFunctionPointer mem_fun, Args &&...args) {
+  [[nodiscard]] constexpr auto func(Name name,
+                                    const T &t,
+                                    MemberFunctionPointer mem_fun,
+                                    Args &&...args) noexcept {
     return func(name,
                 NoDescription<typename Name::char_type>{},
                 t,
@@ -1799,7 +1833,7 @@ namespace cli::funcs {
   [[nodiscard]] constexpr auto func(Name name,
                                     Description description,
                                     MemberFunctionPointer mem_fun,
-                                    Args &&...args) {
+                                    Args &&...args) noexcept {
     (void)name;
     (void)description;
     if constexpr (sizeof...(Args) > 0) {
@@ -1858,7 +1892,7 @@ namespace cli::funcs {
   template<Id Name, class MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<MemberFunctionPointer>
   [[nodiscard]] constexpr auto
-  func(Name name, MemberFunctionPointer mem_fun, Args &&...args) {
+  func(Name name, MemberFunctionPointer mem_fun, Args &&...args) noexcept {
     (void)name;
     if constexpr (sizeof...(Args) > 0) {
       constexpr auto deduced_args =
@@ -1922,7 +1956,8 @@ namespace cli::funcs {
    */
   template<auto MemberFunctionPointer, SC Description, class... Args>
     requires std::is_member_function_pointer_v<decltype(MemberFunctionPointer)>
-  [[nodiscard]] constexpr auto func(Description description, Args &&...args) {
+  [[nodiscard]] constexpr auto func(Description description,
+                                    Args &&...args) noexcept {
     (void)description;
     if constexpr (sizeof...(Args) > 0) {
       constexpr auto deduced_args =
@@ -1986,7 +2021,7 @@ namespace cli::funcs {
    */
   template<auto MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<decltype(MemberFunctionPointer)>
-  [[nodiscard]] constexpr auto func(Args &&...args) {
+  [[nodiscard]] constexpr auto func(Args &&...args) noexcept {
     if constexpr (sizeof...(Args) > 0) {
       using CharT = typename type_list::
         type_at_t<0, type_list::TypeList<Args...>>::name::char_type;
@@ -2021,7 +2056,7 @@ namespace cli::funcs {
     constexpr auto
     to_cmd(T &obj,
            const MemberFunction<Name, Description, Help, F, Args...>
-             &member_function) {
+             &member_function) noexcept {
       if constexpr (sizeof...(Args) == 0)
         return Function(
           Name{}, Description{}, Help{}, MemFunBinder(obj, member_function.f));
@@ -2040,7 +2075,7 @@ namespace cli::funcs {
     constexpr auto
     to_cmd(const T &obj,
            const MemberFunction<Name, Description, Help, F, Args...>
-             &member_function) {
+             &member_function) noexcept {
       if constexpr (sizeof...(Args) == 0)
         return Function(
           Name{}, Description{}, Help{}, MemFunBinder(obj, member_function.f));

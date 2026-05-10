@@ -90,11 +90,11 @@ namespace cli::validate {
    */
   template<class T>
   struct DefaultValidate {
-    constexpr bool operator()(const T &) const { return true; }
+    constexpr bool operator()(const T &) const noexcept { return true; }
   };
 
   struct NullValidate {
-    constexpr bool operator()(const dummy &) const { return true; }
+    constexpr bool operator()(const dummy &) const noexcept { return true; }
   };
 } // namespace cli::validate
 #endif

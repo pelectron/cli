@@ -20,8 +20,8 @@ namespace cli {
     template<bool MutliLineDisplay>
     struct CommandEntered {
       bool value{false};
-      constexpr operator bool() { return value; }
-      constexpr CommandEntered &operator=(bool v) {
+      constexpr operator bool() noexcept { return value; }
+      constexpr CommandEntered &operator=(bool v) noexcept {
         value = v;
         return *this;
       }
@@ -29,14 +29,14 @@ namespace cli {
 
     template<>
     struct CommandEntered<true> {
-      constexpr CommandEntered(bool) {}
-      constexpr operator bool() { return false; }
-      constexpr CommandEntered &operator=(bool) { return *this; }
+      constexpr CommandEntered(bool) noexcept {}
+      constexpr operator bool() noexcept { return false; }
+      constexpr CommandEntered &operator=(bool) noexcept { return *this; }
     };
 
     template<class Index, class Display>
     constexpr Error
-    cursor_left(Index &cursor_, Display &display_, std::size_t n) {
+    cursor_left(Index &cursor_, Display &display_, std::size_t n) noexcept {
       if (cursor_ == 0)
         return Error::none;
       if (n >= cursor_)
@@ -50,7 +50,7 @@ namespace cli {
     constexpr Error cursor_right(auto &cursor_,
                                  Index &size_,
                                  Display &display_,
-                                 std::size_t n) {
+                                 std::size_t n) noexcept {
       if (cursor_ == size_)
         return Error::none;
       if (n + cursor_ > size_)
@@ -65,7 +65,7 @@ namespace cli {
                                  Index &cursor_,
                                  Index &size_,
                                  Display &display_,
-                                 View<const CharT> s) {
+                                 View<const CharT> s) noexcept {
       if (s.size() == 0)
         return Error::none;
 
@@ -108,7 +108,7 @@ namespace cli {
                             Index &size_,
                             Display &display_,
                             auto &command_entered_,
-                            CharT c) {
+                            CharT c) noexcept {
       if (size_ == Cfg::max_line_length)
         return Error::buffer_overflow;
 
@@ -130,7 +130,7 @@ namespace cli {
                               Index &cursor_,
                               Index &size_,
                               Display &display_,
-                              std::size_t n) {
+                              std::size_t n) noexcept {
       if (cursor_ == 0)
         return Error::none;
       else if (cursor_ == size_) {
@@ -173,8 +173,10 @@ namespace cli {
     }
 
     template<class CharT, class Display>
-    constexpr Error
-    delete_char(CharT *data_, auto &cursor_, auto &size_, Display &display_) {
+    constexpr Error delete_char(CharT *data_,
+                                auto &cursor_,
+                                auto &size_,
+                                Display &display_) noexcept {
       if (cursor_ == size_)
         return Error::none;
 
@@ -203,7 +205,7 @@ namespace cli {
 
     template<class Display>
     constexpr Error
-    clear_line_to_end(auto &cursor_, auto &size_, Display &display_) {
+    clear_line_to_end(auto &cursor_, auto &size_, Display &display_) noexcept {
       if (cursor_ == size_) {
         return Error::none;
       }
@@ -224,7 +226,7 @@ namespace cli {
     constexpr Error clear_line_to_begin(CharT *data_,
                                         auto &cursor_,
                                         auto &size_,
-                                        Display &display_) {
+                                        Display &display_) noexcept {
       if (cursor_ == 0)
         return Error::none;
       if (cursor_ == size_) {
@@ -255,7 +257,7 @@ namespace cli {
                        [[maybe_unused]] Line &line,
                        const CharT *data_,
                        Index size_,
-                       Display &display_) {
+                       Display &display_) noexcept {
       if constexpr (cli::is_multiline_display_v<Display>) {
         display_.newline();
       }
@@ -566,7 +568,7 @@ namespace cli {
                   auto &root_,
                   Display &display_,
                   auto &command_entered_,
-                  const View<CharT> &out) {
+                  const View<CharT> &out) noexcept {
       command_entered_ = true;
       // parse the input
       SplitResult res =
@@ -622,10 +624,10 @@ namespace cli {
     Display &display_;
 
   public:
-    constexpr Line(const CommandNode<CharT> &root, Display &display)
+    constexpr Line(const CommandNode<CharT> &root, Display &display) noexcept
       : root_(root), display_(display) {}
 
-    constexpr Error on_char(CharT c) {
+    constexpr Error on_char(CharT c) noexcept {
       if (size_ == Cfg::max_line_length)
         return Error::buffer_overflow;
 
@@ -643,7 +645,7 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error on_backspace(std::size_t n = 1) {
+    constexpr Error on_backspace(std::size_t n = 1) noexcept {
       if (n >= size_) {
         size_ = 0;
         display_.clear_line();
@@ -654,9 +656,9 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error on_autocomplete() { return Error::none; }
+    constexpr Error on_autocomplete() noexcept { return Error::none; }
 
-    constexpr Error set_data(View<const CharT> s) {
+    constexpr Error set_data(View<const CharT> s) noexcept {
       if (s.size() > Cfg::max_line_length)
         return Error::buffer_overflow;
 
@@ -674,36 +676,38 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error clear() {
+    constexpr Error clear() noexcept {
       size_ = 0;
       display_.clear_line();
       return Error::none;
     }
 
-    constexpr Error on_delete_char() { return Error::none; }
+    constexpr Error on_delete_char() noexcept { return Error::none; }
 
-    constexpr Error on_cursor_left(std::size_t) { return Error::none; }
+    constexpr Error on_cursor_left(std::size_t) noexcept { return Error::none; }
 
-    constexpr Error on_cursor_right(std::size_t) { return Error::none; }
+    constexpr Error on_cursor_right(std::size_t) noexcept {
+      return Error::none;
+    }
 
-    constexpr Error on_clear_line_to_end() { return Error::none; }
+    constexpr Error on_clear_line_to_end() noexcept { return Error::none; }
 
-    constexpr Error on_clear_line_to_begin() { return clear(); }
+    constexpr Error on_clear_line_to_begin() noexcept { return clear(); }
 
-    constexpr Error on_clear_screen() {
+    constexpr Error on_clear_screen() noexcept {
       size_ = 0;
       display_.clear_screen();
       return Error::none;
     }
 
-    constexpr View<const CharT> view() const { return {data_, size_}; }
+    constexpr View<const CharT> view() const noexcept { return {data_, size_}; }
 
-    constexpr Error execute(View<CharT> &out) {
+    constexpr Error execute(View<CharT> &out) noexcept {
       return dtl::execute<Cfg>(
         *this, data_, size_, root_, display_, command_entered_, out);
     }
 
-    constexpr void reset() {
+    constexpr void reset() noexcept {
       command_entered_ = false;
       size_ = 0;
     }
@@ -729,10 +733,10 @@ namespace cli {
     Display &display_;
 
   public:
-    constexpr Line(const CommandNode<CharT> &root, Display &display)
+    constexpr Line(const CommandNode<CharT> &root, Display &display) noexcept
       : command_(&root), root_(root), display_(display) {}
 
-    constexpr Error on_char(CharT c) {
+    constexpr Error on_char(CharT c) noexcept {
       if (size_ == Cfg::max_line_length)
         return Error::buffer_overflow;
 
@@ -816,7 +820,7 @@ namespace cli {
       }
     }
 
-    constexpr void reset() {
+    constexpr void reset() noexcept {
       command_entered_ = false;
       size_ = 0;
       command_ = &root_;
@@ -824,13 +828,13 @@ namespace cli {
       last_access_separator_ = max_index;
     }
 
-    constexpr Error clear() {
+    constexpr Error clear() noexcept {
       reset();
       display_.clear_line();
       return Error::none;
     }
 
-    constexpr Error on_backspace(std::size_t n = 1) {
+    constexpr Error on_backspace(std::size_t n = 1) noexcept {
       if (n >= size_) {
         return clear();
       }
@@ -852,7 +856,7 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error on_autocomplete() {
+    constexpr Error on_autocomplete() noexcept {
       if (start_of_args_ < size_)
         return Error::none;
 
@@ -883,7 +887,7 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error set_data(View<const CharT> string) {
+    constexpr Error set_data(View<const CharT> string) noexcept {
       if (string.size() > Cfg::max_line_length)
         return Error::buffer_overflow;
 
@@ -952,17 +956,19 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error on_delete_char() { return Error::none; }
+    constexpr Error on_delete_char() noexcept { return Error::none; }
 
-    constexpr Error on_cursor_left(std::size_t) { return Error::none; }
+    constexpr Error on_cursor_left(std::size_t) noexcept { return Error::none; }
 
-    constexpr Error on_cursor_right(std::size_t) { return Error::none; }
+    constexpr Error on_cursor_right(std::size_t) noexcept {
+      return Error::none;
+    }
 
-    constexpr Error on_clear_line_to_end() { return Error::none; }
+    constexpr Error on_clear_line_to_end() noexcept { return Error::none; }
 
-    constexpr Error on_clear_line_to_begin() { return clear(); }
+    constexpr Error on_clear_line_to_begin() noexcept { return clear(); }
 
-    constexpr Error on_clear_screen() {
+    constexpr Error on_clear_screen() noexcept {
       size_ = 0;
       command_ = &root_;
       start_of_args_ = max_index;
@@ -971,9 +977,9 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr View<const CharT> view() const { return {data_, size_}; }
+    constexpr View<const CharT> view() const noexcept { return {data_, size_}; }
 
-    constexpr Error execute(View<CharT> &out) {
+    constexpr Error execute(View<CharT> &out) noexcept {
       command_entered_ = true;
       // execute the command
       ExecResult<CharT> exec_result =
@@ -1008,21 +1014,21 @@ namespace cli {
     Display &display_;
 
   public:
-    constexpr Line(const CommandNode<CharT> &root, Display &display)
+    constexpr Line(const CommandNode<CharT> &root, Display &display) noexcept
       : root_(root), display_(display) {}
 
-    constexpr Error on_char(CharT c) {
+    constexpr Error on_char(CharT c) noexcept {
       return dtl::on_char<Cfg>(
         data_, cursor_, size_, display_, command_entered_, c);
     }
 
-    constexpr Error on_backspace(std::size_t n = 1) {
+    constexpr Error on_backspace(std::size_t n = 1) noexcept {
       return dtl::backspace(data_, cursor_, size_, display_, n);
     }
 
-    constexpr Error on_autocomplete() { return Error::none; }
+    constexpr Error on_autocomplete() noexcept { return Error::none; }
 
-    constexpr Error set_data(View<const CharT> s) {
+    constexpr Error set_data(View<const CharT> s) noexcept {
       if (s.size() > Cfg::max_line_length)
         return Error::buffer_overflow;
 
@@ -1038,48 +1044,48 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr void reset() {
+    constexpr void reset() noexcept {
       command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
     }
 
-    constexpr Error clear() {
+    constexpr Error clear() noexcept {
       reset();
       display_.clear_line();
       return Error::none;
     }
 
-    constexpr Error on_delete_char() {
+    constexpr Error on_delete_char() noexcept {
       return dtl::delete_char(data_, cursor_, size_, display_);
     }
 
-    constexpr Error on_cursor_left(std::size_t n) {
+    constexpr Error on_cursor_left(std::size_t n) noexcept {
       return dtl::cursor_left(cursor_, display_, n);
     }
 
-    constexpr Error on_cursor_right(std::size_t n) {
+    constexpr Error on_cursor_right(std::size_t n) noexcept {
       return dtl::cursor_right(cursor_, size_, display_, n);
     }
 
-    constexpr Error on_clear_line_to_end() {
+    constexpr Error on_clear_line_to_end() noexcept {
       return dtl::clear_line_to_end(cursor_, size_, display_);
     }
 
-    constexpr Error on_clear_line_to_begin() {
+    constexpr Error on_clear_line_to_begin() noexcept {
       return dtl::clear_line_to_begin(data_, cursor_, size_, display_);
     }
 
-    constexpr Error on_clear_screen() {
+    constexpr Error on_clear_screen() noexcept {
       size_ = 0;
       cursor_ = 0;
       display_.clear_screen();
       return Error::none;
     }
 
-    constexpr View<const CharT> view() const { return {data_, size_}; }
+    constexpr View<const CharT> view() const noexcept { return {data_, size_}; }
 
-    constexpr Error execute(View<CharT> &out) {
+    constexpr Error execute(View<CharT> &out) noexcept {
       Error e = dtl::execute<Cfg>(
         *this, data_, size_, root_, display_, command_entered_, out);
       cursor_ = 0;
@@ -1103,19 +1109,19 @@ namespace cli {
     Display &display_;
 
   public:
-    constexpr Line(const CommandNode<CharT> &root, Display &display)
+    constexpr Line(const CommandNode<CharT> &root, Display &display) noexcept
       : root_(root), display_(display) {}
 
-    constexpr Error on_char(CharT c) {
+    constexpr Error on_char(CharT c) noexcept {
       return dtl::on_char<Cfg>(
         data_, cursor_, size_, display_, command_entered_, c);
     }
 
-    constexpr Error on_backspace(std::size_t n = 1) {
+    constexpr Error on_backspace(std::size_t n = 1) noexcept {
       return dtl::backspace(data_, cursor_, size_, display_, n);
     }
 
-    constexpr Error on_autocomplete() {
+    constexpr Error on_autocomplete() noexcept {
       CLI_ASSERT(root_.subcommand);
 
       if (size_ == 0)
@@ -1151,7 +1157,7 @@ namespace cli {
       }
     }
 
-    constexpr Error set_data(View<const CharT> string) {
+    constexpr Error set_data(View<const CharT> string) noexcept {
       if (string.size() > Cfg::max_line_length)
         return Error::buffer_overflow;
 
@@ -1167,13 +1173,13 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr void reset() {
+    constexpr void reset() noexcept {
       command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
     }
 
-    constexpr Error clear() {
+    constexpr Error clear() noexcept {
       command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
@@ -1181,27 +1187,27 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error on_delete_char() {
+    constexpr Error on_delete_char() noexcept {
       return dtl::delete_char(data_, cursor_, size_, display_);
     }
 
-    constexpr Error on_cursor_left(std::size_t n) {
+    constexpr Error on_cursor_left(std::size_t n) noexcept {
       return dtl::cursor_left(cursor_, display_, n);
     }
 
-    constexpr Error on_cursor_right(std::size_t n) {
+    constexpr Error on_cursor_right(std::size_t n) noexcept {
       return dtl::cursor_right(cursor_, size_, display_, n);
     }
 
-    constexpr Error on_clear_line_to_end() {
+    constexpr Error on_clear_line_to_end() noexcept {
       return dtl::clear_line_to_end(cursor_, size_, display_);
     }
 
-    constexpr Error on_clear_line_to_begin() {
+    constexpr Error on_clear_line_to_begin() noexcept {
       return dtl::clear_line_to_begin(data_, cursor_, size_, display_);
     }
 
-    constexpr Error on_clear_screen() {
+    constexpr Error on_clear_screen() noexcept {
       command_entered_ = false;
       size_ = 0;
       cursor_ = 0;
@@ -1209,9 +1215,9 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr View<const CharT> view() const { return {data_, size_}; }
+    constexpr View<const CharT> view() const noexcept { return {data_, size_}; }
 
-    constexpr Error execute(View<CharT> &out) {
+    constexpr Error execute(View<CharT> &out) noexcept {
       Error e = dtl::execute<Cfg>(
         *this, data_, size_, root_, display_, command_entered_, out);
       cursor_ = 0;
@@ -1219,7 +1225,7 @@ namespace cli {
     }
 
   private:
-    constexpr View<const CharT> get_cursor_name() {
+    constexpr View<const CharT> get_cursor_name() noexcept {
       // find left border
       std::size_t left = 0;
       for (std::size_t i = cursor_; i < size_; --i) {
@@ -1231,7 +1237,7 @@ namespace cli {
       return {data_ + left, data_ + cursor_};
     }
 
-    constexpr View<const CharT> get_full_cursor_name() {
+    constexpr View<const CharT> get_full_cursor_name() noexcept {
       auto is_term_char = [](CharT c) {
         return c == Cfg::access_separator or c == ' ' or c == '(' or c == '=';
       };
@@ -1257,12 +1263,12 @@ namespace cli {
       }
       return {data_ + left, data_ + right};
     }
-    constexpr Error write(View<const CharT> string) {
+    constexpr Error write(View<const CharT> string) noexcept {
       return dtl::insert_write<Cfg::max_line_length>(
         data_, cursor_, size_, display_, string);
     }
 
-    constexpr Error autocomplete_at_end(View<const CharT> cmd_name) {
+    constexpr Error autocomplete_at_end(View<const CharT> cmd_name) noexcept {
       const std::size_t last_access_separator =
         cmd_name.find_last_of(Cfg::access_separator);
       const View name = cmd_name.substr(0, last_access_separator);
@@ -1320,7 +1326,7 @@ namespace cli {
     }
 
     constexpr Error
-    autocomplete_after_access_separator(View<const CharT> cmd_name) {
+    autocomplete_after_access_separator(View<const CharT> cmd_name) noexcept {
       // there is a name under the cursor
       View cursor_name = get_full_cursor_name();
       View name = cmd_name.substr(0, cursor_ - 1);
@@ -1355,7 +1361,7 @@ namespace cli {
     }
 
     constexpr Error
-    autocomplete_on_access_separator(View<const CharT> cmd_name) {
+    autocomplete_on_access_separator(View<const CharT> cmd_name) noexcept {
       const CommandNode<CharT> *parent = &root_;
       std::size_t begin = 0;
       std::size_t end = cmd_name.find_first_of(Cfg::access_separator);
@@ -1408,7 +1414,8 @@ namespace cli {
       return write(node->name.substr(cmdlet.size()));
     }
 
-    constexpr Error autocomplete_in_middle(View<const CharT> cmd_name) {
+    constexpr Error
+    autocomplete_in_middle(View<const CharT> cmd_name) noexcept {
       const CommandNode<CharT> *parent = &root_;
       std::size_t begin = 0;
       std::size_t end = cmd_name.find_first_of(Cfg::access_separator);

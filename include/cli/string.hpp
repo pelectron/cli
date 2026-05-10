@@ -14,7 +14,7 @@ namespace cli {
     static constexpr std::size_t npos = std::numeric_limits<std::size_t>::max();
 
     template<typename CharT>
-    constexpr std::size_t strlen(const CharT *s) {
+    constexpr std::size_t strlen(const CharT *s) noexcept {
       if (not s)
         return 0;
 
@@ -29,7 +29,7 @@ namespace cli {
     constexpr bool op_equal(const CharT *str,
                             std::size_t size,
                             const CharT *other_str,
-                            std::size_t other_size) {
+                            std::size_t other_size) noexcept {
       if (other_size != size)
         return false;
       if (str == nullptr and other_str == nullptr)
@@ -44,7 +44,7 @@ namespace cli {
     constexpr bool op_less_than(const CharT *str,
                                 std::size_t size,
                                 const CharT *other_str,
-                                std::size_t other_size) {
+                                std::size_t other_size) noexcept {
 
       const auto s = size > other_size ? other_size : size;
       for (std::size_t i = 0; i < s; ++i)
@@ -67,7 +67,7 @@ namespace cli {
     constexpr bool op_greater_than(const CharT *str,
                                    std::size_t size,
                                    const CharT *other_str,
-                                   std::size_t other_size) {
+                                   std::size_t other_size) noexcept {
       const auto s = std::min(size, other_size);
       for (std::size_t i = 0; i < s; ++i)
         if (str[i] == other_str[i])
@@ -89,7 +89,7 @@ namespace cli {
     constexpr bool starts_with(const CharT *str,
                                std::size_t size,
                                const CharT *other_str,
-                               std::size_t other_size) {
+                               std::size_t other_size) noexcept {
       if (size < other_size or other_size == 0)
         return false;
       for (std::size_t i = 0; i < other_size; ++i)
@@ -103,7 +103,7 @@ namespace cli {
                                         std::size_t size,
                                         const CharT *other_str,
                                         std::size_t other_size,
-                                        std::size_t pos) {
+                                        std::size_t pos) noexcept {
       for (std::size_t i = pos; i < size; ++i)
         for (std::size_t j = 0; j < other_size; ++j)
           if (other_str[j] == str[i])
@@ -116,7 +116,7 @@ namespace cli {
                                             std::size_t size,
                                             const CharT *other_str,
                                             std::size_t other_size,
-                                            std::size_t pos) {
+                                            std::size_t pos) noexcept {
       for (std::size_t i = pos; i < size; ++i) {
         std::size_t cnt{0};
         for (std::size_t j = 0; j < other_size; ++j) {
@@ -137,7 +137,7 @@ namespace cli {
                                        std::size_t size,
                                        const CharT *other_str,
                                        std::size_t other_size,
-                                       std::size_t pos) {
+                                       std::size_t pos) noexcept {
       if (size == 0)
         return npos;
 
@@ -150,8 +150,10 @@ namespace cli {
     }
 
     template<typename CharT>
-    constexpr std::size_t
-    find(const CharT *str, std::size_t size, CharT c, std::size_t pos) {
+    constexpr std::size_t find(const CharT *str,
+                               std::size_t size,
+                               CharT c,
+                               std::size_t pos) noexcept {
       for (std::size_t i = pos; i < size; ++i)
         if (c == str[i])
           return i;
@@ -163,7 +165,7 @@ namespace cli {
                                std::size_t size,
                                const CharT *other_str,
                                std::size_t other_size,
-                               std::size_t pos) {
+                               std::size_t pos) noexcept {
       for (std::size_t i = pos; i < size; ++i)
         for (std::size_t j = 0; (i + other_size) <= size and j < other_size;
              ++j)
@@ -179,7 +181,7 @@ namespace cli {
                                            std::size_t size,
                                            const CharT *other_str,
                                            std::size_t other_size,
-                                           std::size_t pos) {
+                                           std::size_t pos) noexcept {
       if (size == 0)
         return npos;
 
@@ -194,7 +196,7 @@ namespace cli {
     constexpr std::size_t find_last_not_of(const CharT *str,
                                            std::size_t size,
                                            CharT c,
-                                           std::size_t pos) {
+                                           std::size_t pos) noexcept {
       if (size == 0)
         return npos;
 
@@ -443,25 +445,25 @@ namespace cli {
 
   template<typename CharT, CharT... C1, CharT... C2>
   constexpr bool operator==(const string_constant<CharT, C1...> &,
-                            const string_constant<CharT, C2...> &) {
+                            const string_constant<CharT, C2...> &) noexcept {
     return false;
   }
 
   template<typename CharT, CharT... Cs>
   constexpr bool operator==(const string_constant<CharT, Cs...> &,
-                            const string_constant<CharT, Cs...> &) {
+                            const string_constant<CharT, Cs...> &) noexcept {
     return true;
   }
 
   template<typename CharT, CharT... C1, CharT... C2>
   constexpr bool operator!=(const string_constant<CharT, C1...> &,
-                            const string_constant<CharT, C2...> &) {
+                            const string_constant<CharT, C2...> &) noexcept {
     return true;
   }
 
   template<typename CharT, CharT... Cs>
   constexpr bool operator!=(const string_constant<CharT, Cs...> &,
-                            const string_constant<CharT, Cs...> &) {
+                            const string_constant<CharT, Cs...> &) noexcept {
     return false;
   }
 
@@ -476,28 +478,28 @@ namespace cli {
   struct StringLiteral {
     using char_type = CharT;
     CharT s[N]{0};
-    constexpr StringLiteral(CharT const (&p)[N]) {
+    constexpr StringLiteral(CharT const (&p)[N]) noexcept {
       for (std::size_t i = 0; i < N; ++i) {
         s[i] = p[i];
       }
     }
 
-    constexpr StringLiteral(const auto... cs)
+    constexpr StringLiteral(const auto... cs) noexcept
       requires(std::same_as<decltype(cs), CharT> && ...)
       : s{cs..., 0} {}
 
     template<CharT... Cs>
-    constexpr StringLiteral(string_constant<CharT, Cs...>)
+    constexpr StringLiteral(string_constant<CharT, Cs...>) noexcept
       : s{Cs..., 0} {}
 
-    constexpr StringLiteral(View<CharT> str) {
+    constexpr StringLiteral(View<CharT> str) noexcept {
       CLI_ASSERT(str.size() < N);
       for (std::size_t i = 0; i < str.size(); ++i)
         s[i] = str[i];
     }
 
     template<class T>
-    constexpr operator T() const {
+    constexpr operator T() const noexcept {
       if constexpr (N == 1)
         return T();
       else
@@ -516,7 +518,7 @@ namespace cli {
     operator[](std::size_t i) const noexcept {
       return s[i];
     }
-    constexpr void clear() {
+    constexpr void clear() noexcept {
       for (auto &ch : s)
         ch = 0;
     }

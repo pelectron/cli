@@ -38,22 +38,22 @@ namespace cli {
   public:
     constexpr Event() {}
 
-    constexpr Event(CharT c)
+    constexpr Event(CharT c) noexcept
       : type_(Control::character), payload_{c} {}
 
-    constexpr Event(Control type)
+    constexpr Event(Control type) noexcept
       : type_{type}, payload_{0} {}
 
-    constexpr Event(Control type, std::uint8_t param)
+    constexpr Event(Control type, std::uint8_t param) noexcept
       : type_{type}, payload_{static_cast<CharT>(param)} {}
 
-    constexpr Event(const Event &o)
+    constexpr Event(const Event &o) noexcept
       : type_(o.type_), payload_(o.payload_) {}
 
     // Event(const volatile Event &o)
     //   : type_(o.type_), payload_(o.payload_) {}
 
-    constexpr Event &operator=(const Event &o) {
+    constexpr Event &operator=(const Event &o) noexcept {
       type_ = o.type_;
       payload_ = o.payload_;
       return *this;
@@ -65,29 +65,29 @@ namespace cli {
     //   return *this;
     // }
 
-    volatile Event &operator=(const volatile Event &o) volatile {
+    volatile Event &operator=(const volatile Event &o) volatile noexcept {
       type_ = o.type_;
       payload_ = o.payload_;
       return *this;
     }
 
-    constexpr Control type() const { return type_; }
+    constexpr Control type() const noexcept { return type_; }
 
-    constexpr CharT as_char() const {
+    constexpr CharT as_char() const noexcept {
       CLI_ASSERT(type_ == Control::character);
       return payload_;
     }
 
-    constexpr std::uint8_t param() const { return payload_; }
+    constexpr std::uint8_t param() const noexcept { return payload_; }
 
-    Control type() const volatile { return type_; }
+    Control type() const volatile noexcept { return type_; }
 
-    CharT as_char() const volatile {
+    CharT as_char() const volatile noexcept {
       CLI_ASSERT(type_ == Control::character);
       return payload_;
     }
 
-    std::uint8_t param() const volatile { return payload_; }
+    std::uint8_t param() const volatile noexcept { return payload_; }
 
   private:
     Control type_{};

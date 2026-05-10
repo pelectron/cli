@@ -19,7 +19,7 @@ namespace cli {
     std::size_t size_{};
     std::size_t capacity_{};
 
-    constexpr T *incr(T *p) {
+    constexpr T *incr(T *p) noexcept {
       ++p;
       if (p == (arr_ + capacity_))
         return arr_;
@@ -36,7 +36,7 @@ namespace cli {
      * @param arr start of the array
      * @param capacity the size of the array
      */
-    constexpr RingBufView(T *arr, std::size_t capacity)
+    constexpr RingBufView(T *arr, std::size_t capacity) noexcept
       : arr_(arr), head(arr_), tail(arr_), size_(0), capacity_(capacity) {}
 
     /**
@@ -52,22 +52,24 @@ namespace cli {
     /**
      * returns the number of elements stored
      */
-    constexpr std::size_t size() const { return size_; }
+    constexpr std::size_t size() const noexcept { return size_; }
 
     /**
      * returns capacity() - size()
      */
-    constexpr std::size_t remaining_size() const { return capacity_ - size_; }
+    constexpr std::size_t remaining_size() const noexcept {
+      return capacity_ - size_;
+    }
 
     /**
      * returns the maximum amount of elements that can be stored
      */
-    constexpr std::size_t capacity() const { return capacity_; }
+    constexpr std::size_t capacity() const noexcept { return capacity_; }
 
     /**
      * empties the buffer
      */
-    constexpr void clear() {
+    constexpr void clear() noexcept {
       head = arr_;
       tail = arr_;
       size_ = 0;
@@ -80,7 +82,7 @@ namespace cli {
      * @return true if the operation succeded. If the buffer was full, false is
      * returned.
      */
-    constexpr bool push_back(const value_type &t) {
+    constexpr bool push_back(const value_type &t) noexcept {
       if (size_ == capacity_)
         return false;
       *head = t;
@@ -96,7 +98,7 @@ namespace cli {
      * @return true if the operation succeded. If the buffer was full, false is
      * returned.
      */
-    constexpr bool push_back(value_type &&t) {
+    constexpr bool push_back(value_type &&t) noexcept {
       if (size_ == capacity_)
         return false;
       *head = std::move(t);
@@ -106,29 +108,12 @@ namespace cli {
     }
 
     /**
-     * removes elements from the back
-     *
-     * @param n the number of elements to remove
-     */
-    // constexpr void remove_last(std::size_t n) {
-    //   if (n > size_)
-    //     n = size_;
-    //
-    //   if (head - arr_ >= n) {
-    //     head -= n;
-    //   } else {
-    //     n -= head - arr_;
-    //     head = arr_ + capacity_ - n;
-    //   }
-    // }
-
-    /**
      * removes an element from the front.
      *
      * @param t where to put the value that is popped
      * @return true if a value could be popped, else false.
      */
-    constexpr bool pop(value_type &t) {
+    constexpr bool pop(value_type &t) noexcept {
       if (size_ == 0)
         return false;
       t = *tail;
@@ -136,19 +121,6 @@ namespace cli {
       tail = incr(tail);
       return true;
     }
-
-    struct write_iterator {
-      RingBufView *owner;
-      T t{};
-      constexpr T &operator*() { return t; }
-      constexpr write_iterator &operator++() {
-        owner->push_back(t);
-        t = {};
-        return *this;
-      }
-    };
-
-    constexpr write_iterator output() { return {this, 0}; }
   };
 
   template<typename T>
@@ -172,7 +144,7 @@ namespace cli {
   public:
     using value_type = T;
 
-    RingBufView(volatile T *arr, std::size_t capacity)
+    RingBufView(volatile T *arr, std::size_t capacity) noexcept
       : arr_(arr), head(arr_), tail(arr_), size_(0), capacity_(capacity) {}
 
     /**
@@ -188,17 +160,17 @@ namespace cli {
     /**
      * returns the number of elements stored
      */
-    std::size_t size() const { return size_; }
+    std::size_t size() const noexcept { return size_; }
 
     /**
      * returns the maximum amount of elements that can be stored
      */
-    std::size_t capacity() const { return capacity_; }
+    std::size_t capacity() const noexcept { return capacity_; }
 
     /**
      * empties the buffer
      */
-    void clear() {
+    void clear() noexcept {
       head = arr_;
       tail = arr_;
       size_ = 0;
@@ -211,7 +183,7 @@ namespace cli {
      * @return true if the operation succeded. If the buffer was full, false is
      * returned.
      */
-    bool push_back(const value_type &t) {
+    bool push_back(const value_type &t) noexcept {
       const std::size_t s = size_;
       if (s == capacity_)
         return false;
@@ -228,7 +200,7 @@ namespace cli {
      * @return true if the operation succeded. If the buffer was full, false is
      * returned.
      */
-    constexpr bool push_back(value_type &&t) {
+    constexpr bool push_back(value_type &&t) noexcept {
       const std::size_t s = size_;
       if (s == capacity_)
         return false;
@@ -239,29 +211,12 @@ namespace cli {
     }
 
     /**
-     * removes elements from the back
-     *
-     * @param n the number of elements to remove
-     */
-    // constexpr void remove_last(std::size_t n) {
-    //   if (n > size_)
-    //     n = size_;
-    //
-    //   if (head - arr_ >= n) {
-    //     head -= n;
-    //   } else {
-    //     n -= head - arr_;
-    //     head = arr_ + capacity_ - n;
-    //   }
-    // }
-
-    /**
      * removes an element from the front.
      *
      * @param t where to put the value that is popped
      * @return true if a value could be popped, else false.
      */
-    constexpr bool pop(value_type &t) {
+    constexpr bool pop(value_type &t) noexcept {
       const std::size_t s = size_;
       if (s == 0)
         return false;
@@ -285,7 +240,7 @@ namespace cli {
     T values_[Capacity]{};
 
   public:
-    constexpr RingBuffer()
+    constexpr RingBuffer() noexcept
       : RingBufView<T>(values_, Capacity) {}
   };
 } // namespace cli

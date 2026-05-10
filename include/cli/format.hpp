@@ -85,10 +85,10 @@ namespace cli::format {
    */
   struct FormatResult {
 
-    constexpr FormatResult(Error error)
+    constexpr FormatResult(Error error) noexcept
       : error(error) {}
 
-    constexpr FormatResult(std::size_t size_written)
+    constexpr FormatResult(std::size_t size_written) noexcept
       : size_written(size_written) {}
 
     /// returns true if error is Error::none, else false.
@@ -170,7 +170,7 @@ namespace cli::format {
      * @param t the value to format
      * @return FormatResult
      */
-    constexpr FormatResult operator()(View<CharT>, const T &) const {
+    constexpr FormatResult operator()(View<CharT>, const T &) const noexcept {
       static_assert(always_false<T>, "There is no Format defined for T!");
       return 0;
     }
@@ -178,14 +178,15 @@ namespace cli::format {
 
   template<typename CharT>
   struct NullFormat {
-    constexpr FormatResult operator()(View<CharT>, const cli::dummy &) const {
+    constexpr FormatResult operator()(View<CharT>,
+                                      const cli::dummy &) const noexcept {
       return 0;
     }
   };
 
   template<typename T, typename CharT>
   struct NoFormat {
-    constexpr FormatResult operator()(View<CharT>, const T &) const {
+    constexpr FormatResult operator()(View<CharT>, const T &) const noexcept {
       // TODO: add no_format_available to Error.
       return Error::unimplemented;
     }
@@ -197,12 +198,13 @@ namespace cli::format {
    */
   template<typename CharT>
   struct Format<void, CharT> {
-    constexpr FormatResult operator()(View<CharT>) const { return 0; }
+    constexpr FormatResult operator()(View<CharT>) const noexcept { return 0; }
   };
 
   template<typename CharT>
   struct Format<View<CharT>, CharT> {
-    constexpr FormatResult operator()(View<CharT> buf, View<CharT> s) const {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      View<CharT> s) const noexcept {
       if (s.size() > buf.size())
         return Error::buffer_overflow;
       for (std::size_t i = 0; i < s.size(); ++i)
@@ -214,7 +216,7 @@ namespace cli::format {
   template<typename CharT>
   struct Format<View<const CharT>, CharT> {
     constexpr FormatResult operator()(View<CharT> buf,
-                                      View<const CharT> s) const {
+                                      View<const CharT> s) const noexcept {
       if (s.size() > buf.size())
         return Error::buffer_overflow;
       for (std::size_t i = 0; i < s.size(); ++i)
@@ -230,7 +232,7 @@ namespace cli::format {
    */
   template<typename CharT>
   struct Format<bool, CharT> {
-    constexpr FormatResult operator()(View<CharT> buf, bool b) const {
+    constexpr FormatResult operator()(View<CharT> buf, bool b) const noexcept {
       if (b) {
         if (buf.size() < 4)
           return Error::buffer_overflow;
@@ -372,7 +374,7 @@ namespace cli::format {
       }
     }
 
-    constexpr FormatResult operator()(View<CharT> buf, T value) const {
+    constexpr FormatResult operator()(View<CharT> buf, T value) const noexcept {
       using traits = traits::integer_traits<T>;
       using UnsignedT = typename traits::unsigned_type;
 
@@ -568,7 +570,7 @@ namespace cli::format {
    */
   template<concepts::Character T, typename CharT, Fmt Format = Fmt::normal>
   struct Char {
-    constexpr FormatResult operator()(View<CharT> buf, T value) const {
+    constexpr FormatResult operator()(View<CharT> buf, T value) const noexcept {
       if constexpr (Format == Fmt::normal) {
         if (buf.size() < 3)
           return Error::buffer_overflow;
@@ -862,7 +864,7 @@ namespace cli::format {
     static constexpr auto billion = 1'000'000'000;
 
   public:
-    constexpr FormatResult operator()(View<CharT> buf, T fp) const {
+    constexpr FormatResult operator()(View<CharT> buf, T fp) const noexcept {
       if constexpr (Format == Fmt::normal) {
 
         uint32_t int_val = fp.integer();
@@ -1048,7 +1050,8 @@ namespace cli::format {
            FormatterOf<typename T::value_type, CharT> ElementFormatter,
            CharT Delimiter = ','>
   struct Sequence {
-    constexpr FormatResult operator()(View<CharT> buf, const T &seq) const {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      const T &seq) const noexcept {
       if (buf.size() < 2)
         return Error::buffer_overflow;
       bool first = true;
@@ -1124,7 +1127,8 @@ namespace cli::format {
            FormatterOf<typename T::value_type, CharT> ElementFormatter,
            CharT Delimiter = ','>
   struct FixedSizeSequence {
-    constexpr FormatResult operator()(View<CharT> buf, const T &seq) const {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      const T &seq) const noexcept {
       if (buf.size() < 2)
         return Error::buffer_overflow;
       bool first = true;
@@ -1186,7 +1190,8 @@ namespace cli::format {
    */
   template<concepts::Enum Enum, typename CharT>
   struct Format<Enum, CharT> {
-    constexpr FormatResult operator()(View<CharT> buf, Enum value) const {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      Enum value) const noexcept {
       if constexpr (traits::enum_traits<Enum>::is_flag) {
         View<const CharT> name{};
         std::size_t written = 0;
@@ -1271,7 +1276,8 @@ namespace cli::format {
    */
   template<concepts::StringView T, typename CharT>
   struct StringView {
-    constexpr FormatResult operator()(View<CharT> buf, const T &str) const {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      const T &str) const noexcept {
       static_assert(
         std::is_same_v<CharT, typename T::value_type>,
         "The value_type of the stringview T must be the same as CharT");
@@ -1365,7 +1371,8 @@ namespace cli::format {
    */
   template<concepts::String T, typename CharT>
   struct String {
-    constexpr FormatResult operator()(View<CharT> buf, const T &str) const {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      const T &str) const noexcept {
       static_assert(
         std::is_same_v<CharT, typename T::value_type>,
         "The value_type of the stringview T must be the same as CharT");
@@ -1455,7 +1462,8 @@ namespace cli::format {
   class FieldGroup {
   public:
     constexpr FormatResult
-    operator()(View<CharT> buf, const std::tuple<Fields...> &fields) const {
+    operator()(View<CharT> buf,
+               const std::tuple<Fields...> &fields) const noexcept {
       if (buf.size() == 0)
         return Error::buffer_overflow;
 
@@ -1582,7 +1590,8 @@ namespace cli::format {
                                               UseNames>::type;
 
   public:
-    constexpr FormatResult operator()(View<CharT> buf, const T &t) const {
+    constexpr FormatResult operator()(View<CharT> buf,
+                                      const T &t) const noexcept {
       if (buf.size() == 0)
         return Error::too_few_characters;
 

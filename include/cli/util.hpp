@@ -140,10 +140,6 @@ namespace cli {
                              std::tuple_size_v<std::remove_cvref_t<Tuple>>>());
   }
 
-  using ArgVector = CharView;
-
-  using OutputIterator = RingBufView<uint8_t>::write_iterator;
-
   template<class F, class Tuple, class... Args>
   constexpr void for_each(F &&f, Tuple &&t, Args &&...args) {
     dtl::for_each_impl(

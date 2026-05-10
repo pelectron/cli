@@ -18,7 +18,6 @@
 
 #include "cli/concepts.hpp"
 #include "cli/exec_result.hpp"
-#include "cli/parse.hpp"
 #include "cli/string.hpp"
 #include "cli/type_list.hpp"
 
@@ -47,6 +46,7 @@ namespace cli {
     ExecResult<CharT> (*exec_)(void *this_,
                                View<const CharT> args,
                                View<CharT> out) = nullptr;
+    /// gets extra help, used for function commands
     cli::View<const CharT> (*help_context_)(const void *this_,
                                             cli::View<const CharT>) = nullptr;
     // the parent command
@@ -68,31 +68,31 @@ namespace cli {
       constexpr iterator &operator=(const iterator &) noexcept = default;
       constexpr iterator &operator=(iterator &&) noexcept = default;
 
-      constexpr iterator &operator++() {
+      constexpr iterator &operator++() noexcept {
         node = node->next;
         return *this;
       }
 
-      constexpr iterator operator++(int) {
+      constexpr iterator operator++(int) noexcept {
         iterator ret{node};
         node = node->next;
         return ret;
       }
 
-      constexpr CommandNode *operator->() { return node; }
+      constexpr CommandNode *operator->() noexcept { return node; }
 
-      constexpr const CommandNode *operator->() const { return node; }
+      constexpr const CommandNode *operator->() const noexcept { return node; }
 
-      constexpr CommandNode &operator*() { return *node; }
+      constexpr CommandNode &operator*() noexcept { return *node; }
 
-      constexpr const CommandNode &operator*() const { return *node; }
+      constexpr const CommandNode &operator*() const noexcept { return *node; }
 
       constexpr auto operator<=>(const iterator &) const noexcept = default;
     };
 
-    constexpr iterator begin() { return subcommand; }
-    constexpr iterator end() const { return nullptr; }
-    constexpr const iterator begin() const { return subcommand; }
+    constexpr iterator begin() noexcept { return subcommand; }
+    constexpr iterator end() const noexcept { return nullptr; }
+    constexpr const iterator begin() const noexcept { return subcommand; }
 
     /**
      * executes the command
@@ -104,12 +104,12 @@ namespace cli {
      * @return the error
      */
     constexpr ExecResult<CharT> execute(View<const CharT> args,
-                                        View<CharT> out) const {
+                                        View<CharT> out) const noexcept {
       return (*exec_)(this_, args, out);
     }
 
     constexpr cli::View<const CharT>
-    help_context(cli::View<const CharT> arg) const {
+    help_context(cli::View<const CharT> arg) const noexcept {
       if (help_context_)
         return (*help_context_)(this, arg);
       else
@@ -121,7 +121,7 @@ namespace cli {
      *
      * @param c the command to add
      */
-    constexpr void add_sub(CommandNode &c) {
+    constexpr void add_sub(CommandNode &c) noexcept {
       c.parent = this;
       c.next = nullptr;
       c.subcommand = nullptr;
@@ -185,13 +185,13 @@ namespace cli {
     constexpr CommandBase &operator=(CommandBase &&) = default;
 
     template<concepts::Command... SubCommands_>
-    constexpr CommandBase(SubCommands_ &&...cmds)
+    constexpr CommandBase(SubCommands_ &&...cmds) noexcept
       : subcommands{std::forward<SubCommands_>(cmds)...} {}
 
-    constexpr CommandBase(std::tuple<SubCommands...> &&cmds)
+    constexpr CommandBase(std::tuple<SubCommands...> &&cmds) noexcept
       : subcommands{std::move(cmds)} {}
 
-    constexpr CommandBase(const std::tuple<SubCommands...> &cmds)
+    constexpr CommandBase(const std::tuple<SubCommands...> &cmds) noexcept
       : subcommands{cmds} {}
 
     /**
@@ -204,7 +204,7 @@ namespace cli {
      * @return the error
      */
     constexpr ExecResult<char_type> execute(View<const char_type> args,
-                                            View<char_type> out) {
+                                            View<char_type> out) noexcept {
       return static_cast<Derived *>(this)->execute(args, out);
     }
 
@@ -277,7 +277,7 @@ namespace cli {
      * @return the error
      */
     constexpr ExecResult<char_type> execute(View<const char_type> args,
-                                            View<char_type> out) {
+                                            View<char_type> out) noexcept {
       return static_cast<Derived *>(this)->execute(args, out);
     }
   };
@@ -292,7 +292,7 @@ namespace cli {
   constexpr const CommandNode<CharT> *
   get_command(View<const CharT> command,
               const CommandNode<CharT> *root,
-              CharT access_separator) {
+              CharT access_separator) noexcept {
 
     if (command.size() == 0 or root == nullptr)
       return nullptr;
@@ -341,7 +341,7 @@ namespace cli {
   template<typename CharT>
   constexpr SplitResult<CharT> split_line(View<const CharT> line,
                                           const CommandNode<CharT> *root,
-                                          CharT access_separator) {
+                                          CharT access_separator) noexcept {
     if (line.size() == 0)
       return {};
 
@@ -356,5 +356,6 @@ namespace cli {
     const CommandNode<CharT> *cmd = get_command(name, root, access_separator);
     return {cmd, args};
   }
+
 } // namespace cli
 #endif

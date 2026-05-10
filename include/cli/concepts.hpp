@@ -154,6 +154,11 @@ namespace cli {
       { output(c) } -> std::same_as<void>;
     };
 
+    template<class O, typename CharT>
+    concept NoThrowCharOutput =
+      CharOutput<O, CharT> and
+      noexcept(std::declval<O>()(std::declval<CharT>()));
+
     /**
      * A StringOutput is used to write a string of characters to an
      * unbuffered output Output.
@@ -183,6 +188,11 @@ namespace cli {
         { output(s) } -> std::same_as<void>;
       };
 
+    template<class O, typename CharT>
+    concept NoThrowStringOutput =
+      (StringOutput<O, CharT> and
+       noexcept(std::declval<O>()(std::declval<View<const CharT>>())));
+
     template<class O>
     concept AnyStringOutput =
       StringOutput<O, char> or StringOutput<O, unsigned char> or
@@ -206,6 +216,10 @@ namespace cli {
     template<class O, typename CharT>
     concept BasicOutput = CharOutput<O, CharT> or StringOutput<O, CharT>;
 
+    template<class O, typename CharT>
+    concept BasicNoThrowOutput =
+      NoThrowCharOutput<O, CharT> or NoThrowStringOutput<O, CharT>;
+
     /**
      * The Output concept denotes a StringOutput or a CharOutput. It is
      * used by AnsiDisplay to write characters.
@@ -217,6 +231,12 @@ namespace cli {
     concept Output = BasicOutput<O, char> or BasicOutput<O, unsigned char> or
                      BasicOutput<O, signed char> or BasicOutput<O, char8_t> or
                      BasicOutput<O, char16_t> or BasicOutput<O, char32_t>;
+
+    template<class O>
+    concept NoThrowOutput =
+      BasicNoThrowOutput<O, char> or BasicNoThrowOutput<O, unsigned char> or
+      BasicNoThrowOutput<O, signed char> or BasicNoThrowOutput<O, char8_t> or
+      BasicNoThrowOutput<O, char16_t> or BasicNoThrowOutput<O, char32_t>;
 
     /**
      * The Config is used by cli to configure its relevant parts. It is a type

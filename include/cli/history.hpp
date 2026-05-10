@@ -83,7 +83,7 @@ namespace cli {
       line.contents[line.size] = 0;
     }
 
-    constexpr Str cursor_up() {
+    constexpr Str cursor_up() noexcept {
       if (size_ == 0)
         return {};
 
@@ -94,7 +94,7 @@ namespace cli {
       return ret;
     }
 
-    constexpr Str cursor_down() {
+    constexpr Str cursor_down() noexcept {
       if (size_ == 0)
         return {};
 
@@ -111,7 +111,7 @@ namespace cli {
      *
      * @param cmd the command
      */
-    constexpr void push(Str cmd) {
+    constexpr void push(Str cmd) noexcept {
       if (cmd.size() == 0)
         return;
 
@@ -134,7 +134,7 @@ namespace cli {
      *
      * @return the command
      */
-    constexpr Str cursor_up(std::size_t n) {
+    constexpr Str cursor_up(std::size_t n) noexcept {
       if (n == 0)
         return {};
       for (std::size_t i = 0; i < n - 1; ++i)
@@ -147,7 +147,7 @@ namespace cli {
      *
      * @return the command
      */
-    constexpr Str cursor_down(std::size_t n) {
+    constexpr Str cursor_down(std::size_t n) noexcept {
       if (n == 0)
         return {};
       for (std::size_t i = 0; i < n - 1; ++i)
@@ -158,7 +158,7 @@ namespace cli {
     /**
      * resets the history, i.e. clears it
      */
-    constexpr void reset() {
+    constexpr void reset() noexcept {
       current_ = 0;
       head_ = 0;
       tail_ = 0;
@@ -172,8 +172,8 @@ namespace cli {
   class History<Cfg> {
   public:
     using Str = View<const typename Cfg::char_type>;
-    constexpr void push(Str) {}
-    constexpr void reset() {}
+    constexpr void push(Str) noexcept {}
+    constexpr void reset() noexcept {}
   };
 } // namespace cli
 #endif

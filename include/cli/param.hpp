@@ -197,7 +197,7 @@ namespace cli::params {
                       Parse_ &&parse,
                       Format_ &&format,
                       Validate_ &&validate,
-                      SubCommands_ &&...cmds)
+                      SubCommands_ &&...cmds) noexcept
         : Base(std::forward<SubCommands_>(cmds)...),
           get_(std::forward<Get_>(get)),
           set_(std::forward<Set_>(set)),
@@ -218,7 +218,7 @@ namespace cli::params {
                       Set_ &&set,
                       Parse_ &&parse,
                       Format_ &&format,
-                      Validate_ &&validate)
+                      Validate_ &&validate) noexcept
         : Base(),
           get_(std::forward<Get_>(get)),
           set_(std::forward<Set_>(set)),
@@ -240,7 +240,7 @@ namespace cli::params {
                       Parse_ &&parse,
                       Format_ &&format,
                       Validate_ &&validate,
-                      std::tuple<SubCommands...> &&cmds)
+                      std::tuple<SubCommands...> &&cmds) noexcept
         : Base(std::move(cmds)),
           get_(std::forward<Get_>(get)),
           set_(std::forward<Set_>(set)),
@@ -262,7 +262,7 @@ namespace cli::params {
                       Parse_ &&parse,
                       Format_ &&format,
                       Validate_ &&validate,
-                      const std::tuple<SubCommands...> &cmds)
+                      const std::tuple<SubCommands...> &cmds) noexcept
         : Base(cmds),
           get_(std::forward<Get_>(get)),
           set_(std::forward<Set_>(set)),
@@ -273,7 +273,7 @@ namespace cli::params {
       // Param(SC /*name*/, const T &value, Get getter, Set setter);
 
       constexpr ExecResult<char_type> execute(View<const char_type> args,
-                                              View<char_type> out) {
+                                              View<char_type> out) noexcept {
         args = parse::trim_ws(args);
         if (args.size() == 0) {
           return get_value(out);
@@ -295,11 +295,8 @@ namespace cli::params {
       }
 
     private:
-      constexpr ExecResult<char_type> set_value(View<const char_type> args) {
-        if (args.size() == 0)
-          return ExecResult<char_type>::make_parse_error(
-            Error::too_few_arguments, nullptr);
-
+      constexpr ExecResult<char_type>
+      set_value(View<const char_type> args) noexcept {
         parse::ParseResult parse_result = parse_(args);
         if (not parse_result)
           return ExecResult<char_type>::make_parse_error(
@@ -319,7 +316,7 @@ namespace cli::params {
           return ExecResult<char_type>::make_success();
       }
 
-      constexpr ExecResult<char_type> get_value(View<char_type> out) {
+      constexpr ExecResult<char_type> get_value(View<char_type> out) noexcept {
         value_type t{};
         if (Error err = get_(t); err != Error::none)
           return ExecResult<char_type>::make_get_error(err);
@@ -473,7 +470,7 @@ namespace cli::params {
                            Parse_ &&parse,
                            Format_ &&format,
                            Validate_ &&validate,
-                           SubCommands_ &&...cmds)
+                           SubCommands_ &&...cmds) noexcept
         : f(f),
           subcommands(std::forward<SubCommands>(cmds)...),
           parse(std::forward<Parse_>(parse)),
@@ -510,7 +507,7 @@ namespace cli::params {
                            MemberPointer f,
                            Parse_ &&parse,
                            Format_ &&format,
-                           Validate_ &&validate)
+                           Validate_ &&validate) noexcept
         : f(f),
           parse(std::forward<Parse_>(parse)),
           format(std::forward<Format_>(format)),
@@ -566,7 +563,7 @@ namespace cli::params {
       constexpr NullGet(NullGet &&) = default;
       constexpr NullGet &operator=(const NullGet &) = default;
       constexpr NullGet &operator=(NullGet &&) = default;
-      constexpr Error operator()(dummy &) { return Error::none; }
+      constexpr Error operator()(dummy &) noexcept { return Error::none; }
     };
 
     struct NullSet {
@@ -575,7 +572,7 @@ namespace cli::params {
       constexpr NullSet(NullSet &&) = default;
       constexpr NullSet &operator=(const NullSet &) = default;
       constexpr NullSet &operator=(NullSet &&) = default;
-      constexpr Error operator()(const dummy &) { return Error::none; }
+      constexpr Error operator()(const dummy &) noexcept { return Error::none; }
     };
 
     template<typename T>
@@ -588,7 +585,7 @@ namespace cli::params {
       constexpr DefaultGet &operator=(const DefaultGet &) = default;
       constexpr DefaultGet &operator=(DefaultGet &&) = default;
 
-      constexpr Error operator()(T &t) {
+      constexpr Error operator()(T &t) noexcept {
         if (value_ == nullptr)
           return Error::cant_read_param;
         t = *value_;
@@ -606,7 +603,7 @@ namespace cli::params {
       constexpr DefaultSet &operator=(const DefaultSet &) = default;
       constexpr DefaultSet &operator=(DefaultSet &&) = default;
 
-      constexpr Error operator()(const T &t) {
+      constexpr Error operator()(const T &t) noexcept {
         if (value_ == nullptr)
           return Error::cant_set_param;
         *value_ = t;
@@ -618,7 +615,7 @@ namespace cli::params {
     struct MemDataGet {
       const T &value_;
       MemberPtr member;
-      constexpr Error operator()(mem_data_type<MemberPtr> &t) {
+      constexpr Error operator()(mem_data_type<MemberPtr> &t) noexcept {
         t = (value_.*member);
         return Error::none;
       }
@@ -628,7 +625,7 @@ namespace cli::params {
     struct MemDataSet {
       T &value_;
       MemberPtr member;
-      constexpr Error operator()(const mem_data_type<MemberPtr> &t) {
+      constexpr Error operator()(const mem_data_type<MemberPtr> &t) noexcept {
         value_.*member = t;
         return Error::none;
       }
@@ -636,19 +633,21 @@ namespace cli::params {
 
     template<typename T, typename MemberPtr>
     struct MemDataSet<const T, MemberPtr> {
-      constexpr Error operator()(const mem_data_type<MemberPtr> &) {
+      constexpr Error operator()(const mem_data_type<MemberPtr> &) noexcept {
         return Error::cant_set_param;
       }
     };
 
     template<typename T>
     struct InvalidGet {
-      cli::Error operator()(T &) const { return cli::Error::cant_read_param; }
+      cli::Error operator()(T &) const noexcept {
+        return cli::Error::cant_read_param;
+      }
     };
 
     template<typename T>
     struct InvalidSet {
-      cli::Error operator()(const T &) const {
+      cli::Error operator()(const T &) const noexcept {
         return cli::Error::cant_set_param;
       }
     };
@@ -670,7 +669,7 @@ namespace cli::params {
                                      Parse,
                                      Format,
                                      Validate,
-                                     SubCommands...> member_data) {
+                                     SubCommands...> member_data) noexcept {
       if constexpr (sizeof...(SubCommands) > 0)
         return Param{
           Name{},
@@ -713,7 +712,7 @@ namespace cli::params {
                                      Parse,
                                      Format,
                                      Validate,
-                                     SubCommands...> member_data) {
+                                     SubCommands...> member_data) noexcept {
       if constexpr (sizeof...(SubCommands) > 0)
         return Param{
           Name{},
@@ -740,8 +739,8 @@ namespace cli::params {
     }
 
     template<class T, class CommandOrMemberDataOrMemberFunction>
-    constexpr auto transform(T &obj,
-                             CommandOrMemberDataOrMemberFunction &&mem) {
+    constexpr auto
+    transform(T &obj, CommandOrMemberDataOrMemberFunction &&mem) noexcept {
       if constexpr (concepts::Command<std::remove_cvref_t<
                       CommandOrMemberDataOrMemberFunction>>) {
         return mem;
@@ -798,7 +797,7 @@ namespace cli::params {
    * @param callback the callback
    */
   template<typename T, Callable Callback>
-  constexpr auto set_cb(T &t, Callback callback) {
+  constexpr auto set_cb(T &t, Callback callback) noexcept {
     static_assert(std::is_invocable_v<Callback, T>,
                   "The callback must take a T as its argument");
     return SetWithCallback{dtl::DefaultSet<T>{&t},
@@ -850,7 +849,7 @@ namespace cli::params {
   template<Id Name, SC Description, concepts::Command... SubCommands>
     requires(sizeof...(SubCommands) > 0)
   [[nodiscard]] constexpr auto
-  param(Name name, Description description, SubCommands &&...cmds) {
+  param(Name name, Description description, SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return dtl::Param{Name{},
@@ -877,7 +876,8 @@ namespace cli::params {
    */
   template<Id Name, concepts::Command... SubCommands>
     requires(sizeof...(SubCommands) > 0)
-  [[nodiscard]] constexpr auto param(Name name, SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(Name name,
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     return dtl::Param{Name{},
                       NoDescription<get_char_t<Name>>{},
@@ -1008,7 +1008,7 @@ namespace cli::params {
                                      Parse &&parse,
                                      Format &&format,
                                      Validate &&validate,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return dtl::Param{Name{},
@@ -1069,7 +1069,7 @@ namespace cli::params {
                                      Set &&set,
                                      Parse &&parse,
                                      Format &&format,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1117,12 +1117,13 @@ namespace cli::params {
            validate::ValidatorOf<T> Validate,
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       Get &&get,
-                                                       Set &&set,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        Get &&get,
+        Set &&set,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1169,12 +1170,13 @@ namespace cli::params {
            validate::ValidatorOf<T> Validate,
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       Set &&set,
-                                                       Parse &&parse,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        Set &&set,
+        Parse &&parse,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1222,12 +1224,13 @@ namespace cli::params {
            validate::ValidatorOf<T> Validate,
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       Get &&get,
-                                                       Format &&format,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        Get &&get,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1272,11 +1275,12 @@ namespace cli::params {
            SetterOf<T> Set,
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       Get &&get,
-                                                       Set &&set,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        Get &&get,
+        Set &&set,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1319,11 +1323,12 @@ namespace cli::params {
            parse::ParserOf<T, get_char_t<Name>> Parse,
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       Set &&set,
-                                                       Parse &&parse,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        Set &&set,
+        Parse &&parse,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1367,11 +1372,12 @@ namespace cli::params {
            format::FormatterOf<T, get_char_t<Name>> Format,
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       Get &&get,
-                                                       Format &&format,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        Get &&get,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1419,7 +1425,7 @@ namespace cli::params {
                                      Description description,
                                      Set &&set,
                                      Validate &&validate,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1459,7 +1465,10 @@ namespace cli::params {
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   [[nodiscard]] constexpr concepts::Command auto
-  param(Name name, Description description, Get &&get, SubCommands &&...cmds) {
+  param(Name name,
+        Description description,
+        Get &&get,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1499,7 +1508,10 @@ namespace cli::params {
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   [[nodiscard]] constexpr concepts::Command auto
-  param(Name name, Description description, Set &&set, SubCommands &&...cmds) {
+  param(Name name,
+        Description description,
+        Set &&set,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param<T>(Name{},
@@ -1605,15 +1617,16 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Get &&get,
-                                                       Set &&set,
-                                                       Parse &&parse,
-                                                       Format &&format,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Get &&get,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return dtl::Param{Name{},
@@ -1670,14 +1683,15 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Get &&get,
-                                                       Set &&set,
-                                                       Parse &&parse,
-                                                       Format &&format,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Get &&get,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -1731,13 +1745,14 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Get &&get,
-                                                       Set &&set,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Get &&get,
+        Set &&set,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -1792,14 +1807,15 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Set &&set,
-                                                       Parse &&parse,
-                                                       Format &&format,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -1854,14 +1870,15 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Get &&get,
-                                                       Parse &&parse,
-                                                       Format &&format,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Get &&get,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -1907,12 +1924,13 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Get &&get,
-                                                       Set &&set,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Get &&get,
+        Set &&set,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -1963,13 +1981,14 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Set &&set,
-                                                       Parse &&parse,
-                                                       Format &&format,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2021,13 +2040,14 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Get &&get,
-                                                       Parse &&parse,
-                                                       Format &&format,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Get &&get,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2074,12 +2094,13 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Set &&set,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Set &&set,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2126,12 +2147,13 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Get &&get,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Get &&get,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2182,13 +2204,14 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Parse &&parse,
-                                                       Format &&format,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2231,11 +2254,12 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Get &&get,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Get &&get,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2278,11 +2302,12 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Set &&set,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Set &&set,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2330,12 +2355,13 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Parse &&parse,
-                                                       Format &&format,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2377,11 +2403,12 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       T &t,
-                                                       Validate &&validate,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        T &t,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2418,8 +2445,8 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and
              not std::is_const_v<T>)
-  [[nodiscard]] constexpr concepts::Command auto
-  param(Name name, Description description, T &t, SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto param(
+    Name name, Description description, T &t, SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2485,12 +2512,13 @@ namespace cli::params {
            format::FormatterOf<T, get_char_t<Name>> Format,
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       const T &t,
-                                                       Get &&get,
-                                                       Format &&format,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        const T &t,
+        Get &&get,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return dtl::Param{Name{},
@@ -2532,11 +2560,12 @@ namespace cli::params {
            GetterOf<T> Get,
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       const T &t,
-                                                       Get &&get,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        const T &t,
+        Get &&get,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2575,11 +2604,12 @@ namespace cli::params {
            format::FormatterOf<T, get_char_t<Name>> Format,
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto param(Name name,
-                                                       Description description,
-                                                       const T &t,
-                                                       Format &&format,
-                                                       SubCommands &&...cmds) {
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        Description description,
+        const T &t,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -2613,7 +2643,10 @@ namespace cli::params {
            CmdOrMemDataOrMemFun... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   [[nodiscard]] constexpr concepts::Command auto
-  param(Name name, Description description, const T &t, SubCommands &&...cmds) {
+  param(Name name,
+        Description description,
+        const T &t,
+        SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     return param(Name{},
@@ -3295,7 +3328,7 @@ namespace cli::params {
                                      Parse &&parse,
                                      Format &&format,
                                      Validate &&validate,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     using namespace dtl;
@@ -3335,7 +3368,7 @@ namespace cli::params {
                                      MemberPointer f,
                                      Parse &&parse,
                                      Format &&format,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     using namespace dtl;
@@ -3372,7 +3405,7 @@ namespace cli::params {
                                      Description description,
                                      MemberPointer f,
                                      Validate &&validate,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     using namespace dtl;
@@ -3414,7 +3447,7 @@ namespace cli::params {
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
                                      MemberPointer f,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     using namespace dtl;
@@ -3461,7 +3494,7 @@ namespace cli::params {
   template<Id Name, class MemberPointer, concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
   [[nodiscard]] constexpr auto
-  param(Name name, MemberPointer f, SubCommands &&...cmds) {
+  param(Name name, MemberPointer f, SubCommands &&...cmds) noexcept {
     (void)name;
     using namespace dtl;
     return param(Name{},
@@ -3491,7 +3524,7 @@ namespace cli::params {
     requires std::is_member_pointer_v<
       std::remove_cvref_t<decltype(MemberPointer)>>
   [[nodiscard]] constexpr auto param(Description description,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)description;
     using namespace dtl;
     return param(
@@ -3519,7 +3552,7 @@ namespace cli::params {
   template<auto MemberPointer, concepts::Command... SubCommands>
     requires std::is_member_pointer_v<
       std::remove_cvref_t<decltype(MemberPointer)>>
-  [[nodiscard]] constexpr auto param(SubCommands &&...cmds) {
+  [[nodiscard]] constexpr auto param(SubCommands &&...cmds) noexcept {
     using namespace dtl;
     return param<MemberPointer>(NoDescription<char>{},
                                 std::forward<SubCommands>(cmds)...);
@@ -3589,7 +3622,7 @@ namespace cli::params {
                                      Description description,
                                      MemberPointer f,
                                      Format &&format,
-                                     SubCommands &&...cmds) {
+                                     SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     using namespace dtl;

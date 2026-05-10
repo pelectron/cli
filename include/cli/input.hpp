@@ -54,12 +54,14 @@ namespace cli {
      * @param event where to store the popped event
      * @return returns false if no event is available, i.e. event is not set.
      */
-    constexpr bool pop_event(event_type &event) { return buffer_.pop(event); }
+    constexpr bool pop_event(event_type &event) noexcept {
+      return buffer_.pop(event);
+    }
 
     /**
      * resets/clears the input
      */
-    constexpr void reset() {
+    constexpr void reset() noexcept {
       state_ = State::normal;
       buffer_.clear();
     }
@@ -72,7 +74,7 @@ namespace cli {
      * @param c the received character
      * @return either Error::none or Error::buffer_overflow.
      */
-    constexpr Error on_char(char_type c) {
+    constexpr Error on_char(char_type c) noexcept {
       switch (state_) {
         case State::normal:
           return handle_normal(c);
@@ -86,17 +88,19 @@ namespace cli {
           return handle_delimiter(c);
         default:
           CLI_ASSERT(false);
+          state_ = State::normal;
+          return Error::none;
       }
     }
 
-    constexpr Error on_control(Control ctrl, std::uint8_t param = 1) {
+    constexpr Error on_control(Control ctrl, std::uint8_t param = 1) noexcept {
       return buffer_.push_back(event_type(ctrl, param))
                ? Error::none
                : Error::buffer_overflow;
     }
 
   private:
-    constexpr Error handle_normal(char_type c) {
+    constexpr Error handle_normal(char_type c) noexcept {
       switch (c) {
         case 0x07: // bell
           return push_control(Control::bell, 1);
@@ -132,7 +136,7 @@ namespace cli {
       }
     }
 
-    constexpr Error handle_escape_start(char_type c) {
+    constexpr Error handle_escape_start(char_type c) noexcept {
       if (c == static_cast<char_type>('[')) {
         param_ = 0;
         state_ = State::escape_bracket;
@@ -149,7 +153,7 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error handle_escape_bracket(char_type c) {
+    constexpr Error handle_escape_bracket(char_type c) noexcept {
       state_ = State::normal;
       switch (c) {
         case 'A':
@@ -175,7 +179,7 @@ namespace cli {
       }
     }
 
-    constexpr Error handle_escape_param(char_type c) {
+    constexpr Error handle_escape_param(char_type c) noexcept {
       state_ = State::normal;
       switch (c) {
         case 'A':
@@ -218,7 +222,7 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error handle_delimiter(char_type c) {
+    constexpr Error handle_delimiter(char_type c) noexcept {
       state_ = State::normal;
       if (c == '\n')
         return push_control(Control::enter, 1);
@@ -233,7 +237,7 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error print_escape(char_type c) {
+    constexpr Error print_escape(char_type c) noexcept {
       if (buffer_.remaining_size() < 3)
         return Error::buffer_overflow;
 
@@ -243,7 +247,7 @@ namespace cli {
       return Error::none;
     }
 
-    constexpr Error print_param(char_type end) {
+    constexpr Error print_param(char_type end) noexcept {
       char_type buf[10]{};
       cli::format::Int<std::uint8_t, char_type> fmt;
       cli::format::FormatResult res = fmt({buf, 10}, param_);
@@ -271,12 +275,12 @@ namespace cli {
       delimiter
     };
 
-    constexpr Error push_control(Control c, uint8_t param) {
+    constexpr Error push_control(Control c, uint8_t param) noexcept {
       return buffer_.push_back(event_type(c, param)) ? Error::none
                                                      : Error::buffer_overflow;
     }
 
-    constexpr Error push_char(char_type c) {
+    constexpr Error push_char(char_type c) noexcept {
       return buffer_.push_back(event_type(c)) ? Error::none
                                               : Error::buffer_overflow;
     }

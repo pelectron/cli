@@ -31,7 +31,7 @@ namespace cli {
      * @param arr the start of the array
      * @param capacity the array size
      */
-    constexpr VecView(T *arr, std::size_t capacity)
+    constexpr VecView(T *arr, std::size_t capacity) noexcept
       : values_(arr), size_(0), capacity_(capacity) {}
 
     /**
@@ -40,7 +40,7 @@ namespace cli {
      * @param t the element
      * @return true if the operation succeded, i.e. the vector is not full.
      */
-    constexpr bool push_back(const T &t) {
+    constexpr bool push_back(const T &t) noexcept {
       if (size_ == capacity_)
         return false;
       std::construct_at(values_ + size_++, t);
@@ -53,7 +53,7 @@ namespace cli {
      * @param t the element
      * @return true if the operation succeded, i.e. the vector is not full.
      */
-    constexpr bool push_back(T &&t) {
+    constexpr bool push_back(T &&t) noexcept {
       if (size_ == capacity_)
         return false;
       std::construct_at(values_ + size_++, std::move(t));
@@ -65,7 +65,7 @@ namespace cli {
      *
      * @param n the number of elements to remove
      */
-    constexpr void remove_last(size_t n) {
+    constexpr void remove_last(size_t n) noexcept {
       if (size_ <= n)
         clear();
       else {
@@ -80,7 +80,7 @@ namespace cli {
     /**
      * removes all elements from the vector
      */
-    constexpr void clear() {
+    constexpr void clear() noexcept {
       if constexpr (std::is_trivially_destructible_v<T>) {
         this->size_ = 0;
       } else {
@@ -94,47 +94,47 @@ namespace cli {
     /**
      * returns the number of elemnts in the vector
      */
-    constexpr std::size_t size() const { return size_; }
+    constexpr std::size_t size() const noexcept { return size_; }
 
     /**
      * returns the capacity of the vector
      */
-    constexpr std::size_t capacity() const { return capacity_; }
+    constexpr std::size_t capacity() const noexcept { return capacity_; }
 
     /**
      * returns the maximum size of the vector
      */
-    constexpr std::size_t max_size() const { return capacity_; }
+    constexpr std::size_t max_size() const noexcept { return capacity_; }
 
     /**
      * returns the pointer to the first element of the vector
      */
-    constexpr T *data() { return values_; }
+    constexpr T *data() noexcept { return values_; }
 
     /**
      * returns the pointer to the first element of the vector
      */
-    constexpr const T *data() const { return values_; }
+    constexpr const T *data() const noexcept { return values_; }
 
     /**
      * returns an iterator to the first element of the vector
      */
-    constexpr T *begin() { return values_; }
+    constexpr T *begin() noexcept { return values_; }
 
     /**
      * returns an iterator to the first element of the vector
      */
-    constexpr const T *begin() const { return values_; }
+    constexpr const T *begin() const noexcept { return values_; }
 
     /**
      * returns an iterator to the last element of the vector
      */
-    constexpr T *end() { return values_ + size_; }
+    constexpr T *end() noexcept { return values_ + size_; }
 
     /**
      * returns an iterator to the last element of the vector
      */
-    constexpr const T *end() const { return values_ + size_; }
+    constexpr const T *end() const noexcept { return values_ + size_; }
 
     /**
      * access the i-th element of the vector.
@@ -142,7 +142,7 @@ namespace cli {
      *
      * @param i the index
      */
-    constexpr T &operator[](std::size_t i) { return values_[i]; }
+    constexpr T &operator[](std::size_t i) noexcept { return values_[i]; }
 
     /**
      * access the i-th element of the vector.
@@ -150,7 +150,9 @@ namespace cli {
      *
      * @param i the index
      */
-    constexpr const T &operator[](std::size_t i) const { return values_[i]; }
+    constexpr const T &operator[](std::size_t i) const noexcept {
+      return values_[i];
+    }
   };
 
   /**
@@ -165,17 +167,17 @@ namespace cli {
     T values_[Capacity]{};
 
   public:
-    constexpr FixedCapacityVector()
+    constexpr FixedCapacityVector() noexcept
       : VecView<T>(values_, Capacity) {}
 
-    constexpr FixedCapacityVector(const FixedCapacityVector &other)
+    constexpr FixedCapacityVector(const FixedCapacityVector &other) noexcept
       : VecView<T>(values_, Capacity) {
       for (std::size_t i = 0; i < other.size(); ++i) {
         this->push_back(other[i]);
       }
     }
 
-    constexpr FixedCapacityVector(FixedCapacityVector &&other)
+    constexpr FixedCapacityVector(FixedCapacityVector &&other) noexcept
       : VecView<T>(values_, Capacity) {
       for (std::size_t i = 0; i < other.size(); ++i) {
         this->push_back(std::move(other[i]));
@@ -183,7 +185,7 @@ namespace cli {
       other.clear();
     }
 
-    constexpr FixedCapacityVector(std::initializer_list<T> il)
+    constexpr FixedCapacityVector(std::initializer_list<T> il) noexcept
       : FixedCapacityVector() {
       for (const auto &v : il) {
         if (this->size_ >= Capacity)
@@ -192,13 +194,14 @@ namespace cli {
       }
     }
 
-    constexpr ~FixedCapacityVector()
+    constexpr ~FixedCapacityVector() noexcept
       requires std::is_trivially_destructible_v<T>
     = default;
 
-    constexpr ~FixedCapacityVector() { this->clear(); }
+    constexpr ~FixedCapacityVector() noexcept { this->clear(); }
 
-    constexpr FixedCapacityVector &operator=(const FixedCapacityVector &other) {
+    constexpr FixedCapacityVector &
+    operator=(const FixedCapacityVector &other) noexcept {
       this->clear();
       while (this->size_ < other.size_) {
         this->values_[this->size_] = other.values_[this->size_];
@@ -207,7 +210,8 @@ namespace cli {
       return *this;
     }
 
-    constexpr FixedCapacityVector &operator=(FixedCapacityVector &&other) {
+    constexpr FixedCapacityVector &
+    operator=(FixedCapacityVector &&other) noexcept {
       this->clear();
       while (this->size_ < other.size_) {
         this->values_[this->size_] = std::move(other.values_[this->size_]);
@@ -217,7 +221,7 @@ namespace cli {
       return *this;
     }
 
-    constexpr bool operator==(const FixedCapacityVector &other) const {
+    constexpr bool operator==(const FixedCapacityVector &other) const noexcept {
       if (this->size_ != other.size_)
         return false;
 

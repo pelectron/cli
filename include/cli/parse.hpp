@@ -107,7 +107,7 @@ namespace cli::parse {
   struct ParseResult {
 
     /// constructs a failed parse with the error reason
-    constexpr ParseResult(Error error, View<const CharT> rest = {})
+    constexpr ParseResult(Error error, View<const CharT> rest = {}) noexcept
       requires(not std::same_as<T, Error>)
       : error{error}, value{}, rest{rest} {}
 
@@ -118,7 +118,7 @@ namespace cli::parse {
      * @param value the parse value
      * @param rest the unparsed rest of the string
      */
-    constexpr ParseResult(const T &value, View<const CharT> rest = {})
+    constexpr ParseResult(const T &value, View<const CharT> rest = {}) noexcept
       requires(not std::same_as<T, Error>)
       : error{Error::none}, value{value}, rest{rest} {}
 
@@ -129,7 +129,7 @@ namespace cli::parse {
      * @param value the parse value
      * @param rest the unparsed rest of the string
      */
-    constexpr ParseResult(T &&value, View<const CharT> rest = {})
+    constexpr ParseResult(T &&value, View<const CharT> rest = {}) noexcept
       requires(not std::same_as<T, Error>)
       : error{Error::none}, value{std::move(value)}, rest{rest} {}
 
@@ -141,18 +141,22 @@ namespace cli::parse {
      * @param rest the unparsed rest of the string
      */
     template<class U>
-    constexpr ParseResult(from_value_t, U &&value, View<const CharT> rest = {})
+    constexpr ParseResult(from_value_t,
+                          U &&value,
+                          View<const CharT> rest = {}) noexcept
       : error{Error::none}, value{std::forward<U>(value)}, rest{rest} {}
 
     /// constructs a failed parse with the error reason
-    constexpr ParseResult(from_error_t, Error e, View<const CharT> rest = {})
+    constexpr ParseResult(from_error_t,
+                          Error e,
+                          View<const CharT> rest = {}) noexcept
       : error{e}, value{}, rest{rest} {}
 
     /// returns true if this is a successful parse result, i.e. if the error is
     /// Error::none.
     constexpr operator bool() const noexcept { return error == Error::none; }
 
-    constexpr auto operator<=>(const ParseResult &) const = default;
+    constexpr auto operator<=>(const ParseResult &) const noexcept = default;
 
     Error error;
     T value;
@@ -207,19 +211,19 @@ namespace cli::parse {
 
   template<typename T, typename CharT>
   struct NoParse {
-    ParseResult<T, CharT> operator()(View<const CharT>) const {
+    ParseResult<T, CharT> operator()(View<const CharT>) const noexcept {
       return {Error::unimplemented};
     }
   };
 
   template<typename CharT>
-  constexpr View<CharT> skip_ws(View<CharT> str) {
+  constexpr View<CharT> skip_ws(View<CharT> str) noexcept {
     return str.substr(str.find_first_not_of(View<const CharT>{
       string_constant<CharT, ' ', '\n', '\r', '\t', '\v', '\f'>{}}));
   }
 
   template<typename CharT>
-  constexpr View<CharT> trim_ws(View<CharT> str) {
+  constexpr View<CharT> trim_ws(View<CharT> str) noexcept {
     View s = skip_ws(str);
     std::size_t idx = s.find_last_not_of(View<const CharT>{
       string_constant<CharT, ' ', '\n', '\r', '\t', '\v', '\f'>{}});
@@ -248,11 +252,15 @@ namespace cli::parse {
     using unsigned_type = typename traits::unsigned_type;
 
   protected:
-    static constexpr std::size_t max_hex_length() { return sizeof(T) * 2; }
+    static constexpr std::size_t max_hex_length() noexcept {
+      return sizeof(T) * 2;
+    }
 
-    static constexpr std::size_t max_bin_length() { return sizeof(T) * 8; }
+    static constexpr std::size_t max_bin_length() noexcept {
+      return sizeof(T) * 8;
+    }
 
-    static constexpr std::size_t max_dec_length() {
+    static constexpr std::size_t max_dec_length() noexcept {
       if constexpr (traits::is_signed) {
         switch (sizeof(type)) {
           case 1:
@@ -277,8 +285,8 @@ namespace cli::parse {
         }
       }
     }
-    static constexpr ParseResult<T, CharT> parse_hex(View<const CharT> str,
-                                                     std::size_t offset) {
+    static constexpr ParseResult<T, CharT>
+    parse_hex(View<const CharT> str, std::size_t offset) noexcept {
       constexpr auto to_hex = [](uint8_t c) -> uint8_t {
         if (c >= '0' and c <= '9') {
           return static_cast<CharT>(c - '0');
@@ -311,8 +319,8 @@ namespace cli::parse {
       return {static_cast<type>(v), str.substr(max_size)};
     }
 
-    static constexpr ParseResult<T, CharT> parse_bin(View<const CharT> str,
-                                                     std::size_t offset) {
+    static constexpr ParseResult<T, CharT>
+    parse_bin(View<const CharT> str, std::size_t offset) noexcept {
       const std::size_t max_size = std::min(
         max_bin_length() + offset, str.size()); // the maximum amount of digits
                                                 // we can consume with 32 bits.
@@ -335,7 +343,8 @@ namespace cli::parse {
       return {static_cast<type>(v), str.substr(max_size)};
     }
 
-    static constexpr ParseResult<T, CharT> parse_dec(View<const CharT> str) {
+    static constexpr ParseResult<T, CharT>
+    parse_dec(View<const CharT> str) noexcept {
       if constexpr (not traits::is_signed) {
         std::size_t offset = 0;
         if (str[0] == '+') {
@@ -394,7 +403,8 @@ namespace cli::parse {
     }
 
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT> str) const noexcept {
       static_assert(static_cast<unsigned>(
                       Format & (Fmt::binary | Fmt::hex | Fmt::normal)) != 0,
                     "Invalid Fmt specified. Must be at least one of "
@@ -426,7 +436,8 @@ namespace cli::parse {
   template<concepts::Character T, typename CharT>
   class Char {
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT> str) const noexcept {
       if (str.size() == 0)
         return Error::too_few_characters;
 
@@ -452,7 +463,8 @@ namespace cli::parse {
   template<concepts::StringView T, typename CharT>
   class StringView {
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT> str) const noexcept {
       static_assert(
         std::is_same_v<CharT, typename T::value_type>,
         "The value_type of the stringview T must be the same as CharT");
@@ -502,7 +514,8 @@ namespace cli::parse {
   template<concepts::String T, typename CharT>
   class String {
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT> str) const noexcept {
       static_assert(
         std::is_same_v<CharT, typename T::value_type>,
         "The value_type of the stringview T must be the same as CharT");
@@ -587,7 +600,7 @@ namespace cli::parse {
     using unsigned_t = std::make_unsigned_t<typename traits::raw_value_type>;
 
     template<typename B, typename U>
-    static constexpr B cxpow(B base, U exp) {
+    static constexpr B cxpow(B base, U exp) noexcept {
       if (exp == 0)
         return B(1);
       B ret = base;
@@ -686,7 +699,8 @@ namespace cli::parse {
       (1u << traits::num_int_digits) - 1u;
 
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT> str) const noexcept {
       // TODO: figure out a way to parse fixpoint numbers with a large
       // fractional portion, i.e. more than 10 decimal digits
       if (str.size() == 0)
@@ -846,7 +860,8 @@ namespace cli::parse {
   template<concepts::Enum T, typename CharT, bool AllowNumbers>
   class Enum {
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT> str) const noexcept {
       if constexpr (traits::enum_traits<T>::is_flag) {
         T val{};
         bool read_one = false;
@@ -930,7 +945,8 @@ namespace cli::parse {
            CharT Delimiter = ','>
   class Sequence {
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT> str) const noexcept {
       if (str.size() == 0)
         return {Error::too_few_characters, str};
 
@@ -989,7 +1005,8 @@ namespace cli::parse {
            CharT Delimiter = ','>
   class FixedSizeSequence {
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT> str) const noexcept {
       if (str.size() == 0)
         return Error::too_few_characters;
 
@@ -1068,7 +1085,8 @@ namespace cli::parse {
      * @param buf the buffer to parse from
      * @return ParseResult<T, CharT>
      */
-    constexpr ParseResult<T, CharT> operator()(View<const CharT>) const {
+    constexpr ParseResult<T, CharT>
+    operator()(View<const CharT>) const noexcept {
       static_assert(always_false<T>, "No default parser for T available!");
     }
   };
@@ -1102,7 +1120,8 @@ namespace cli::parse {
       "false", "FALSE", "0", "no", "n"};
 
   public:
-    constexpr ParseResult<bool, CharT> operator()(View<const CharT> sv) const {
+    constexpr ParseResult<bool, CharT>
+    operator()(View<const CharT> sv) const noexcept {
       if (sv.size() == 0)
         return Error::too_few_characters;
 
@@ -1226,7 +1245,7 @@ namespace cli::parse {
 
   public:
     template<class... Fs>
-    constexpr FieldGroup(Fs &&...fields)
+    constexpr FieldGroup(Fs &&...fields) noexcept
       : s{.fields{std::forward<Fs>(fields)...}} {
       for_each(
         [](const auto &f, State &self) {
@@ -1243,7 +1262,7 @@ namespace cli::parse {
     }
 
     template<class... Fs>
-    constexpr FieldGroup(std::tuple<Fs...> &&fields)
+    constexpr FieldGroup(std::tuple<Fs...> &&fields) noexcept
       : s{.fields = std::move(fields)} {
       for_each(
         [](const auto &f, State &self) {
@@ -1260,7 +1279,7 @@ namespace cli::parse {
     }
 
     template<class... Fs>
-    constexpr FieldGroup(const std::tuple<Fs...> &fields)
+    constexpr FieldGroup(const std::tuple<Fs...> &fields) noexcept
       : s{.fields = fields} {
       for_each(
         [](const auto &f, State &self) {
@@ -1282,7 +1301,7 @@ namespace cli::parse {
     constexpr FieldGroup &operator=(FieldGroup &&) = default;
 
     constexpr ParseResult<std::tuple<Fields...>, CharT>
-    operator()(View<const CharT> str) {
+    operator()(View<const CharT> str) noexcept {
       if (str.size() == 0) {
         if constexpr ((Fields::has_default and ...))
           return s.fields;
@@ -1528,7 +1547,7 @@ namespace cli::parse {
                                            Postfix>::type;
 
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> s) {
+    constexpr ParseResult<T, CharT> operator()(View<const CharT> s) noexcept {
       if (s.size() == 0)
         return Error::too_few_characters;
 
@@ -1565,7 +1584,7 @@ namespace cli::parse {
   class NullParse {
   public:
     constexpr ParseResult<dummy, CharT>
-    operator()(View<const CharT> str) const {
+    operator()(View<const CharT> str) const noexcept {
       return {dummy{}, str};
     }
   };

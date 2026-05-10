@@ -64,7 +64,7 @@ namespace cli {
                       'l',
                       'e'>{}};
 
-    constexpr void write(View<const char_type> s) const {
+    constexpr void write(View<const char_type> s) noexcept {
       engine.display_.write(s);
     }
 
@@ -74,7 +74,7 @@ namespace cli {
      * @param cmd the command
      */
     constexpr void operator()(View<const char_type> cmd,
-                              View<const char_type> arg) const {
+                              View<const char_type> arg) noexcept {
       engine.display_.newline();
       if (cmd.size() == 0) {
         if (arg.size() != 0)
@@ -115,7 +115,7 @@ namespace cli {
   };
 
   template<class Engine>
-  constexpr auto create_help_cmd(Engine &engine) {
+  constexpr auto create_help_cmd(Engine &engine) noexcept {
     return funcs::func(
       string_constant<typename Engine::char_type, 'h', 'e', 'l', 'p'>{},
       string_constant<typename Engine::char_type,

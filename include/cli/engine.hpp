@@ -15,7 +15,6 @@
 #include "cli/util.hpp"
 
 #include <cstdint>
-#include <type_traits>
 
 namespace cli {
 
@@ -99,7 +98,7 @@ namespace cli {
     template<concepts::Config C,
              concepts::Display<typename C::char_type> D,
              concepts::Command... Cmds>
-    constexpr Engine(C config, D &&display, Cmds &&...commands)
+    constexpr Engine(C config, D &&display, Cmds &&...commands) noexcept
       : commands_{*this, std::forward<Cmds>(commands)...},
         display_{std::forward<D>(display)},
         line_{*commands_.root(), display_} {
@@ -115,7 +114,7 @@ namespace cli {
      * @return Error::none on success, Error::buffer_overflow if the input can't
      * handle more events.
      */
-    constexpr Error on_char(char_type c) { return input_.on_char(c); }
+    constexpr Error on_char(char_type c) noexcept { return input_.on_char(c); }
 
     /**
      * Notifies the engine of a newly received control.
@@ -124,14 +123,14 @@ namespace cli {
      * @return Error::none on success, Error::buffer_overflow if the input can't
      * handle more events.
      */
-    constexpr Error on_control(Control ctrl, std::uint8_t param = 1) {
+    constexpr Error on_control(Control ctrl, std::uint8_t param = 1) noexcept {
       return input_.on_control(ctrl, param);
     }
 
     /**
      * processes the characters/events of the input.
      */
-    constexpr Error process() {
+    constexpr Error process() noexcept {
       Event<char_type> ev{};
       while (input_.pop_event(ev)) {
         Error e = process_event(ev);
@@ -144,7 +143,7 @@ namespace cli {
     /**
      * resets the engine, i.e. clears the input and clears the display.
      */
-    constexpr void reset() {
+    constexpr void reset() noexcept {
       input_.reset();
       line_.clear_screen();
     }
@@ -152,7 +151,7 @@ namespace cli {
     /**
      * prints the command tree
      */
-    constexpr void print() {
+    constexpr void print() noexcept {
       if constexpr (needs_incremental_print) {
         print_data_.current = nullptr;
         print_data_.indent = 0;
@@ -250,14 +249,14 @@ namespace cli {
         return Error::none;
     }
 
-    constexpr Error on_enter() {
+    constexpr Error on_enter() noexcept {
       history_.push(line_.view());
       View out_buf = {buffer_, config::output_size_v<Cfg>};
 
       return line_.execute(out_buf);
     }
 
-    constexpr void print_one() {
+    constexpr void print_one() noexcept {
       if (print_data_.current == nullptr) {
         // print first lines
         print_data_.current = root();
