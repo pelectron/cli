@@ -19,7 +19,7 @@
 
 // clang-format off
 #if defined (_MSC_VER)
-  #if define(__clang__)
+  #if defined(__clang__)
     #define CLI_CLANG_CL
   #else
     #define CLI_MSVC
@@ -109,7 +109,16 @@ namespace cli::ctti {
       constexpr auto size = name.size() - CTTI_TYPE_PRETTY_FUNCTION_LEFT -
                             CTTI_TYPE_PRETTY_FUNCTION_RIGHT;
       static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
+#if defined(CLI_MSVC)
+      View sub = name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
+      std::size_t offset = sub.find(' ');
+      if (offset < sub.size())
+        return sub.substr(offset + 1);
+      else
+        return sub;
+#else
       return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
+#endif
     }
 
     static_assert(name_impl<int>() == "int");

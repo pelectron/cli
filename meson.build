@@ -86,7 +86,7 @@ install_headers(
 
 if (not simulation.disabled())
   install_headers(
-    'include/cli/sim.hpp', 
+    'include/cli/sim.hpp',
     subdir: 'cli',
   )
 endif
@@ -99,9 +99,19 @@ if (not build_examples.disabled())
 endif
 
 if get_option('led-example').enabled()
-   led_lib = static_library('led', 'examples/led.cpp', include_directories:inc)
-   executable('led-example', 'examples/syscalls.cpp', link_with: led_lib, dependencies: cli_dep)
-  executable('empty', 'examples/empty.cpp', 'examples/syscalls.cpp', dependencies: cli_dep)
+  led_lib = static_library('led', 'examples/led.cpp', include_directories: inc)
+  executable(
+    'led-example',
+    'examples/syscalls.cpp',
+    link_with: led_lib,
+    dependencies: cli_dep,
+  )
+  executable(
+    'empty',
+    'examples/empty.cpp',
+    'examples/syscalls.cpp',
+    dependencies: cli_dep,
+  )
 endif
 
 if (not build_tests.disabled())
@@ -125,7 +135,7 @@ if (not build_tests.disabled())
   catch_dep = dependency(
     'catch2',
     default_options: [
-      'tests=false', 
+      'tests=false',
       'warning_level=0',
       'prefer_static=true',
     ],
@@ -212,7 +222,11 @@ endif
 if (not cli_term.disabled())
   # cli-term dependencies
   deps = [
-    dependency('cpp-terminal', required: true),
+    dependency(
+      'cpp-terminal',
+      default_options: ['warning_level=0', 'buildtype=release'],
+      required: true,
+    ),
     dependency('asio', required: true),
   ]
 
@@ -223,13 +237,10 @@ if (not cli_term.disabled())
     dependencies: deps,
     include_directories: inc,
     install: true,
-    override_options:[
-      'warning_level=3', 
-      'buildtype=release'
-    ],
+    override_options: ['warning_level=3', 'buildtype=release'],
     cpp_args: [
       '-DASIO_NO_DEPRECATED',
     ],
-    install_tag: 'bin'
+    install_tag: 'bin',
   )
 endif

@@ -22,6 +22,7 @@ struct F2 {
   int i;
   char c;
   F1 f1_struct;
+  void apply() {}
 };
 
 namespace ns {
@@ -66,6 +67,7 @@ TEST_CASE("ctti::enum_name", "[ctti]") {
 TEST_CASE("ctti::value_name", "[ctti]") {
   REQUIRE(cli::ctti::value_name<123>() == "123"_sc);
   REQUIRE(cli::ctti::value_name<0xFFFF>() == "65535"_sc);
+  REQUIRE(cli::ctti::value_name<&F2::apply>() == "apply"_sc);
 }
 
 // template<class Field, class... Fields>
