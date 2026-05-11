@@ -99,7 +99,8 @@ if (not build_examples.disabled())
 endif
 
 if get_option('led-example').enabled()
-  executable('led-example', 'examples/led.cpp', 'examples/syscalls.cpp', dependencies: cli_dep)
+   led_lib = static_library('led', 'examples/led.cpp', include_directories:inc)
+   executable('led-example', 'examples/syscalls.cpp', link_with: led_lib, dependencies: cli_dep)
   executable('empty', 'examples/empty.cpp', 'examples/syscalls.cpp', dependencies: cli_dep)
 endif
 

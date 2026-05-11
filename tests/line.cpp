@@ -79,6 +79,7 @@ struct NoCursor_NoAutocomplete {
   static constexpr bool use_cursor = false;
   static constexpr bool use_autocomplete = false;
   static constexpr std::size_t max_line_length = 32;
+  static constexpr bool use_detailed_error_messages = true;
 };
 
 struct NoCursor_Autocomplete {
@@ -91,6 +92,7 @@ struct NoCursor_Autocomplete {
   static constexpr bool use_cursor = false;
   static constexpr bool use_autocomplete = true;
   static constexpr std::size_t max_line_length = 32;
+  static constexpr bool use_detailed_error_messages = true;
 };
 
 struct Cursor_NoAutocomplete {
@@ -103,6 +105,7 @@ struct Cursor_NoAutocomplete {
   static constexpr bool use_cursor = true;
   static constexpr bool use_autocomplete = false;
   static constexpr std::size_t max_line_length = 32;
+  static constexpr bool use_detailed_error_messages = true;
 };
 
 struct Cursor_Autocomplete {
@@ -115,6 +118,7 @@ struct Cursor_Autocomplete {
   static constexpr bool use_cursor = true;
   static constexpr bool use_autocomplete = true;
   static constexpr std::size_t max_line_length = 32;
+  static constexpr bool use_detailed_error_messages = true;
 };
 
 static_assert(cli::concepts::Config<NoCursor_NoAutocomplete>);

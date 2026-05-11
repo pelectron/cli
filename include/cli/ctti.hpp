@@ -7,6 +7,7 @@
 #ifndef CLI_CTTI_HPP
 #define CLI_CTTI_HPP
 
+#include "cli/basic_format.hpp"
 #include "cli/concepts.hpp"
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
@@ -17,35 +18,64 @@
 #include <utility>
 
 // clang-format off
-#if defined(__clang__) && !defined(_MSC_VER)
+#if defined (_MSC_VER)
+  #if define(__clang__)
+    #define CLI_CLANG_CL
+  #else
+    #define CLI_MSVC
+  #endif
+#elif defined(__clang__)
+  #define CLI_CLANG
+#elif defined(__GNUC__)
+  #if defined (__arm__)
+    #define CLI_ARM_GCC
+  #else
+    #define CLI_GCC 
+  #endif
+#else 
+#error "Unsupported Compiler detected!"
+#endif
+
+#if defined(CLI_CLANG)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
   #define CTTI_VALUE_PREFIX "CharView cli::ctti::dtl::value_impl() [D = "
   #define CTTI_VALUE_SUFFIX "]"
-#elif defined(__GNUC__) && !defined(__clang__)
+  #define CTTI_MEMBER_NAME_PREFIX "CharView cli::ctti::dtl::member_name_impl() [Ptr = ptr<decltype(p1)>{&external."
+  #define CTTI_MEMBER_NAME_SUFFIX "}]"
+#elif defined(CLI_GCC)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
   #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "; cli::CharView = cli::View<const char>]"
   #define CTTI_VALUE_PREFIX "consteval cli::CharView cli::ctti::dtl::value_impl() [with auto D = "
   #define CTTI_VALUE_SUFFIX "; cli::CharView = cli::View<const char>]"
-#elif defined(_MSC_VER)
-  #if defined(__clang__)
-    #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
-    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
-    #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
-    #define CTTI_VALUE_PREFIX "CharView cli::ctti::dtl::name_impl() [D = "
-    #define CTTI_VALUE_SUFFIX "]"
-  #else
+  #define CTTI_MEMBER_NAME_SUFFIX ")}; cli::CharView = cli::View<const char>]"
+#elif defined(CLI_ARM_GCC)
+  #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "consteval cli::CharView cli::ctti::dtl::name_impl() [with T = "
+  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "; cli::CharView = cli::View<const char>]"
+  #define CTTI_VALUE_PREFIX "consteval cli::CharView cli::ctti::dtl::value_impl() [with auto D = "
+  #define CTTI_VALUE_SUFFIX "; cli::CharView = cli::View<const char>]"
+  #define CTTI_MEMBER_NAME_SUFFIX ")}; cli::CharView = cli::View<const char>]"
+#elif defined(CLI_MSVC)
   #define CLI_FUNCTION_NAME __FUNCSIG__
-    #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class cli::View<char const > __cdecl cli::ctti::dtl::name_impl<"
-    #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
-    #define CTTI_VALUE_PREFIX "class cli::View<char const > __cdecl cli::ctti::dtl::value_impl<"
-    #define CTTI_VALUE_SUFFIX ">(void)"
-  #endif
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "class cli::View<char const > __cdecl cli::ctti::dtl::name_impl<"
+  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX ">(void)"
+  #define CTTI_VALUE_PREFIX "class cli::View<char const > __cdecl cli::ctti::dtl::value_impl<"
+  #define CTTI_VALUE_SUFFIX ">(void)"
+  #define CTTI_MEMBER_NAME_SUFFIX "}>(void)"
+#elif defined(CLI_CLANG_CL)
+  #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
+  #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView __cdecl cli::ctti::dtl::name_impl(void) [T = "
+  #define CTTI_TYPE_PRETTY_FUNCTION_SUFFIX "]"
+  #define CTTI_VALUE_PREFIX "CharView __cdecl cli::ctti::dtl::value_impl(void) [D = "
+  #define CTTI_VALUE_SUFFIX "]"
+  #define CTTI_MEMBER_NAME_SUFFIX "}]"
 #else
-  #error "No support for this compiler."
+#error "Unsupported Compiler detected!"
 #endif
+
 // clang-format on
 
 #define CTTI_TYPE_PRETTY_FUNCTION_LEFT                                         \
@@ -79,16 +109,10 @@ namespace cli::ctti {
       constexpr auto size = name.size() - CTTI_TYPE_PRETTY_FUNCTION_LEFT -
                             CTTI_TYPE_PRETTY_FUNCTION_RIGHT;
       static_assert(name.starts_with(CTTI_TYPE_PRETTY_FUNCTION_PREFIX));
-#if defined(__clang__) or defined(__GNUC__)
       return name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
-#elif defined(_MSC_VER)
-      const auto split = name.substr(CTTI_TYPE_PRETTY_FUNCTION_LEFT, size);
-      const auto idx = split.find(' ');
-      if (idx == CharView::npos)
-        return split;
-      return split.substr(idx + 1);
-#endif
     }
+
+    static_assert(name_impl<int>() == "int");
 
     template<typename T, typename CharT = char>
     consteval auto name() {
@@ -101,7 +125,6 @@ namespace cli::ctti {
       }
     }
 
-#if (defined(__clang__) and not defined(_MSC_VER)) or defined(__GNUC__)
     template<auto D>
     consteval CharView value_impl() {
       constexpr CharView name{CLI_FUNCTION_NAME};
@@ -109,15 +132,6 @@ namespace cli::ctti {
       constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
       return name.substr(CTTI_VALUE_LEFT, size);
     }
-#elif defined(_MSC_VER)
-    template<auto D>
-    consteval CharView value_impl() {
-      constexpr CharView name{CLI_FUNCTION_NAME};
-      static_assert(name.starts_with(CTTI_VALUE_PREFIX));
-      constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
-      return name.substr(CTTI_VALUE_LEFT, size);
-    }
-#endif
 
     template<typename T, typename CharT = char>
     struct value {
@@ -148,6 +162,42 @@ namespace cli::ctti {
       }
     };
 
+    template<typename Int, typename CharT>
+      requires concepts::Integer<Int>
+    struct value<Int, CharT> {
+
+      template<Int V>
+      static consteval std::size_t len() {
+        [[maybe_unused]] CharT buffer[256]{};
+        return cli::format::Format<Int, CharT>{}({buffer, 256}, V).size_written;
+      }
+      template<Int V, std::size_t I>
+      static consteval std::size_t ith() {
+        [[maybe_unused]] CharT buffer[256]{};
+        cli::format::Format<Int, CharT>{}({buffer, 256}, V).size_written;
+        return buffer[I];
+      }
+
+      template<auto D>
+      static consteval auto get() {
+        constexpr auto length = len<D>();
+        return []<std::size_t... Is>(std::index_sequence<Is...>) {
+          return string_constant<CharT, ith<D, Is>()...>{};
+        }(std::make_index_sequence<length>());
+      }
+    };
+
+    template<typename Char, typename CharT>
+      requires concepts::Character<Char>
+    struct value<Char, CharT> {
+
+      template<auto D>
+      static consteval auto get() {
+        static_assert(sizeof(Char) <= sizeof(CharT));
+        return string_constant<CharT, D>{};
+      }
+    };
+
     struct any_type {
       template<class T>
       constexpr operator T();
@@ -163,46 +213,34 @@ namespace cli::ctti {
     extern const T external;
 
     template<auto Ptr>
-    [[nodiscard]] consteval auto member_name_impl() -> CharView {
-      const auto name =
-        CharView{std::source_location::current().function_name()};
-#if defined(__clang__) and not defined(_MSC_VER)
-      const auto split = name.substr(0, name.find("}]"));
-      return split.substr(split.find_last_of(".") + 1);
-#elif defined(__GNUC__)
-      const auto split = name.substr(0, name.find(")}"));
-      return split.substr(split.find_last_of(":") + 1);
-#elif defined(_MSC_VER)
-#if defined(__clang__)
-      const auto split = name.substr(0, name.find("}"));
-      return split.substr(split.find_last_of(".") + 1);
+    [[nodiscard]] consteval CharView member_name_impl() {
+      constexpr CharView name{CLI_FUNCTION_NAME};
+#if defined(CLI_CLANG) || defined(CLI_CLANG_CL)
+      return name.substr((sizeof(CTTI_MEMBER_NAME_PREFIX) - 1),
+                         name.size() - (sizeof(CTTI_MEMBER_NAME_PREFIX) - 1) -
+                           (sizeof(CTTI_MEMBER_NAME_SUFFIX) - 1));
+#elif defined(CLI_GCC) || defined(CLI_ARM_GCC)
+      View sub =
+        name.substr(0, name.size() - sizeof(CTTI_MEMBER_NAME_SUFFIX) + 1);
+      std::size_t pos = sub.find_last_of(':');
+      return sub.substr(pos + 1);
+#elif defined(CLI_MSVC)
+      View sub =
+        name.substr(0, name.size() - sizeof(CTTI_MEMBER_NAME_SUFFIX) + 1);
+      std::size_t pos = sub.find_last_of('>');
+      return sub.substr(pos + 1);
 #else
-      const auto split = name.substr(0, name.find("}>"));
-      return split.substr(split.find("->") + 2);
-#endif
+#error "Unsupported Compiler detected!"
 #endif
     }
 
     template<auto Value>
     [[nodiscard]] consteval auto value_name_impl() -> CharView {
-      const auto name =
-        CharView{std::source_location::current().function_name()};
-#if defined(__clang__) and not defined(_MSC_VER)
-      const auto split = name.substr(0, name.find_last_of("]"));
-      return split.substr(split.find_last_of(": ") + 1);
-#elif defined(__GNUC__)
-      const auto split = name.substr(0, name.find_last_of(";"));
-      return split.substr(split.find_last_of(": ") + 1);
-#elif defined(_MSC_VER)
-#if defined(__clang__)
-      const auto split = name.substr(0, name.find_last_of("]"));
-      return split.substr(split.find_last_of(": ") + 1);
-#else
-      const auto split = name.substr(0, name.find_last_of(">"));
-      const auto split2 = split.substr(split.find_last_of(": <") + 1);
-      return split2.substr(0, split2.find_first_of("("));
-#endif
-#endif
+      return value_impl<Value>();
+      // constexpr CharView name = {CLI_FUNCTION_NAME};
+      // constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
+      // static_assert(name.starts_with(CTTI_VALUE_PREFIX));
+      // return name.substr(CTTI_VALUE_LEFT, size);
     }
 
     template<auto &Value>
@@ -226,34 +264,19 @@ namespace cli::ctti {
 #endif
 #endif
     }
+
     template<auto Value>
     [[nodiscard]] consteval auto enum_name_impl() -> CharView {
-      const auto name =
-        CharView{std::source_location::current().function_name()};
-      return name;
-#if defined(__clang__) and not defined(_MSC_VER)
-      const auto split = name.substr(0, name.find_last_of("]"));
-      return split.substr(split.find_last_of(": ") + 1);
-#elif defined(__GNUC__)
-      const auto split = name.substr(0, name.find_last_of(";"));
-      return split.substr(split.find_last_of(": ") + 1);
-#elif defined(_MSC_VER)
-#if defined(__clang__)
-      const auto split = name.substr(0, name.find_last_of("]"));
-      return split.substr(split.find_last_of(": ") + 1);
-#else
-      const auto split = name.substr(0, name.find_last_of(">"));
-      const auto split2 = split.substr(split.find_last_of(": <") + 1);
-      return split2.substr(0, split2.find_first_of("("));
-#endif
-#endif
+      constexpr auto name = value_impl<Value>();
+      std::size_t pos = name.find_last_of(':');
+      if (pos == CharView::npos)
+        return name;
+      return name.substr(pos + 1);
     }
 
     template<auto V, typename CharT = char>
     consteval auto value_name() {
-      return []<std::size_t... Is>(std::index_sequence<Is...>) {
-        return string_constant<CharT, value_name_impl<V>().data()[Is]...>{};
-      }(std::make_index_sequence<value_name_impl<V>().size()>());
+      return value<decltype(V), CharT>::template get<V>();
     }
 
     template<auto &V, typename CharT = char>
@@ -298,7 +321,7 @@ namespace cli::ctti {
 
       const RawArray strings{
         Pair{static_cast<E>(traits::enum_traits<E>::min + Is),
-            value_name<static_cast<E>(traits::enum_traits<E>::min + Is), CharT>()} ...};
+            enum_name<static_cast<E>(traits::enum_traits<E>::min + Is), CharT>()} ...};
 
       std::size_t size = 0;
       for (const auto &[e, s] : strings) {
@@ -318,7 +341,7 @@ namespace cli::ctti {
 
       const RawArray strings{
         Pair{ static_cast<E>(traits::enum_traits<E>::min + Is),
-              value_name<static_cast<E>(traits::enum_traits<E>::min + Is), CharT>()}...};
+              enum_name<static_cast<E>(traits::enum_traits<E>::min + Is), CharT>()}...};
 
       FilteredArray ret{};
       std::size_t size = 0;
@@ -337,7 +360,7 @@ namespace cli::ctti {
       using RawArray = std::array<Pair, sizeof...(Is)>;
 
       RawArray strings{ Pair{ static_cast<E>(1u << Is),
-                              value_name<static_cast<E>(1u << Is), CharT>()}...};
+                              enum_name<static_cast<E>(1u << Is), CharT>()}...};
       std::size_t size = 0;
       for (const auto &[e, s] : strings) {
         if (is_identifier(s)) {
@@ -357,7 +380,7 @@ namespace cli::ctti {
 
       RawArray strings{
           Pair{ static_cast<E>(1u << Is),
-                value_name<static_cast<E>(1u << Is), CharT>()}...};
+                enum_name<static_cast<E>(1u << Is), CharT>()}...};
 
       FilteredArray ret{};
       std::size_t size = 0;

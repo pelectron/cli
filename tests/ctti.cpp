@@ -34,7 +34,7 @@ using F2Info = cli::ctti::StructInfo<F2>;
 
 using cli::operator""_sc;
 
-TEST_CASE("ctti::name") {
+TEST_CASE("ctti::name", "[ctti]") {
   CHECK(cli::ctti::name<F1>() == "F1"_sc);
   CHECK(cli::ctti::name<F2>() == "F2"_sc);
   CHECK(cli::ctti::name<S4<int>>() == "S4<int>"_sc);
@@ -42,13 +42,13 @@ TEST_CASE("ctti::name") {
   CHECK(cli::ctti::name<ns::F3>() == "ns::F3"_sc);
 }
 
-TEST_CASE("ctti::dtl::member_name") {
+TEST_CASE("ctti::dtl::member_name", "[ctti]") {
   REQUIRE(cli::ctti::dtl::member_name<F2, 0>() == "i"_sc);
   REQUIRE(cli::ctti::dtl::member_name<F2, 1>() == "c"_sc);
   REQUIRE(cli::ctti::dtl::member_name<F2, 2>() == "f1_struct"_sc);
 }
 
-TEST_CASE("ctti::to_tuple") {
+TEST_CASE("ctti::to_tuple", "[ctti]") {
   F2 f2{.i = 5, .c = 'k', .f1_struct = {.a = 10}};
   auto t = cli::ctti::to_tuple(f2);
   REQUIRE(std::get<0>(t).value == 5);
@@ -56,15 +56,15 @@ TEST_CASE("ctti::to_tuple") {
   REQUIRE(std::get<2>(t).value.a == 10);
 }
 
-TEST_CASE("ctti::enum_name") {
+TEST_CASE("ctti::enum_name", "[ctti]") {
   REQUIRE(cli::ctti::enum_name(cli::Error::none) == "none");
   REQUIRE(cli::ctti::enum_name(static_cast<cli::Error>(300)) == "<unknown>");
   REQUIRE(cli::ctti::enum_name(F::A) == "A");
   REQUIRE(cli::ctti::enum_name(F::A | F::B) == "<unknown>");
 }
 
-TEST_CASE("ctti::value_name") {
-  REQUIRE(cli::ctti::dtl::value_impl<1>() == "1");
+TEST_CASE("ctti::value_name", "[ctti]") {
+  REQUIRE(cli::ctti::value_name<123>() == "123"_sc);
   REQUIRE(cli::ctti::value_name<0xFFFF>() == "65535"_sc);
 }
 
