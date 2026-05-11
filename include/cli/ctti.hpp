@@ -139,13 +139,21 @@ namespace cli::ctti {
       constexpr CharView name{CLI_FUNCTION_NAME};
       static_assert(name.starts_with(CTTI_VALUE_PREFIX));
       constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
-      constexpr View sub = name.substr(CTTI_VALUE_LEFT, size);
-      std::size_t col = sub.find_last_of(':');
-      std::size_t parens = sub.find_last_of('(');
+      constexpr CharView sub = name.substr(CTTI_VALUE_LEFT, size);
+      constexpr std::size_t parens = sub.find('(');
+      if (parens == CharView::npos) {
+        constexpr std::size_t col = sub.find_last_of(" :");
+        if (col == CharView::npos)
+          return sub;
+        else
+          return sub.substr(col + 1);
+      }
+      constexpr View sub2 = sub.substr(0, parens);
+      constexpr std::size_t col = sub2.find_last_of(" :");
       if (col == CharView::npos)
-        return sub.substr(0, parens);
+        return sub2;
       else
-        return sub.substr(col + 1, parens);
+        return sub2.substr(col + 1);
     }
 
     template<typename T, typename CharT = char>

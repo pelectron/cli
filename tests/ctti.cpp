@@ -18,16 +18,20 @@ struct F1 {
   int a;
 };
 
+namespace ns {
+  struct F3 {};
+} // namespace ns
+
 struct F2 {
   int i;
   char c;
   F1 f1_struct;
   void apply() {}
+  void apply_c() const {}
+  void apply_e() noexcept {}
+  void apply_ce() const noexcept {}
+  void f(ns::F3) {}
 };
-
-namespace ns {
-  struct F3 {};
-} // namespace ns
 
 using F1Info = cli::ctti::StructInfo<F1>;
 
@@ -68,6 +72,10 @@ TEST_CASE("ctti::value_name", "[ctti]") {
   REQUIRE(cli::ctti::value_name<123>() == "123"_sc);
   REQUIRE(cli::ctti::value_name<0xFFFF>() == "65535"_sc);
   REQUIRE(cli::ctti::value_name<&F2::apply>() == "apply"_sc);
+  REQUIRE(cli::ctti::value_name<&F2::apply_c>() == "apply_c"_sc);
+  REQUIRE(cli::ctti::value_name<&F2::apply_ce>() == "apply_ce"_sc);
+  REQUIRE(cli::ctti::value_name<&F2::apply_e>() == "apply_e"_sc);
+  REQUIRE(cli::ctti::value_name<&F2::f>() == "f"_sc);
 }
 
 // template<class Field, class... Fields>

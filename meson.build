@@ -224,7 +224,7 @@ if (not cli_term.disabled())
   deps = [
     dependency(
       'cpp-terminal',
-      default_options: ['warning_level=0', 'buildtype=release'],
+      default_options: ['warning_level=3', 'buildtype=release'],
       required: true,
     ),
     dependency('asio', required: true),
@@ -243,4 +243,5 @@ if (not cli_term.disabled())
     ],
     install_tag: 'bin',
   )
+
 endif
