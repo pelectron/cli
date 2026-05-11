@@ -23,16 +23,24 @@ c_args = [
     '-mthumb',
     '-mfloat-abi=hard',
     '-mfpu=fpv4-sp-d16',
-    '--specs=nosys.specs'
+    '--specs=nosys.specs',
+    '-fno-exceptions',
+    '-fno-unwind-tables',
+    '-ffreestanding',
+    '-fno-threadsafe-statics',
+    '-fdata-sections',
+    '-ffunction-sections',
+    '-fno-keep-static-consts'
   ]
 
-cpp_args = c_args + ['-fno-exceptions']
+cpp_args = c_args 
 
 c_link_args = [
     '-mcpu=cortex-m4',
     '-mthumb',
     '-mfloat-abi=hard',
     '-mfpu=fpv4-sp-d16',
-    '--specs=nosys.specs'
+    '--specs=nosys.specs',
+    '-Wl,--gc-sections'
   ]
 cpp_link_args = c_link_args

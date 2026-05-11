@@ -1,0 +1,17 @@
+empty size: 1456
+base size: 3366 -> 2kB
+help: 5399 -> 2kB
+help + empty_help_prints_commands: 5611 -> 300B
+detailed errors: 5538 -> 2.2kB
+history: 11996 -> 1kB
+cursor: 4278 -> 1kB
+autocomplete: 3502 -> 150B
+cursor and autocomplete: 5706 -> 2.3kB
+help and detailed error: 7563 -> 4.2kB
+help and error and autocomplete: 8043 -> 4.7kB
+help and error and cursor: 8327 -> 5kB
+help and error and autocomplete and cursor: 9671 -> 6.3kB
+everything enabled: 17144 -> 9.6kB
+everything + struct param: 20112 -> 3kB
+everything + struct + value: 20596 -> 0.5kB
+everything + struct + value + func: 21992 -> 1.3kB
