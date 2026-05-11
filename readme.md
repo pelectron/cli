@@ -21,21 +21,34 @@ connect to systems running `CLI` over serial port or ethernet.
   - autocomplete
   - cursor movement
   - help command
-  - detailed errors
+  - detailed error reporting
 - smallish code size, depending on configuration
   - example: autocomplete, cursor movement, help, and detailed errors are
-    disabled -> library code size is about 3.5kB on an arm Cortex-M3
+    disabled -> base library code size is about 2kB on an arm Cortex-M3
+  - enabling everything adds about 7.5kB on an arm Cortex-M3
+  - each command adds 0.5kB - 1.5kB, depending on how many different types are
+    used.
 
 ## Contents
 
+- [Library Features](#library-features)
 - [Short Example](#a-short-example)
 - [How To Build](#how-to-build)
   - [Dependencies](#dependencies)
   - [Meson](#meson)
+    - [As a dependency](#as-a-dependency)
+    - [Building cli-term](#building-cli-term)
+    - [Installing cli-term](#installing-cli-term)
+    - [Installing The Headers](#installing-the-headers)
   - [Other Build Systems](#other-build-systems)
+    - [As A Library](#as-a-library)
+    - [Building](#building)
   - [Examples](#examples)
 - [Simulation](#simulation)
 - [Documentation](#documentation)
+- [Design Rationale](#design-rationale)
+- [Suported Compilers](#supported-compilers)
+- [Contributions](#contributions)
 
 ## A Short Example
 
@@ -45,12 +58,12 @@ Imagine your embedded application has some parameters and some functionality
 that you want to trigger remotely.
 
 ```cpp
-// the settings
 struct Settings{
   int foo;
   char bar;
 };
 
+// the settings
 static Settings settings;
 
 enum class Mode{
@@ -137,7 +150,8 @@ For more involved examples, see `examples/cli.cpp` and `examples/led.cpp`.
 ## How to build
 
 Using `CLI` as a library requires no build because it is a header only library.
-If you use meson, refer to [this section](#meson).
+For meson, refer to [this section](#meson). For other build systems, see
+[here](#other-build-systems).
 
 ### Dependencies
 
@@ -149,30 +163,45 @@ When building the `cli-term` executable, you must also have
 
 For testing, [catch2](https://github.com/catchorg/Catch2) is used.
 
-If you use meson, these dependencies will available even if you don't have them
-installed.
+With meson, these dependencies will downloaded if the are not installed.
 
 ### Meson
 
-If you use meson, add CLI as a subproject and use it like so:
+#### As a dependency
+
+If you use meson, add CLI as a subproject or wrap and use it like so:
 
 ```{python}
+# with wrap
 cli_dep = dependency(
   'cli',
   default_options: [
     'tests=disabled',
     'examples=disabled',
     'sim=disabled',
-    'cli-term=disabled'
+    'cli-term=disabled',
+  ]
+)
+
+# as subproject
+cli_dep = subproject(
+  'cli',
+  default_options: [
+    'tests=disabled',
+    'examples=disabled',
+    'sim=disabled',
+    'cli-term=disabled',
   ]
 )
 ```
 
-To build `cli-term`, the cli-term option must be enabled. Simply execute the
+#### Building cli-term
+
+To build `cli-term`, the `cli-term` option must be enabled. Simply execute the
 following command in the project root directory:
 
 ```bash
-meson setup build -Dcli-term=enabled
+meson setup build -Dcli-term=enabled -Dauto_features=disabled 
 meson compile -C build
 ```
 
@@ -181,21 +210,77 @@ This will generate `cli-term` in the `build` directory.
 If you are on windows, you may need to add `--vsenv` to the meson setup command
 
 ```bash
-meson setup build -Dcli-term=enabled --vsenv
+meson setup build -Dcli-term=enabled -Dauto_features=disabled --vsenv
 meson compile -C build
+```
+
+#### Installing cli-term
+
+To install `cli-term`, either use meson's install command or copy `cli-term` to
+the desired location.
+
+```bash
+meson setup build -Dcli-term=enabled -Dauto_features=disabled
+meson install -C build --tags bin --skip-subprojects
+```
+
+**NOTE**: To customize the installation directory, specify the `--prefix`
+option in meson's setup command. On Linux, the prefix defaults to `usr/local/`.
+On Windows the prefix defaults to `C:\`.
+
+Windows example (administrator command prompt is needed):
+
+```bash
+meson setup build -Dcli-term=enabled -Dauto_features=disabled --vsenv --prefix="C:/Program Files/cli/"
+meson install -C build --tags bin --skip-subprojects
+```
+
+#### Installing The Headers 
+
+Either copy the `include` directory to the desired location or use meson's install command.
+
+```bash
+meson setup build -Dauto_features=disabled
+meson install -C build --tags devel --skip-subprojects
+```
+
+On windows, you may need to add the `--vsenv` option and adjust the prefix.
+
+```bash
+meson setup build -Dauto_features=disabled --vsenv
+meson install -C build --tags devel --skip-subprojects
+```
+
+#### Installing All In One 
+
+```bash
+meson setup build -Dauto_features=disabled -Dcli-term=enabled
+meson install -C build --skip-subprojects
 ```
 
 ### Other Build Systems
 
-If you use another build system, just add CLI's `include` folder to your build
+#### As A Library
+
+Just add CLI's `include` folder to your build
 system's include directories and you are set.
 
 To use the simulation component, you must have
-[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available.
+[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available, add
+it's include path and link against it.
+
+#### Building
 
 To build `cli-term`, you must have [asio](https://think-async.com/Asio/) and
-[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available. Then
-you can compile `source/cli-term.cpp` into `cli-term`.
+[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available. 
+
+Compile `source/cli-term/cli-term.cpp` and `source/cli-term/main.cpp` into `cli-term`.
+
+Example:
+
+```bash
+gcc source/cli-term/cli-term.cpp source/cli-term/main.cpp -Iinclude -Lcpp-terminal
+```
 
 ### Examples
 
@@ -207,7 +292,8 @@ meson setup build -Dexamples=enabled
 meson compile -C build
 ```
 
-This will create the `cli` executable in the `build` directory.
+This will create the `cli` and `cli-singleline` executable in the `build`
+directory.
 
 ## Simulation
 
@@ -257,10 +343,28 @@ This project is documented using doxygen. Either use the provided `Doxyfile`
 and manually invoke doxygen or build the documentation with meson by setting
 the `docs` project option to true.
 
-To get a good overview of the main components and a reference, use the
-[accompanying markdown documentation (docs.md)](./docs.md).
+To get a good overview of the main components and a condensed reference, use
+the [accompanying markdown documentation (docs.md)](./docs.md).
 
 ```bash
 meson setup build -Ddocs=true
 meson compile -C build
 ```
+
+## Design Rationale
+
+Why C++20 and not some earlier standard?
+  - concepts 
+  - consteval
+  - constinit
+
+## Supported Compilers 
+
+`CLI` is tested  with `clang`, `gcc`, `arm-none-eabi-gcc` and `msvc`. If you
+want to use `CLI` with another compiler, `cli/ctti.hpp` most likely needs to be
+extended.
+
+## Contributions
+
+Contributions are welcome and appreciated, especially for adding additional
+compiler support. Just make a pull request. 

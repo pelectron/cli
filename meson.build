@@ -1,6 +1,7 @@
 project(
   'cli',
   'cpp',
+  version: '1.0',
   license: 'BSL-1.0',
   license_files: 'LICENSE_1_0.txt',
   meson_version: '>=1.1.0',
@@ -13,25 +14,31 @@ build_tests = get_option('tests')
 build_examples = get_option('examples')
 simulation = get_option('sim')
 cli_term = get_option('cli-term')
+embedded = get_option('embedded')
 
-# testing, building examples, and simulation can only be done for  non-embeded targets
+# testing, building examples, simulation, and cli-term can only be used
+# for non-embeded targets
 build_tests.disable_if(
-  meson.is_cross_build(),
+  embedded,
   error_message: 'can\'t build tests for embedded targets',
 )
+
 build_examples.disable_if(
-  meson.is_cross_build(),
+  embedded,
   error_message: 'can\'t build examples on embedded targets',
 )
+
 simulation.disable_if(
-  meson.is_cross_build(),
+  embedded,
   error_message: 'can\'t have simulation with embedded targets',
 )
+
 cli_term.disable_if(
-  meson.is_cross_build(),
+  embedded,
   error_message: 'cli-term can\'t be built for embedded targets',
 )
 
+# settings up the cli dependency
 deps = []
 
 if (not simulation.disabled())
@@ -42,27 +49,53 @@ cli_dep = declare_dependency(include_directories: inc, dependencies: deps)
 
 meson.override_dependency('cli', cli_dep)
 
-must_fail_to_compile = files('tests/fails/param_t.cpp')
+# headers to install
+install_headers(
+  'include/cli.hpp',
+)
 
-cpp = meson.get_compiler('cpp')
+install_headers(
+  'include/cli/command.hpp',
+  'include/cli/command_tree.hpp',
+  'include/cli/concepts.hpp',
+  'include/cli/config.hpp',
+  'include/cli/ctti.hpp',
+  'include/cli/display.hpp',
+  'include/cli/engine.hpp',
+  'include/cli/enums.hpp',
+  'include/cli/event.hpp',
+  'include/cli/exec_result.hpp',
+  'include/cli/format.hpp',
+  'include/cli/function.hpp',
+  'include/cli/help.hpp',
+  'include/cli/history.hpp',
+  'include/cli/input.hpp',
+  'include/cli/line.hpp',
+  'include/cli/param.hpp',
+  'include/cli/parse.hpp',
+  'include/cli/ring_buffer.hpp',
+  'include/cli/string.hpp',
+  'include/cli/traits.hpp',
+  'include/cli/type_list.hpp',
+  'include/cli/u64.hpp',
+  'include/cli/util.hpp',
+  'include/cli/validator.hpp',
+  'include/cli/vector.hpp',
+  subdir: 'cli',
+)
 
-foreach file : must_fail_to_compile
-  if (cpp.compiles(file, include_directories: inc))
-    error(
-      'CLI is able to compile '
-      + file.full_path()
-      + ', which should be a compile error.',
-    )
-  endif
-endforeach
+if (not simulation.disabled())
+  install_headers(
+    'include/cli/sim.hpp', 
+    subdir: 'cli',
+  )
+endif
 
 if (not build_examples.disabled())
-
   if (not simulation.disabled())
     executable('cli', 'examples/cli.cpp', dependencies: cli_dep)
     executable('cli-singleline', 'examples/cli-singleline.cpp', dependencies: cli_dep)
   endif
-
 endif
 
 if get_option('led-example').enabled()
@@ -71,9 +104,30 @@ if get_option('led-example').enabled()
 endif
 
 if (not build_tests.disabled())
+
+  # check for failing tests that need to fail
+  must_fail_to_compile = files('tests/fails/param_t.cpp')
+
+  cpp = meson.get_compiler('cpp')
+
+  foreach file : must_fail_to_compile
+    if (cpp.compiles(file, include_directories: inc))
+      error(
+        'CLI is able to compile '
+        + file.full_path()
+        + ', which should be a compile error.',
+      )
+    endif
+  endforeach
+
+  # unit test dependencies
   catch_dep = dependency(
     'catch2',
-    default_options: ['tests=false', 'warning_level=0'],
+    default_options: [
+      'tests=false', 
+      'warning_level=0',
+      'prefer_static=true',
+    ],
     fallback: ['catch2', 'catch2_with_main_dep'],
     version: '>=3.4.0',
     required: true,
@@ -81,6 +135,7 @@ if (not build_tests.disabled())
 
   test_inc = include_directories('tests')
 
+  # unit test warnings to disable
   if cpp.get_id() == 'clang' or cpp.get_id() == 'gcc'
     exclude_warnings = [
       '-Wno-abi-tag',
@@ -142,6 +197,7 @@ if (not build_tests.disabled())
     include_directories: test_inc,
     cpp_args: exclude_warnings,
     dependencies: [cli_dep, catch_dep],
+    install_tag: 'tests',
   )
 
   test('unit test', ut)
@@ -153,6 +209,7 @@ if (get_option('docs'))
 endif
 
 if (not cli_term.disabled())
+  # cli-term dependencies
   deps = [
     dependency('cpp-terminal', required: true),
     dependency('asio', required: true),
@@ -160,9 +217,18 @@ if (not cli_term.disabled())
 
   executable(
     'cli-term',
-    'source/cli-term.cpp',
+    'source/cli-term/cli-term.cpp',
+    'source/cli-term/main.cpp',
     dependencies: deps,
     include_directories: inc,
-    cpp_args: ['-DASIO_NO_DEPRECATED'],
+    install: true,
+    override_options:[
+      'warning_level=3', 
+      'buildtype=release'
+    ],
+    cpp_args: [
+      '-DASIO_NO_DEPRECATED',
+    ],
+    install_tag: 'bin'
   )
 endif
