@@ -100,10 +100,10 @@ TEST_CASE("parse::Enum") {
 }
 
 TEST_CASE("parse::FlagEnum") {
-  using enum F;
+  using enum Flag;
   SECTION("valid values (no numbers allowed)") {
     // clang-format off
-  EnumTestVector<F> vectors[]{
+  EnumTestVector<Flag> vectors[]{
     PASS_TV(A),
     PASS_TV(B),
     PASS_TV(C),
@@ -117,7 +117,7 @@ TEST_CASE("parse::FlagEnum") {
   };
     // clang-format on
 
-    constexpr cli::parse::Enum<F, char, false> parse;
+    constexpr cli::parse::Enum<Flag, char, false> parse;
     for (const auto &tv : vectors) {
       auto res = parse(tv.input);
       CHECK(res);
@@ -127,14 +127,14 @@ TEST_CASE("parse::FlagEnum") {
   }
 
   SECTION("invalid values (no number allowed)") {
-    EnumTestVector<F> vectors[]{
+    EnumTestVector<Flag> vectors[]{
       {"A | B | C | K", {cli::Error::invalid_value, "A | B | C | K"}                },
       {"A | K | C",     {cli::Error::invalid_value, "A | K | C"}                    },
       {"1",             {cli::parse::from_error, cli::Error::invalid_value, "1"}    },
       {"1rest",         {cli::parse::from_error, cli::Error::invalid_value, "1rest"}},
     };
 
-    constexpr cli::parse::Enum<F, char, false> parse;
+    constexpr cli::parse::Enum<Flag, char, false> parse;
 
     for (const auto &tv : vectors) {
       auto res = parse(tv.input);
@@ -146,7 +146,7 @@ TEST_CASE("parse::FlagEnum") {
 
   SECTION("valid values (numbers allowed)") {
     // clang-format off
-  EnumTestVector<F> vectors[]{
+  EnumTestVector<Flag> vectors[]{
     PASS_TV(A),
     PASS_TV(B),
     PASS_TV(C),
@@ -166,7 +166,7 @@ TEST_CASE("parse::FlagEnum") {
   };
     // clang-format on
 
-    constexpr cli::parse::Enum<F, char, true> parse;
+    constexpr cli::parse::Enum<Flag, char, true> parse;
     for (const auto &tv : vectors) {
       auto res = parse(tv.input);
       CHECK(bool(res) == bool(tv.output));
@@ -177,13 +177,13 @@ TEST_CASE("parse::FlagEnum") {
   }
 
   SECTION("invalid values (number allowed)") {
-    EnumTestVector<F> vectors[]{
+    EnumTestVector<Flag> vectors[]{
       {"A | B | C | K", {cli::Error::invalid_value, "A | B | C | K"}             },
       {"A | K | C",     {cli::Error::invalid_value, "A | K | C"}                 },
       {"10",            {cli::parse::from_error, cli::Error::invalid_value, "10"}},
     };
 
-    constexpr cli::parse::Enum<F, char, false> parse;
+    constexpr cli::parse::Enum<Flag, char, false> parse;
 
     for (const auto &tv : vectors) {
       auto res = parse(tv.input);

@@ -8,11 +8,11 @@
 
 using cli::operator""_sc;
 
-static constinit int i{0};
+static constinit int global_i{0};
 
 TEST_CASE("CommandTree") {
-  MockEngine engine{cli::param("c1"_sc, "c1 desc"_sc, i),
-                    cli::param("c"_sc, "c desc"_sc, i)};
+  MockEngine engine{cli::param("c1"_sc, "c1 desc"_sc, global_i),
+                    cli::param("c"_sc, "c desc"_sc, global_i)};
 
   const auto *root = engine.tree.root();
   REQUIRE(root->subcommand->name == "c");
@@ -22,8 +22,8 @@ TEST_CASE("CommandTree") {
 
 TEST_CASE("CommandTree rvalue tuple") {
   MockEngine engine{
-    cli::Tuple{cli::param("c1"_sc, "c1 desc"_sc, i),
-               cli::param("c"_sc, "c desc"_sc, i)}
+    cli::Tuple{cli::param("c1"_sc, "c1 desc"_sc, global_i),
+               cli::param("c"_sc, "c desc"_sc, global_i)}
   };
 
   const auto *root = engine.tree.root();
@@ -33,8 +33,8 @@ TEST_CASE("CommandTree rvalue tuple") {
 }
 
 TEST_CASE("CommandTree lvalue tuple") {
-  const cli::Tuple params{cli::param("c1"_sc, "c1 desc"_sc, i),
-                          cli::param("c"_sc, "c desc"_sc, i)};
+  const cli::Tuple params{cli::param("c1"_sc, "c1 desc"_sc, global_i),
+                          cli::param("c"_sc, "c desc"_sc, global_i)};
 
   MockEngine engine{params};
 

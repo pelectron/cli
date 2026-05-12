@@ -88,8 +88,8 @@ namespace cli::funcs {
     constexpr FunctionArg(Name, Description, P &&parse_, V &&validate_) noexcept
       : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
-    CLI_NO_UNIQUE_ADDRESS Name name;
-    CLI_NO_UNIQUE_ADDRESS Description description;
+    CLI_NO_UNIQUE_ADDRESS Name name{};
+    CLI_NO_UNIQUE_ADDRESS Description description{};
     CLI_NO_UNIQUE_ADDRESS Parse parse{};
     CLI_NO_UNIQUE_ADDRESS Validate validate{};
   };
@@ -160,8 +160,8 @@ namespace cli::funcs {
                                         V &&validate_) noexcept
       : parse(std::forward<P>(parse_)), validate(std::forward<V>(validate_)) {}
 
-    CLI_NO_UNIQUE_ADDRESS Name name;
-    CLI_NO_UNIQUE_ADDRESS Description description;
+    CLI_NO_UNIQUE_ADDRESS Name name{};
+    CLI_NO_UNIQUE_ADDRESS Description description{};
     CLI_NO_UNIQUE_ADDRESS Parse parse{};
     CLI_NO_UNIQUE_ADDRESS Validate validate{};
   };
@@ -198,8 +198,8 @@ namespace cli::funcs {
     using parser = parse::Parse<Deduced, char_type>;
     using validator = validate::DefaultValidate<Deduced>;
 
-    CLI_NO_UNIQUE_ADDRESS Name name;
-    CLI_NO_UNIQUE_ADDRESS Description description;
+    CLI_NO_UNIQUE_ADDRESS Name name{};
+    CLI_NO_UNIQUE_ADDRESS Description description{};
   };
 
   namespace dtl {
@@ -1727,15 +1727,15 @@ namespace cli::funcs {
                              Description,
                              Help,
                              Function mem_fun_ptr,
-                             const Args &...arguments) noexcept
-      : f(mem_fun_ptr), args(arguments...) {}
+                             const Args &...func_args) noexcept
+      : f(mem_fun_ptr), args(func_args...) {}
 
     constexpr MemberFunction(Name,
                              Description,
                              Help,
                              Function mem_fun_ptr,
-                             const cli::Tuple<Args...> &arguments) noexcept
-      : f(mem_fun_ptr), args(arguments) {}
+                             const cli::Tuple<Args...> &func_args) noexcept
+      : f(mem_fun_ptr), args(func_args) {}
   };
 
   template<Id Name, SC Description, SC Help, class Function>

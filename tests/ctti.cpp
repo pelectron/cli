@@ -65,8 +65,8 @@ TEST_CASE("ctti::to_tuple", "[ctti]") {
 TEST_CASE("ctti::enum_name", "[ctti]") {
   REQUIRE(cli::ctti::enum_name(cli::Error::none) == "none");
   REQUIRE(cli::ctti::enum_name(static_cast<cli::Error>(300)) == "<unknown>");
-  REQUIRE(cli::ctti::enum_name(F::A) == "A");
-  REQUIRE(cli::ctti::enum_name(F::A | F::B) == "<unknown>");
+  REQUIRE(cli::ctti::enum_name(Flag::A) == "A");
+  REQUIRE(cli::ctti::enum_name(Flag::A | Flag::B) == "<unknown>");
 }
 
 TEST_CASE("ctti::value_name", "[ctti]") {

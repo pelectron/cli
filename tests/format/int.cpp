@@ -2,6 +2,7 @@
 #include "cli/format.hpp"
 
 #include <catch2/catch_all.hpp>
+#include <cstdint>
 #include <format>
 #include <limits>
 #include <string>
@@ -65,8 +66,14 @@ std::string max_string(cli::Fmt fmt = cli::Fmt::normal) {
       return "0x" + std::format("{:X}", std::numeric_limits<T>::max());
     case cli::Fmt::binary:
       return std::format("{:#b}", std::numeric_limits<T>::max());
+    default:
+      assert(false);
   }
-  return std::to_string(std::numeric_limits<T>::max());
+
+  if constexpr (std::is_signed_v<T>)
+    return std::to_string(int64_t{std::numeric_limits<T>::max()});
+  else
+    return std::to_string(uint64_t{std::numeric_limits<T>::max()});
 }
 
 template<class T>
@@ -82,8 +89,14 @@ std::string min_string(cli::Fmt fmt = cli::Fmt::normal) {
       return std::format(
         "{:#b}",
         static_cast<std::make_unsigned_t<T>>(std::numeric_limits<T>::min()));
+    default:
+      assert(false);
   }
-  return std::to_string(std::numeric_limits<T>::min());
+
+  if constexpr (std::is_signed_v<T>)
+    return std::to_string(int64_t{std::numeric_limits<T>::max()});
+  else
+    return std::to_string(uint64_t{std::numeric_limits<T>::max()});
 }
 
 #define TV1(value)                                                             \

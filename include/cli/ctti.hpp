@@ -8,6 +8,7 @@
 #define CLI_CTTI_HPP
 
 #include "cli/basic_format.hpp"
+#include "cli/compiler.hpp"
 #include "cli/concepts.hpp"
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
@@ -19,24 +20,6 @@
 #include <utility>
 
 // clang-format off
-#if defined (_MSC_VER)
-  #if defined(__clang__)
-    #define CLI_CLANG_CL
-  #else
-    #define CLI_MSVC
-  #endif
-#elif defined(__clang__)
-  #define CLI_CLANG
-#elif defined(__GNUC__)
-  #if defined (__arm__)
-    #define CLI_ARM_GCC
-  #else
-    #define CLI_GCC 
-  #endif
-#else 
-#error "Unsupported Compiler detected!"
-#endif
-
 #if defined(CLI_CLANG)
   #define CLI_FUNCTION_NAME __PRETTY_FUNCTION__
   #define CTTI_TYPE_PRETTY_FUNCTION_PREFIX "CharView cli::ctti::dtl::name_impl() [T = "
@@ -462,9 +445,10 @@ namespace cli::ctti {
     template<auto N>
     [[nodiscard]] consteval auto nth(auto... args) {
       return [&]<std::size_t... Ns>(std::index_sequence<Ns...>) {
-        return [](decltype((void *)Ns)..., auto *nth, auto *...) {
-          return *nth;
-        }(&args...);
+        return
+          [](decltype(reinterpret_cast<void *>(Ns))..., auto *nth, auto *...) {
+            return *nth;
+          }(&args...);
       }(std::make_index_sequence<N>{});
     }
 
@@ -1309,6 +1293,10 @@ namespace cli::ctti {
       }
     }
 
+#if defined(CLI_CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundefined-var-template"
+#endif
     template<class T, auto N>
     struct member_type {
       using type = std::remove_cvref_t<typename decltype(get<N>(
@@ -1323,6 +1311,9 @@ namespace cli::ctti {
         return string_constant<CharT, name[Ns]...>{};
       }(std::make_index_sequence<name.size()>{});
     }
+#if defined(CLI_CLANG)
+#pragma clang diagnostic pop
+#endif
 
     template<class T, auto N, typename CharT = char>
     using member_name_t = decltype(member_name<T, N, CharT>());

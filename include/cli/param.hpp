@@ -467,16 +467,16 @@ namespace cli::params {
       constexpr MemberData(Name,
                            Description,
                            Type,
-                           MemberPointer f,
-                           Parse_ &&parse,
-                           Format_ &&format,
-                           Validate_ &&validate,
+                           MemberPointer mem_ptr,
+                           Parse_ &&p,
+                           Format_ &&fmt,
+                           Validate_ &&v,
                            SubCommands_ &&...cmds) noexcept
-        : f(f),
+        : f(mem_ptr),
           subcommands(std::forward<SubCommands>(cmds)...),
-          parse(std::forward<Parse_>(parse)),
-          format(std::forward<Format_>(format)),
-          validate(std::forward<Validate_>(validate)) {}
+          parse(std::forward<Parse_>(p)),
+          format(std::forward<Format_>(fmt)),
+          validate(std::forward<Validate_>(v)) {}
     };
 
     template<Id Name,
@@ -505,14 +505,14 @@ namespace cli::params {
       constexpr MemberData(Name,
                            Description,
                            Help,
-                           MemberPointer f,
-                           Parse_ &&parse,
-                           Format_ &&format,
-                           Validate_ &&validate) noexcept
-        : f(f),
-          parse(std::forward<Parse_>(parse)),
-          format(std::forward<Format_>(format)),
-          validate(std::forward<Validate_>(validate)) {}
+                           MemberPointer mem_ptr,
+                           Parse_ &&p,
+                           Format_ &&fmt,
+                           Validate_ &&v) noexcept
+        : f(mem_ptr),
+          parse(std::forward<Parse_>(p)),
+          format(std::forward<Format_>(fmt)),
+          validate(std::forward<Validate_>(v)) {}
     };
 
     template<Id Name,

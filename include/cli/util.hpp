@@ -662,8 +662,8 @@ namespace cli {
   struct MemFunBinder<T, Ret (T::*)(MemFunArgs...)> {
     T *t;
     Ret (T::*mem_fun)(MemFunArgs...);
-    constexpr MemFunBinder(T &t, Ret (T::*mem_fun)(MemFunArgs...))
-      : t(&t), mem_fun(mem_fun) {}
+    constexpr MemFunBinder(T &obj, Ret (T::*mem_func)(MemFunArgs...))
+      : t(&obj), mem_fun(mem_func) {}
     constexpr MemFunBinder(const MemFunBinder &) = default;
     constexpr MemFunBinder(MemFunBinder &&) = default;
     constexpr MemFunBinder &operator=(const MemFunBinder &) = default;
@@ -677,8 +677,8 @@ namespace cli {
     T *t;
     Ret (T::*mem_fun)(MemFunArgs...) noexcept;
 
-    constexpr MemFunBinder(T &t, Ret (T::*mem_fun)(MemFunArgs...) noexcept)
-      : t(&t), mem_fun(mem_fun) {}
+    constexpr MemFunBinder(T &obj, Ret (T::*mem_func)(MemFunArgs...) noexcept)
+      : t(&obj), mem_fun(mem_func) {}
     constexpr MemFunBinder(const MemFunBinder &) = default;
     constexpr MemFunBinder(MemFunBinder &&) = default;
     constexpr MemFunBinder &operator=(const MemFunBinder &) = default;
@@ -694,8 +694,9 @@ namespace cli {
     const T *t;
     Ret (T::*mem_fun)(MemFunArgs...) const;
 
-    constexpr MemFunBinder(const T &t, Ret (T::*mem_fun)(MemFunArgs...) const)
-      : t(&t), mem_fun(mem_fun) {}
+    constexpr MemFunBinder(const T &obj,
+                           Ret (T::*mem_func)(MemFunArgs...) const)
+      : t(&obj), mem_fun(mem_func) {}
     constexpr MemFunBinder(const MemFunBinder &) = default;
     constexpr MemFunBinder(MemFunBinder &&) = default;
     constexpr MemFunBinder &operator=(const MemFunBinder &) = default;
@@ -710,9 +711,9 @@ namespace cli {
     const T *t;
     Ret (T::*mem_fun)(MemFunArgs...) const noexcept;
 
-    constexpr MemFunBinder(const T &t,
-                           Ret (T::*mem_fun)(MemFunArgs...) const noexcept)
-      : t(&t), mem_fun(mem_fun) {}
+    constexpr MemFunBinder(const T &obj,
+                           Ret (T::*mem_func)(MemFunArgs...) const noexcept)
+      : t(&obj), mem_fun(mem_func) {}
     constexpr MemFunBinder(const MemFunBinder &) = default;
     constexpr MemFunBinder(MemFunBinder &&) = default;
     constexpr MemFunBinder &operator=(const MemFunBinder &) = default;

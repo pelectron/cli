@@ -93,7 +93,7 @@ TEMPLATE_TEST_CASE("RingBufView::size()",
   TestType buf(arr, 10);
 
   for (std::size_t i = 1; i <= 10; ++i) {
-    REQUIRE(buf.push_back(i));
+    REQUIRE(buf.push_back(static_cast<int>(i)));
     REQUIRE(buf.size() == i);
   }
   buf.push_back(11);

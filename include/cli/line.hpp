@@ -1,13 +1,13 @@
 #ifndef CLI_CURSOR_HPP
 #define CLI_CURSOR_HPP
 
+#include "cli/basic_format.hpp"
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
 #include "cli/config.hpp"
 #include "cli/display.hpp"
 #include "cli/enums.hpp"
 #include "cli/exec_result.hpp"
-#include "cli/format.hpp"
 #include "cli/string.hpp"
 #include "cli/util.hpp"
 
@@ -92,8 +92,8 @@ namespace cli {
 
       // update size and cursor
       const std::size_t old_cursor = cursor_;
-      size_ += static_cast<Index>(s.size());
-      cursor_ += static_cast<Index>(s.size());
+      size_ = static_cast<Index>(size_ + s.size());
+      cursor_ = static_cast<Index>(cursor_ + s.size());
 
       // write new data
       display_.write({data_ + old_cursor, data_ + size_});
@@ -149,7 +149,7 @@ namespace cli {
         for (Index i = cursor_; i < size_; ++i) {
           data_[i - cursor_] = data_[i];
         }
-        size_ -= cursor_;
+        size_ = static_cast<Index>(size_ - cursor_);
         cursor_ = 0;
 
         display_.clear_line();
@@ -222,10 +222,10 @@ namespace cli {
       return Error::none;
     }
 
-    template<class CharT, class Display>
+    template<class CharT, class Display, typename Index>
     constexpr Error clear_line_to_begin(CharT *data_,
-                                        auto &cursor_,
-                                        auto &size_,
+                                        Index &cursor_,
+                                        Index &size_,
                                         Display &display_) noexcept {
       if (cursor_ == 0)
         return Error::none;
@@ -240,7 +240,7 @@ namespace cli {
       for (std::size_t i = cursor_; i < size_; ++i)
         data_[i - cursor_] = data_[i];
 
-      size_ = size_ - cursor_;
+      size_ = static_cast<Index>(size_ - cursor_);
       cursor_ = 0;
 
       display_.write({data_, size_});
@@ -544,12 +544,28 @@ namespace cli {
                                            ' '>{});
             display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
           } break;
+          default:
+            if constexpr (not cli::is_multiline_display_v<Display>) {
+              display_.newline();
+            }
+            display_.write(
+              ctti::enum_name<Error, CharT>(Error::implementation_error));
+            break;
         }
-
       } else {
         switch (exec_result.type()) {
           case ExecResult<CharT>::success:
             return print_success();
+          case ExecResult<CharT>::parse_error:
+            [[fallthrough]];
+          case ExecResult<CharT>::format_error:
+            [[fallthrough]];
+          case ExecResult<CharT>::validation_error:
+            [[fallthrough]];
+          case ExecResult<CharT>::set_error:
+            [[fallthrough]];
+          case ExecResult<CharT>::get_error:
+            [[fallthrough]];
           default:
             display_.write(string_constant<CharT, 'e', 'r', 'r', 'o', 'r'>{});
         }

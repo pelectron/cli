@@ -59,8 +59,8 @@ namespace cli {
     class iterator {
       friend struct CommandNode;
       CommandNode *node = nullptr;
-      constexpr iterator(CommandNode *node) noexcept
-        : node(node) {}
+      constexpr iterator(CommandNode *n) noexcept
+        : node(n) {}
 
     public:
       constexpr iterator(const iterator &) noexcept = default;

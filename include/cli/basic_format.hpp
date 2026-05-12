@@ -24,11 +24,11 @@ namespace cli::format {
    */
   struct FormatResult {
 
-    constexpr FormatResult(Error error) noexcept
-      : error(error) {}
+    constexpr FormatResult(Error e) noexcept
+      : error(e) {}
 
-    constexpr FormatResult(std::size_t size_written) noexcept
-      : size_written(size_written) {}
+    constexpr FormatResult(std::size_t size) noexcept
+      : size_written(size) {}
 
     /// returns true if error is Error::none, else false.
     constexpr operator bool() const noexcept { return error == Error::none; }
@@ -339,7 +339,7 @@ namespace cli::format {
             for (std::size_t i = 0; i < num_dec_digits() - 2 and
                                     (t < traits::max or -t > traits::min);
                  ++i)
-              t = 10 * t;
+              t = static_cast<T>(10 * t);
             return t;
           }();
           UnsignedT u_value = static_cast<UnsignedT>(value);
@@ -355,7 +355,7 @@ namespace cli::format {
           if (is_negative) {
             buffer[0] = '-';
             ++size;
-            u_value = (~u_value) + 1u;
+            u_value = static_cast<UnsignedT>((~u_value) + 1u);
           }
 
           T pow10 = max_pow_10;
@@ -383,7 +383,7 @@ namespace cli::format {
               if (t > (10u * t))
                 return t;
               else
-                t = 10u * t;
+                t = static_cast<T>(10u * t);
             return t;
           }();
           char buffer[num_dec_digits()]{};
@@ -443,7 +443,8 @@ namespace cli::format {
             buffer[size++] = static_cast<CharT>(digit - 10u + 'A');
           else
             assert(false);
-          u_value &= (1u << (nibble * 4u)) - 1u;
+          u_value =
+            static_cast<UnsignedT>(u_value & ((1u << (nibble * 4u)) - 1u));
         }
 
         if (buf.size() < size)
@@ -467,7 +468,8 @@ namespace cli::format {
         char buffer[max_size]{'0', 'b', 0};
         std::size_t size = 2;
         const auto max_bit = sizeof(UnsignedT) * 8 - 1;
-        unsigned bit = max_bit - std::countl_zero(u_value);
+        unsigned bit =
+          static_cast<unsigned>(max_bit - std::countl_zero(u_value));
         for (; bit <= max_bit; --bit) {
           const auto digit = (u_value >> bit) & 1u;
           buffer[size++] = static_cast<CharT>(digit + '0');
@@ -567,11 +569,11 @@ namespace cli::format {
     // compile time, with only integer divisions at run time. This will
     // unfortunately produce some rounding errors.
     static constexpr auto factor = []() {
-      u64 i{10};
+      u64 u{10};
       for (std::size_t i = 0; i < Precision; ++i) {
-        i = i * 10;
+        u = u * 10;
       }
-      return i >> traits::num_frac_digits;
+      return u >> traits::num_frac_digits;
     }();
     static constexpr uint8_t max_frac_string_length{traits::num_frac_digits};
     static constexpr u64 bin_weight{[] {
@@ -907,13 +909,13 @@ namespace cli::format {
           //
           // next = v/pow10, rest = v % pow10
           u64 next = v;
-          u64 rest = u64::div64_with_mod(next, pow10);
+          u64 r = u64::div64_with_mod(next, pow10);
 
           if (next >= 10)
             return Error::implementation_error;
 
           buf[buf_idx++] = next.low() + '0';
-          if (rest == 0)
+          if (r == 0)
             break;
           v = rest;
           pow10 = pow10 / 10;

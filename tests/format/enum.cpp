@@ -85,9 +85,9 @@ TEST_CASE("format::Enum") {
 }
 
 TEST_CASE("format::FlagEnum") {
-  using enum F;
+  using enum Flag;
   // clang-format off
-  EnumTestVector<F> vectors[]{
+  EnumTestVector<Flag> vectors[]{
     TV1(A),
     TV1(B),
     TV1(C),

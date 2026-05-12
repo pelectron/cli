@@ -26,8 +26,8 @@ namespace cli::traits {
 using FormatE = cli::format::Format<E, char>;
 using ParseE = cli::parse::Parse<E, char>;
 
-using FormatF = cli::format::Format<F, char>;
-using ParseF = cli::parse::Parse<F, char>;
+using FormatF = cli::format::Format<Flag, char>;
+using ParseF = cli::parse::Parse<Flag, char>;
 
 TEST_CASE("parse-format enum") {
   FormatE format;
@@ -53,14 +53,14 @@ TEST_CASE("parse-format enum") {
 TEST_CASE("parse-format flag enum") {
   FormatF format;
   ParseF parse;
-  const std::pair<F, std::string> values[]{
-    {F::A,               "A"    },
-    {F::B,               "B"    },
-    {F::C,               "C"    },
-    {F::D,               "D"    },
-    {F::A | F::B,        "A|B"  },
-    {F::A | F::C,        "A|C"  },
-    {F::A | F::B | F::C, "A|B|C"},
+  const std::pair<Flag, std::string> values[]{
+    {Flag::A,                     "A"    },
+    {Flag::B,                     "B"    },
+    {Flag::C,                     "C"    },
+    {Flag::D,                     "D"    },
+    {Flag::A | Flag::B,           "A|B"  },
+    {Flag::A | Flag::C,           "A|C"  },
+    {Flag::A | Flag::B | Flag::C, "A|B|C"},
   };
   char buffer[32]{};
   for (auto [e, s] : values) {

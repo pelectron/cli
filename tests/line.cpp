@@ -282,9 +282,9 @@ TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
 
     SECTION("on_char after execute") {
       line.set_data("c1");
-      char buffer[16]{};
-      cli::View<char> out{buffer, 16};
-      line.execute(out);
+      char buf[16]{};
+      cli::View<char> out_{buf, 16};
+      line.execute(out_);
       line.on_char('c');
       REQUIRE(d.data == "c");
       REQUIRE(d.past == std::vector<std::string>{"c1"});
@@ -363,15 +363,15 @@ TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
     }
 
     SECTION("on_char after execute") {
-      MultilineDisplay d;
-      cli::Line<NoCursor_Autocomplete, MultilineDisplay> line(root, d);
-      char buffer[16]{};
-      cli::View<char> out{buffer, 16};
-      line.set_data("c1");
-      line.execute(out);
-      line.on_char('c');
-      REQUIRE(d.data == "c");
-      REQUIRE(d.past == std::vector<std::string>{"c1"});
+      MultilineDisplay display;
+      cli::Line<NoCursor_Autocomplete, MultilineDisplay> line_(root, display);
+      char buf[16]{};
+      cli::View<char> out_{buf, 16};
+      line_.set_data("c1");
+      line_.execute(out_);
+      line_.on_char('c');
+      REQUIRE(display.data == "c");
+      REQUIRE(display.past == std::vector<std::string>{"c1"});
     }
   }
 }

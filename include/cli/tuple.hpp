@@ -1,11 +1,20 @@
 #ifndef CLI_TUPLE_HPP
 #define CLI_TUPLE_HPP
 
+#include "cli/compiler.hpp"
 #include "cli/type_list.hpp"
 
 #include <cstddef>
 #include <type_traits>
 #include <utility>
+
+#if defined(CLI_GCC) or defined(CLI_ARM_GCC)
+#define CLI_DISABLE_MULTIPLE_INHERITANCE_WANRING_START
+#define CLI_DISABLE_MULTIPLE_INHERITANCE_WANRING_END
+#else
+#define CLI_DISABLE_MULTIPLE_INHERITANCE_WANRING_START
+#define CLI_DISABLE_MULTIPLE_INHERITANCE_WANRING_END
+#endif
 
 namespace cli {
   template<typename... Ts>
@@ -66,6 +75,11 @@ namespace cli {
     friend constexpr const auto &get(const Tuple<Ts...> &tuple);
   };
 
+#if defined(CLI_GCC) or defined(CLI_ARM_GCC)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmultiple-inheritance"
+#else
+#endif
   template<std::size_t... Is,
            template<typename I, I...> typename List,
            typename... Ts>
@@ -117,6 +131,10 @@ namespace cli {
     }
   };
 
+#if defined(CLI_GCC) or defined(CLI_ARM_GCC)
+#pragma GCC diagnostic pop
+#else
+#endif
   template<typename... Ts>
   class Tuple
     : public TupleImpl<std::make_index_sequence<sizeof...(Ts)>, Ts...> {

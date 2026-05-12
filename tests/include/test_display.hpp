@@ -10,7 +10,7 @@
 struct Display {
   std::size_t cursor = 0;
   std::string data{};
-  std::vector<std::string> past;
+  std::vector<std::string> past{};
 
   void write(char c);
   void write(cli::View<const char> s);

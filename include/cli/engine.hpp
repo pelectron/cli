@@ -13,6 +13,7 @@
 #include "cli/line.hpp"
 #include "cli/string.hpp"
 #include "cli/util.hpp"
+#include "event.hpp"
 
 #include <cstdint>
 
@@ -223,8 +224,10 @@ namespace cli {
           return line_.on_clear_line_to_begin();
         case Control::enter:
           return on_enter();
-        default:
+        case Control::bell:
           // TODO: Control::bell handling
+          [[fallthrough]];
+        default:
           return Error::unimplemented;
       }
     }
@@ -341,7 +344,7 @@ namespace cli {
     CLI_NO_UNIQUE_ADDRESS input_type input_{};
     CLI_NO_UNIQUE_ADDRESS History<Cfg> history_{};
     CLI_NO_UNIQUE_ADDRESS
-    PrintData<char_type, needs_incremental_print> print_data_;
+    PrintData<char_type, needs_incremental_print> print_data_{};
     char_type buffer_[config::output_size_v<Cfg>]{};
   };
 

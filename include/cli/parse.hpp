@@ -108,9 +108,9 @@ namespace cli::parse {
   struct ParseResult {
 
     /// constructs a failed parse with the error reason
-    constexpr ParseResult(Error error, View<const CharT> rest = {}) noexcept
+    constexpr ParseResult(Error e, View<const CharT> rest_str = {}) noexcept
       requires(not std::same_as<T, Error>)
-      : error{error}, value{}, rest{rest} {}
+      : error{e}, value{}, rest{rest_str} {}
 
     /**
      * construct a successful parse result from a value and the rest of the
@@ -119,9 +119,10 @@ namespace cli::parse {
      * @param value the parse value
      * @param rest the unparsed rest of the string
      */
-    constexpr ParseResult(const T &value, View<const CharT> rest = {}) noexcept
+    constexpr ParseResult(const T &val,
+                          View<const CharT> rest_str = {}) noexcept
       requires(not std::same_as<T, Error>)
-      : error{Error::none}, value{value}, rest{rest} {}
+      : error{Error::none}, value{val}, rest{rest_str} {}
 
     /**
      * construct a successful parse result from a value and the rest of the
@@ -130,9 +131,9 @@ namespace cli::parse {
      * @param value the parse value
      * @param rest the unparsed rest of the string
      */
-    constexpr ParseResult(T &&value, View<const CharT> rest = {}) noexcept
+    constexpr ParseResult(T &&val, View<const CharT> rest_str = {}) noexcept
       requires(not std::same_as<T, Error>)
-      : error{Error::none}, value{std::move(value)}, rest{rest} {}
+      : error{Error::none}, value{std::move(val)}, rest{rest_str} {}
 
     /**
      * construct a successful parse result from a value and the rest of the
@@ -143,15 +144,15 @@ namespace cli::parse {
      */
     template<class U>
     constexpr ParseResult(from_value_t,
-                          U &&value,
-                          View<const CharT> rest = {}) noexcept
-      : error{Error::none}, value{std::forward<U>(value)}, rest{rest} {}
+                          U &&val,
+                          View<const CharT> rest_str = {}) noexcept
+      : error{Error::none}, value{std::forward<U>(val)}, rest{rest_str} {}
 
     /// constructs a failed parse with the error reason
     constexpr ParseResult(from_error_t,
                           Error e,
-                          View<const CharT> rest = {}) noexcept
-      : error{e}, value{}, rest{rest} {}
+                          View<const CharT> rest_str = {}) noexcept
+      : error{e}, value{}, rest{rest_str} {}
 
     /// returns true if this is a successful parse result, i.e. if the error is
     /// Error::none.
@@ -1548,11 +1549,11 @@ namespace cli::parse {
                                            Postfix>::type;
 
   public:
-    constexpr ParseResult<T, CharT> operator()(View<const CharT> s) noexcept {
-      if (s.size() == 0)
+    constexpr ParseResult<T, CharT> operator()(View<const CharT> str) noexcept {
+      if (str.size() == 0)
         return Error::too_few_characters;
 
-      View sv = s;
+      View sv = str;
       if constexpr (Name::string_size > 0) {
         constexpr StringLiteral name{Name{}};
         if (name.size() > 0 and sv.starts_with(name)) {

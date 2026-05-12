@@ -44,15 +44,16 @@ namespace cli::traits {
   */
 } // namespace cli::traits
 
-enum class F : uint32_t {
+enum class Flag : uint32_t {
   A = 1 << 0,
   B = 1 << 1,
   C = 1 << 2,
   D = 1 << 3
 };
 
-constexpr F operator|(F f1, F f2) {
-  return static_cast<F>(static_cast<uint32_t>(f1) | static_cast<uint32_t>(f2));
+constexpr Flag operator|(Flag f1, Flag f2) {
+  return static_cast<Flag>(static_cast<uint32_t>(f1) |
+                           static_cast<uint32_t>(f2));
 }
 
 #endif

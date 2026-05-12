@@ -6,11 +6,11 @@
 #include <catch2/catch_all.hpp>
 
 using cli::operator""_sc;
-static int i;
+static int global_int;
 TEST_CASE("help") {
-  MockEngine engine{cli::param("c1"_sc, "c1 desc"_sc, i),
-                    cli::param("c"_sc, "c desc"_sc, i),
-                    cli::param("c2"_sc, ""_sc, i),
+  MockEngine engine{cli::param("c1"_sc, "c1 desc"_sc, global_int),
+                    cli::param("c"_sc, "c desc"_sc, global_int),
+                    cli::param("c2"_sc, ""_sc, global_int),
                     cli::func(
                       "func"_sc,
                       "func desc"_sc,

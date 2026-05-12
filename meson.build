@@ -139,6 +139,7 @@ if (not build_tests.disabled())
       'warning_level=0',
       'prefer_static=true',
     ],
+    include_type: 'system',
     fallback: ['catch2', 'catch2_with_main_dep'],
     version: '>=3.4.0',
     required: true,
@@ -147,14 +148,22 @@ if (not build_tests.disabled())
   test_inc = include_directories('tests/include')
 
   # unit test warnings to disable
-  if cpp.get_id() == 'clang' or cpp.get_id() == 'gcc'
+  if cpp.get_id() == 'clang'
+    exclude_warnings = [
+      '-Wno-padded',
+      # '-Wno-shadow',
+      '-Wno-ctor-dtor-privacy',
+      # '-Wno-undefined-var-template',
+    ]
+  elif cpp.get_id() == 'gcc'
     exclude_warnings = [
       '-Wno-abi-tag',
-      '-Wno-effc++',
-      '-Wno-ctor-dtor-privacy',
+      # '-Wno-effc++',
       '-Wno-padded',
-      '-Wno-shadow',
-      '-Wno-unknown-warning-option',
+      # '-Wno-shadow',
+      '-Wno-ctor-dtor-privacy',
+      '-Wno-switch-enum',
+      # '-Wno-multiple-inheritance',
     ]
   else
     exclude_warnings = []
@@ -228,7 +237,7 @@ if (not cli_term.disabled())
   deps = [
     dependency(
       'cpp-terminal',
-      default_options: ['warning_level=3', 'buildtype=release'],
+      default_options: ['warning_level=0', 'buildtype=release'],
       required: true,
     ),
     dependency('asio', required: true),

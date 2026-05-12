@@ -28,6 +28,6 @@ struct MockEngine {
 
   bool print_called = false;
   cli::CommandTree<MockEngine<Commands...>, Commands...> tree;
-  MultilineDisplay display_;
+  MultilineDisplay display_{};
 };
 #endif

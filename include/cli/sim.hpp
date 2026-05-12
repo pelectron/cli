@@ -15,6 +15,7 @@
 
 #include "cli.hpp"
 #include "cli/util.hpp"
+#include "enums.hpp"
 
 #include <cpp-terminal/exception.hpp>
 #include <cpp-terminal/input.hpp>
@@ -96,18 +97,18 @@ namespace cli::sim {
                 engine.on_char(c);
               break;
             case Term::Key::Enter:
-              switch (
-                cli::config::input_delimiter_v<typename Engine::config_type>) {
-                case cli::Delimiter::lf:
-                  engine.on_char('\n');
-                  break;
-                case cli::Delimiter::cr:
-                  engine.on_char('\r');
-                  break;
-                case cli::Delimiter::crlf:
-                  engine.on_char('\r');
-                  engine.on_char('\n');
-                  break;
+              if constexpr (cli::config::input_delimiter_v<
+                              typename Engine::config_type> == Delimiter::lf) {
+                engine.on_char('\n');
+              } else if constexpr (cli::config::input_delimiter_v<
+                                     typename Engine::config_type> ==
+                                   Delimiter::cr) {
+                engine.on_char('\r');
+              } else if constexpr (cli::config::input_delimiter_v<
+                                     typename Engine::config_type> ==
+                                   Delimiter::crlf) {
+                engine.on_char('\r');
+                engine.on_char('\n');
               }
               break;
             case Term::Key::ArrowDown:
@@ -130,6 +131,18 @@ namespace cli::sim {
               engine.on_char(static_cast<char>(key.value));
           }
         } break;
+        case Term::Event::Type::Empty:
+          [[fallthrough]];
+        case Term::Event::Type::Cursor:
+          [[fallthrough]];
+        case Term::Event::Type::Screen:
+          [[fallthrough]];
+        case Term::Event::Type::Focus:
+          [[fallthrough]];
+        case Term::Event::Type::Mouse:
+          [[fallthrough]];
+        case Term::Event::Type::CopyPaste:
+          [[fallthrough]];
         default:
           break;
       }

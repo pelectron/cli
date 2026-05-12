@@ -272,8 +272,8 @@ namespace cli {
     std::uint64_t v{};
     constexpr u64(std::uint32_t l, std::uint32_t h)
       : v(l | (static_cast<uint64_t>(h) << 32)) {}
-    constexpr u64(std::uint64_t v)
-      : v(v) {}
+    constexpr u64(std::uint64_t val)
+      : v(val) {}
     constexpr u64() = default;
     constexpr std::uint32_t low() const noexcept {
       return static_cast<std::uint32_t>(v);
