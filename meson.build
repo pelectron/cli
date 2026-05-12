@@ -144,7 +144,7 @@ if (not build_tests.disabled())
     required: true,
   )
 
-  test_inc = include_directories('tests')
+  test_inc = include_directories('tests/include')
 
   # unit test warnings to disable
   if cpp.get_id() == 'clang' or cpp.get_id() == 'gcc'
@@ -194,6 +194,7 @@ if (not build_tests.disabled())
     'tests/command_tree.cpp',
     'tests/ctti.cpp',
     'tests/display.cpp',
+    'tests/elem.cpp',
     'tests/event.cpp',
     'tests/exec_result.cpp',
     'tests/history.cpp',
@@ -203,6 +204,9 @@ if (not build_tests.disabled())
     'tests/param.cpp',
     'tests/ring_buffer.cpp',
     'tests/string.cpp',
+    'tests/stringify.cpp',
+    'tests/test_display.cpp',
+    'tests/tuple.cpp',
     'tests/util.cpp',
     'tests/validate.cpp',
     include_directories: test_inc,
