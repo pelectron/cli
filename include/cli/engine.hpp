@@ -146,7 +146,7 @@ namespace cli {
      */
     constexpr void reset() noexcept {
       input_.reset();
-      line_.clear_screen();
+      line_.on_clear_screen();
     }
 
     /**
