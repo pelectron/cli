@@ -219,7 +219,6 @@ namespace cli {
           }
           return print_param(c);
       }
-      return Error::none;
     }
 
     constexpr Error handle_delimiter(char_type c) noexcept {
