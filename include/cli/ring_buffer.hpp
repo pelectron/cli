@@ -163,6 +163,13 @@ namespace cli {
     std::size_t size() const noexcept { return size_; }
 
     /**
+     * returns capacity() - size()
+     */
+    constexpr std::size_t remaining_size() const noexcept {
+      return capacity_ - size_;
+    }
+
+    /**
      * returns the maximum amount of elements that can be stored
      */
     std::size_t capacity() const noexcept { return capacity_; }
