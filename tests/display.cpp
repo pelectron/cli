@@ -1,10 +1,6 @@
-
 #include "cli/display.hpp"
-#include "common.hpp"
 
 #include <catch2/catch_all.hpp>
-#include <cstddef>
-#include <limits>
 
 struct SingleLineDisplay {};
 struct SingleLineDisplay2 {

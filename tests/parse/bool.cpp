@@ -1,5 +1,6 @@
-#include "catch2/catch_test_macros.hpp"
 #include "cli/parse.hpp"
+#include "stringify.hpp"
+
 #include <catch2/catch_all.hpp>
 
 std::string to_string(cli::View<const char> s) { return {s.data(), s.size()}; }
@@ -18,7 +19,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("true rest");
       REQUIRE(res);
       REQUIRE(res.value == true);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -33,7 +34,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("false rest");
       REQUIRE(res);
       REQUIRE(res.value == false);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -48,7 +49,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("TRUE rest");
       REQUIRE(res);
       REQUIRE(res.value == true);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -63,7 +64,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("FALSE rest");
       REQUIRE(res);
       REQUIRE(res.value == false);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -78,7 +79,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("1 rest");
       REQUIRE(res);
       REQUIRE(res.value == true);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -93,7 +94,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("0 rest");
       REQUIRE(res);
       REQUIRE(res.value == false);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -108,7 +109,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("yes rest");
       REQUIRE(res);
       REQUIRE(res.value == true);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -123,7 +124,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("no rest");
       REQUIRE(res);
       REQUIRE(res.value == false);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -138,7 +139,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("y rest");
       REQUIRE(res);
       REQUIRE(res.value == true);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 
@@ -153,7 +154,7 @@ TEST_CASE("parse::Parse<bool>", "[parse][Bool]") {
       const auto res = parse("n rest");
       REQUIRE(res);
       REQUIRE(res.value == false);
-      REQUIRE(to_string(res.rest) == to_string(" rest"));
+      REQUIRE(res.rest == " rest");
     }
   }
 }

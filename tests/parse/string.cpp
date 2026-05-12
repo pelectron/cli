@@ -1,9 +1,10 @@
 #include "cli/string.hpp"
-#include "catch2/catch_test_macros.hpp"
 #include "cli/enums.hpp"
 #include "cli/parse.hpp"
 #include "common.hpp"
-#include <array>
+#include "stringify.hpp"
+
+#include <catch2/catch_all.hpp>
 #include <string>
 
 TEST_CASE("parse::String") {

@@ -22,6 +22,7 @@ namespace cli {
     constexpr TupleElem()
       requires std::is_constructible_v<T>
       : value_{} {}
+
     constexpr TupleElem(const T &t)
       requires std::is_copy_constructible_v<T>
       : value_(t) {}
@@ -29,6 +30,12 @@ namespace cli {
     constexpr TupleElem(T &&t)
       requires std::is_move_constructible_v<T>
       : value_(std::move(t)) {}
+
+    template<typename T_>
+    constexpr TupleElem(T_ &&t)
+      requires std::is_constructible_v<T, T_ &&> and
+               (not std::same_as<T, std::remove_cvref_t<T_>>)
+      : value_{t} {}
 
     constexpr TupleElem(const TupleElem &o)
       requires std::is_copy_constructible_v<T>
@@ -67,11 +74,21 @@ namespace cli {
   public:
     constexpr TupleImpl()
       requires(std::is_constructible_v<Ts> and ...)
-    {}
+      : TupleElem<Is, Ts>{}... {}
 
     template<typename... T>
     constexpr TupleImpl(T &&...ts)
+      requires(std::is_constructible_v<Ts, T &&> && ...) and
+              (not std::same_as<T, Ts> and ...)
       : TupleElem<Is, Ts>(std::forward<T>(ts))... {}
+
+    constexpr TupleImpl(const Ts &...ts)
+      requires(std::is_copy_constructible_v<Ts> && ...)
+      : TupleElem<Is, Ts>{ts}... {}
+
+    constexpr TupleImpl(Ts &&...ts)
+      requires(std::is_move_constructible_v<Ts> && ...)
+      : TupleElem<Is, Ts>{std::move(ts)}... {}
 
     constexpr TupleImpl(const TupleImpl &o)
       requires(std::is_copy_constructible_v<Ts> && ...)
@@ -108,7 +125,7 @@ namespace cli {
   public:
     constexpr Tuple()
       requires(std::is_constructible_v<Ts> and ...)
-    {}
+      : Impl{} {}
 
     template<typename... T>
       requires(sizeof...(T) == sizeof...(Ts))

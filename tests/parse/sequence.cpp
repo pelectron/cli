@@ -1,8 +1,8 @@
-#include "catch2/catch_template_test_macros.hpp"
-#include "catch2/catch_test_macros.hpp"
-
 #include "cli/parse.hpp"
 #include "common.hpp"
+#include "stringify.hpp"
+
+#include <catch2/catch_all.hpp>
 #include <iostream>
 
 using Seq1 = cli::FixedCapacityVector<int, 10>;

@@ -1,6 +1,5 @@
-#include "catch2/catch_test_macros.hpp"
+#include "cli/command.hpp"
 #include "cli/string.hpp"
-#include <cli/command.hpp>
 
 #include <catch2/catch_all.hpp>
 #include <vector>

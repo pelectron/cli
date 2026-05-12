@@ -1,6 +1,7 @@
-#include "catch2/catch_test_macros.hpp"
 #include "cli/parse.hpp"
-#include "common.hpp"
+#include "stringify.hpp"
+
+#include <catch2/catch_all.hpp>
 
 using IntList = cli::FixedCapacityVector<int, 10>;
 
@@ -20,8 +21,6 @@ struct StructTestVector {
   cli::CharView input;
   cli::parse::ParseResult<S, char> output;
 };
-
-#define str(x) std::string(x.data(), x.size())
 
 TEST_CASE("Struct", "[parse][Struct]") {
   using cli::parse::ok;
@@ -56,7 +55,7 @@ TEST_CASE("Struct", "[parse][Struct]") {
       CHECK(res);
       CHECK(res.error == tv.output.error);
       CHECK(res.value == tv.output.value);
-      CHECK(str(res.rest) == str(tv.output.rest));
+      CHECK(res.rest == tv.output.rest);
     }
   }
 
@@ -89,7 +88,7 @@ TEST_CASE("Struct", "[parse][Struct]") {
       REQUIRE(res);
       REQUIRE(res.error == tv.output.error);
       REQUIRE(res.value == tv.output.value);
-      REQUIRE(str(res.rest) == str(tv.output.rest));
+      REQUIRE(res.rest == tv.output.rest);
     }
   }
 
@@ -118,7 +117,7 @@ TEST_CASE("Struct", "[parse][Struct]") {
       REQUIRE(res);
       REQUIRE(res.error == tv.output.error);
       REQUIRE(res.value == tv.output.value);
-      REQUIRE(str(res.rest) == str(tv.output.rest));
+      REQUIRE(res.rest == tv.output.rest);
     }
   }
 
@@ -147,7 +146,7 @@ TEST_CASE("Struct", "[parse][Struct]") {
       REQUIRE(res);
       REQUIRE(res.error == tv.output.error);
       REQUIRE(res.value == tv.output.value);
-      REQUIRE(str(res.rest) == str(tv.output.rest));
+      REQUIRE(res.rest == tv.output.rest);
     }
   }
 
@@ -168,7 +167,7 @@ TEST_CASE("Struct", "[parse][Struct]") {
       CHECK(res);
       CHECK(res.error == tv.output.error);
       REQUIRE(res.value == tv.output.value);
-      CHECK(str(res.rest) == str(tv.output.rest));
+      CHECK(res.rest == tv.output.rest);
     }
   }
 }

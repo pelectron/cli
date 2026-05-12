@@ -1,5 +1,5 @@
 #include "catch2/catch_test_macros.hpp"
-#include "common.hpp"
+#include "stringify.hpp"
 
 #include "cli/parse.hpp"
 
@@ -56,8 +56,6 @@ struct SeqTestVector {
   PASS_TVR(__VA_ARGS__), PASS_TV1R(__VA_ARGS__), PASS_TV2R(__VA_ARGS__),       \
     PASS_TV3R(__VA_ARGS__)
 
-#define str(x) (x.data() ? std::string(x.data(), x.size()) : "")
-
 TEST_CASE("parse::FixedSizeSequence") {
   using Parser = cli::parse::Parse<std::array<int, 10>, char>;
   Parser parse{};
@@ -78,7 +76,7 @@ TEST_CASE("parse::FixedSizeSequence") {
       REQUIRE(res);
       REQUIRE(res.error == tv.output.error);
       REQUIRE(res.value == tv.output.value);
-      REQUIRE(str(res.rest) == str(tv.output.rest));
+      REQUIRE(res.rest == tv.output.rest);
     }
   }
 

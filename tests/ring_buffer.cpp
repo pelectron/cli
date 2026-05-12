@@ -1,7 +1,5 @@
 #include "cli/ring_buffer.hpp"
 
-#include "common.hpp"
-
 #include <catch2/catch_all.hpp>
 
 TEST_CASE("RingBuffer::RingBuffer()") {

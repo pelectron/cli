@@ -2,6 +2,7 @@
 #include "cli/enums.hpp"
 #include "cli/parse.hpp"
 #include "common.hpp"
+#include "stringify.hpp"
 
 #include <catch2/catch_all.hpp>
 
@@ -19,7 +20,6 @@ struct EnumTestVector {
       cli::parse::from_value, value, {}                                        \
     }                                                                          \
   }
-#define str(x) std::string(x.data(), x.size())
 
 TEST_CASE("parse::Enum") {
   SECTION("no number allowed") {

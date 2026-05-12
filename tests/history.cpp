@@ -1,8 +1,8 @@
 #include "cli/history.hpp"
-#include "catch2/catch_test_macros.hpp"
 #include "cli/config.hpp"
+#include "stringify.hpp"
+
 #include <catch2/catch_all.hpp>
-#include <iostream>
 
 TEST_CASE("History") {
   cli::History<cli::default_config> h;

@@ -1,7 +1,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include "cli.hpp"
 #include "cli/command.hpp"
-#include "common.hpp"
+#include "mock_engine.hpp"
 
 #include <catch2/catch_all.hpp>
 

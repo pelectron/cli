@@ -1,13 +1,15 @@
 #include "cli/input.hpp"
-#include "catch2/catch_template_test_macros.hpp"
-#include "catch2/catch_test_macros.hpp"
 #include "cli/config.hpp"
 #include "cli/enums.hpp"
 #include "cli/event.hpp"
-#include "common.hpp"
+#include "stringify.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <cstddef>
+
+constexpr std::uint8_t operator""_u8(unsigned long long int i) {
+  return static_cast<std::uint8_t>(i);
+}
 
 struct non_volatile_cfg {
   using char_type = char;

@@ -1,7 +1,5 @@
-#include "catch2/catch_test_macros.hpp"
 #include "cli/enums.hpp"
 #include "cli/format.hpp"
-#include "common.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <format>

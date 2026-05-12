@@ -2,7 +2,8 @@
 #include "cli/concepts.hpp"
 #include "cli/enums.hpp"
 #include "cli/string.hpp"
-#include "common.hpp"
+#include "stringify.hpp"
+#include "test_display.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <string>

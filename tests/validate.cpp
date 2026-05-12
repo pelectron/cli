@@ -1,4 +1,3 @@
-#include "cli/util.hpp"
 #include "cli/validator.hpp"
 
 #include <catch2/catch_test_macros.hpp>
