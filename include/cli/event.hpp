@@ -59,13 +59,13 @@ namespace cli {
       return *this;
     }
 
-    // constexpr Event &operator=(Event &&o) {
-    //   type_ = o.type_;
-    //   payload_ = o.payload_;
-    //   return *this;
-    // }
+    Event &operator=(const volatile Event &o) noexcept {
+      type_ = o.type_;
+      payload_ = o.payload_;
+      return *this;
+    }
 
-    volatile Event &operator=(const volatile Event &o) volatile noexcept {
+    volatile Event &operator=(const Event &o) volatile noexcept {
       type_ = o.type_;
       payload_ = o.payload_;
       return *this;

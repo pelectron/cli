@@ -30,29 +30,48 @@ TEST_CASE("Event::Event(const Event&)") {
 }
 
 TEST_CASE("Event::operator=(const Event&)") {
-  const cli::Event<char> ce{cli::Control::backspace, 5};
+  SECTION("non volatile") {
+    const cli::Event<char> ce{cli::Control::backspace, 5};
 
-  cli::Event<char> e{};
-  e = ce;
-  REQUIRE(e.type() == cli::Control::backspace);
-  REQUIRE(e.param() == 5);
+    cli::Event<char> e{};
+    e = ce;
+    REQUIRE(e.type() == cli::Control::backspace);
+    REQUIRE(e.param() == 5);
 
-  const cli::Event<char> ce2{'k'};
+    const cli::Event<char> ce2{'k'};
 
-  e = ce2;
-  REQUIRE(e.type() == cli::Control::character);
-  REQUIRE(e.as_char() == 'k');
+    e = ce2;
+    REQUIRE(e.type() == cli::Control::character);
+    REQUIRE(e.as_char() == 'k');
+  }
 
-  const volatile cli::Event<char> v_ce1{cli::Control::backspace, 5};
+  SECTION("assign from volatile") {
+    const volatile cli::Event<char> ce{cli::Control::backspace, 5};
 
-  volatile cli::Event<char> v_e{};
-  v_e = v_ce1;
-  REQUIRE(v_e.type() == cli::Control::backspace);
-  REQUIRE(v_e.param() == 5);
+    cli::Event<char> e{};
+    e = ce;
+    REQUIRE(e.type() == cli::Control::backspace);
+    REQUIRE(e.param() == 5);
 
-  const volatile cli::Event<char> v_ce2{'k'};
-  v_e = v_ce2;
+    const volatile cli::Event<char> ce2{'k'};
 
-  REQUIRE(v_e.type() == cli::Control::character);
-  REQUIRE(v_e.as_char() == 'k');
+    e = ce2;
+    REQUIRE(e.type() == cli::Control::character);
+    REQUIRE(e.as_char() == 'k');
+  }
+
+  SECTION("assign to volatile") {
+    const cli::Event<char> ce{cli::Control::backspace, 5};
+
+    volatile cli::Event<char> e{};
+    e = ce;
+    REQUIRE(e.type() == cli::Control::backspace);
+    REQUIRE(e.param() == 5);
+
+    const cli::Event<char> ce2{'k'};
+
+    e = ce2;
+    REQUIRE(e.type() == cli::Control::character);
+    REQUIRE(e.as_char() == 'k');
+  }
 }
