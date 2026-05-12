@@ -22,6 +22,7 @@
 #include "cli/format.hpp"
 #include "cli/parse.hpp"
 #include "cli/string.hpp"
+#include "cli/tuple.hpp"
 #include "cli/type_list.hpp"
 #include "cli/util.hpp"
 #include "cli/validator.hpp"
@@ -30,6 +31,11 @@
 #include <cstddef>
 #include <type_traits>
 #include <utility>
+
+namespace cli {
+  template<class Engine, concepts::Command... Commands>
+  class CommandTree;
+} // namespace cli
 
 namespace cli::funcs {
 
@@ -261,7 +267,7 @@ namespace cli::funcs {
     template<Callable F, class... Args>
     constexpr auto deduce_args(const Args &...args) noexcept {
       return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-        return std::tuple(deduce_arg<F, Is>(args)...);
+        return cli::Tuple(deduce_arg<F, Is>(args)...);
       }(std::make_index_sequence<sizeof...(Args)>());
     }
 
@@ -315,11 +321,11 @@ namespace cli::funcs {
 
     template<typename CharT, Callable F, FuncArg... Args>
     constexpr auto
-    pretty_signature_name(const std::tuple<Args...> &args) noexcept {
+    pretty_signature_name(const cli::Tuple<Args...> &args) noexcept {
       return []<std::size_t... Is>(std::index_sequence<Is...>,
-                                   const std::tuple<Args...> &args_) {
+                                   const cli::Tuple<Args...> &args_) {
         return string_constant<CharT, '('>{} +
-               make_pretty_signature_name(std::get<Is>(args_)...) +
+               make_pretty_signature_name(get<Is>(args_)...) +
                string_constant<CharT, ')', '-', '>'>{} +
                ctti::name<typename function_traits<F>::return_type, CharT>();
       }(std::make_index_sequence<sizeof...(Args)>(), args);
@@ -358,9 +364,9 @@ namespace cli::funcs {
 
     template<class... Args>
     constexpr auto
-    parse_field_from_args(const std::tuple<Args...> &args) noexcept {
+    parse_field_from_args(const cli::Tuple<Args...> &args) noexcept {
       return [&args]<std::size_t... Is>(std::index_sequence<Is...>) {
-        return std::tuple(parse_field_from_arg(std::get<Is>(args))...);
+        return cli::Tuple(parse_field_from_arg(get<Is>(args))...);
       }(std::make_index_sequence<sizeof...(Args)>{});
     }
 
@@ -1003,6 +1009,13 @@ namespace cli::funcs {
 
   /// @}
 
+  struct FuncGetter {
+    template<typename Function>
+    constexpr auto &get(Function &f) {
+      return f.func_;
+    }
+  };
+
   template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
   class Function
     : public CommandBase<Function<Name, Description, Type, F, Args...>,
@@ -1021,7 +1034,8 @@ namespace cli::funcs {
       FieldGroup<typename Name::char_type, '=', ',', '(', ')', Fields...>;
     using Parser = type_list::apply_t<PartialParser,
                                       decltype(dtl::parse_field_from_args(
-                                        std::declval<std::tuple<Args...>>()))>;
+                                        std::declval<cli::Tuple<Args...>>()))>;
+    friend struct FuncGetter;
 
   public:
     using char_type = typename Base::char_type;
@@ -1042,7 +1056,7 @@ namespace cli::funcs {
                        Description,
                        Type,
                        Func &&function,
-                       const std::tuple<Args...> &args) noexcept
+                       const cli::Tuple<Args...> &args) noexcept
       : func_(std::forward<Func>(function)), args_(args) {}
 
     template<Callable Func>
@@ -1050,7 +1064,7 @@ namespace cli::funcs {
                        Description,
                        Type,
                        Func &&function,
-                       std::tuple<Args...> &&args) noexcept
+                       cli::Tuple<Args...> &&args) noexcept
       : func_(std::forward<Func>(function)), args_(std::move(args)) {}
 
     constexpr ExecResult<char_type>
@@ -1081,10 +1095,10 @@ namespace cli::funcs {
 
         if constexpr (std::is_same_v<void, Ret>) {
           (void)out;
-          func_(std::get<Is>(tuple).value...);
+          func_(get<Is>(tuple).value...);
           return ExecResult<char_type>::make_success();
         } else {
-          Ret ret_val = func_(std::get<Is>(tuple).value...);
+          Ret ret_val = func_(get<Is>(tuple).value...);
           format::Format<Ret, typename Base::char_type> format{};
           format::FormatResult fmt_result = format(out, ret_val);
           if (not fmt_result)
@@ -1101,7 +1115,7 @@ namespace cli::funcs {
     validate(const auto &tuple, std::index_sequence<I, Is...>) noexcept {
       auto valid =
         typename type_list::type_at_t<I, TypeList<Args...>>::validator{}(
-          std::get<I>(tuple).value);
+          get<I>(tuple).value);
       if constexpr (sizeof...(Is) == 0)
         return {.valid = valid, .index = type_list::list_size_v<arguments>};
       else {
@@ -1141,11 +1155,11 @@ namespace cli::funcs {
     View<const char_type>
     get_help(View<const char_type> arg,
              std::index_sequence<I, Is...>) const noexcept {
-      if (arg == std::get<I>(args_).name) {
+      if (arg == get<I>(args_).name) {
         return string_constant<char_type, '['>{} +
-               pretty_arg_type(std::get<I>(args_)) +
+               pretty_arg_type(get<I>(args_)) +
                string_constant<char_type, ']', ':', ' '>{} +
-               std::get<I>(args_).description;
+               get<I>(args_).description;
       } else {
         if constexpr (sizeof...(Is) == 0)
           return {};
@@ -1155,7 +1169,7 @@ namespace cli::funcs {
     }
 
     CLI_NO_UNIQUE_ADDRESS F func_{};
-    CLI_NO_UNIQUE_ADDRESS std::tuple<Args...> args_{};
+    CLI_NO_UNIQUE_ADDRESS cli::Tuple<Args...> args_{};
   };
 
   template<Id Name, SC Description, SC Type, Callable F>
@@ -1258,11 +1272,11 @@ namespace cli::funcs {
                 std::decay_t<Args>...>;
 
   template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
-  Function(Name, Description, Type, F &&, const std::tuple<Args...> &)
+  Function(Name, Description, Type, F &&, const cli::Tuple<Args...> &)
     -> Function<Name, Description, Type, std::decay_t<F>, Args...>;
 
   template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
-  Function(Name, Description, Type, F &&, std::tuple<Args...> &&)
+  Function(Name, Description, Type, F &&, cli::Tuple<Args...> &&)
     -> Function<Name, Description, Type, std::decay_t<F>, Args...>;
   /**
    * @defgroup Functions Functions
@@ -1707,7 +1721,7 @@ namespace cli::funcs {
                   "A MemberFunctions Function template argument must be a "
                   "pointer to member function");
     Function f;
-    std::tuple<Args...> args;
+    cli::Tuple<Args...> args;
 
     constexpr MemberFunction(Name,
                              Description,
@@ -1720,7 +1734,7 @@ namespace cli::funcs {
                              Description,
                              Help,
                              Function mem_fun_ptr,
-                             const std::tuple<Args...> &arguments) noexcept
+                             const cli::Tuple<Args...> &arguments) noexcept
       : f(mem_fun_ptr), args(arguments) {}
   };
 
@@ -1748,7 +1762,7 @@ namespace cli::funcs {
                       std::decay_t<Args>...>;
   template<Id Name, SC Description, SC Help, class Function, FuncArg... Args>
   MemberFunction(
-    Name &&, Description &&, Help &&, Function &&, const std::tuple<Args...> &)
+    Name &&, Description &&, Help &&, Function &&, const cli::Tuple<Args...> &)
     -> MemberFunction<std::decay_t<Name>,
                       std::decay_t<Description>,
                       std::decay_t<Help>,

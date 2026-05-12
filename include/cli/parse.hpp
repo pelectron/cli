@@ -22,6 +22,7 @@
 #include "cli/enums.hpp"
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
+#include "cli/tuple.hpp"
 #include "cli/type_list.hpp"
 #include "cli/u64.hpp"
 #include "cli/util.hpp"
@@ -1186,13 +1187,13 @@ namespace cli::parse {
     // std::size_t consumed = 0;
     // bool initialized[sizeof...(Fields)]{};
     // bool optional[sizeof...(Fields)]{};
-    // std::tuple<Fields...> fields{};
+    // cli::Tuple<Fields...> fields{};
     struct State {
       Error error = Error::none;
       std::size_t consumed = 0;
       bool initialized[sizeof...(Fields)]{};
       bool optional[sizeof...(Fields)]{};
-      std::tuple<Fields...> fields{};
+      cli::Tuple<Fields...> fields{};
       constexpr bool all_fields_have_a_value() const {
         for (std::size_t i = 0; i < sizeof...(Fields); ++i) {
           if (not(initialized[i] or optional[i]))
@@ -1208,8 +1209,8 @@ namespace cli::parse {
       Pair{View<const CharT>(typename Fields::name{}),
            +[](State &state, View<const CharT> &sv) {
              constexpr auto index =
-               type_list::index_of_v<Fields, std::tuple<Fields...>>;
-             auto res = std::get<index>(state.fields).parse(sv);
+               type_list::index_of_v<Fields, cli::Tuple<Fields...>>;
+             auto res = get<index>(state.fields).parse(sv);
              if (not res) {
                state.error = res.error;
                return;
@@ -1217,7 +1218,7 @@ namespace cli::parse {
 
              // parse success -> set value and remember that this field
              // has been initialized
-             std::get<index>(state.fields).value = res.value;
+             get<index>(state.fields).value = res.value;
              state.initialized[index] = true;
              ++state.consumed;
              sv = skip_ws(res.rest);
@@ -1251,7 +1252,7 @@ namespace cli::parse {
         [](const auto &f, State &self) {
           using F = std::remove_cvref_t<decltype(f)>;
           constexpr auto index =
-            type_list::index_of_v<F, std::tuple<Fields...>>;
+            type_list::index_of_v<F, cli::Tuple<Fields...>>;
           if constexpr (F::has_default) {
             /// self.initialized[index] = true;
             self.optional[index] = true;
@@ -1262,13 +1263,13 @@ namespace cli::parse {
     }
 
     template<class... Fs>
-    constexpr FieldGroup(std::tuple<Fs...> &&fields) noexcept
+    constexpr FieldGroup(cli::Tuple<Fs...> &&fields) noexcept
       : s{.fields = std::move(fields)} {
       for_each(
         [](const auto &f, State &self) {
           using F = std::remove_cvref_t<decltype(f)>;
           constexpr auto index =
-            type_list::index_of_v<F, std::tuple<Fields...>>;
+            type_list::index_of_v<F, cli::Tuple<Fields...>>;
           if constexpr (F::has_default) {
             /// self.initialized[index] = true;
             self.optional[index] = true;
@@ -1279,13 +1280,13 @@ namespace cli::parse {
     }
 
     template<class... Fs>
-    constexpr FieldGroup(const std::tuple<Fs...> &fields) noexcept
+    constexpr FieldGroup(const cli::Tuple<Fs...> &fields) noexcept
       : s{.fields = fields} {
       for_each(
         [](const auto &f, State &self) {
           using F = std::remove_cvref_t<decltype(f)>;
           constexpr auto index =
-            type_list::index_of_v<F, std::tuple<Fields...>>;
+            type_list::index_of_v<F, cli::Tuple<Fields...>>;
           if constexpr (F::has_default) {
             /// self.initialized[index] = true;
             self.optional[index] = true;
@@ -1300,7 +1301,7 @@ namespace cli::parse {
     constexpr FieldGroup &operator=(const FieldGroup &) = default;
     constexpr FieldGroup &operator=(FieldGroup &&) = default;
 
-    constexpr ParseResult<std::tuple<Fields...>, CharT>
+    constexpr ParseResult<cli::Tuple<Fields...>, CharT>
     operator()(View<const CharT> str) noexcept {
       if (str.size() == 0) {
         if constexpr ((Fields::has_default and ...))

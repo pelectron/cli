@@ -56,9 +56,9 @@ TEST_CASE("ctti::dtl::member_name", "[ctti]") {
 TEST_CASE("ctti::to_tuple", "[ctti]") {
   F2 f2{.i = 5, .c = 'k', .f1_struct = {.a = 10}};
   auto t = cli::ctti::to_tuple(f2);
-  REQUIRE(std::get<0>(t).value == 5);
-  REQUIRE(std::get<1>(t).value == 'k');
-  REQUIRE(std::get<2>(t).value.a == 10);
+  REQUIRE(cli::get<0>(t).value == 5);
+  REQUIRE(cli::get<1>(t).value == 'k');
+  REQUIRE(cli::get<2>(t).value.a == 10);
 }
 
 TEST_CASE("ctti::enum_name", "[ctti]") {

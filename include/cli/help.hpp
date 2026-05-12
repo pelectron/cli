@@ -65,7 +65,7 @@ namespace cli {
                       'e'>{}};
 
     constexpr void write(View<const char_type> s) noexcept {
-      engine.display_.write(s);
+      engine->display_.write(s);
     }
 
     /**
@@ -75,27 +75,27 @@ namespace cli {
      */
     constexpr void operator()(View<const char_type> cmd,
                               View<const char_type> arg) noexcept {
-      engine.display_.newline();
+      engine->display_.newline();
       if (cmd.size() == 0) {
         if (arg.size() != 0)
           return write(cmd_not_found);
 
         if constexpr (config::empty_help_prints_commands_v<config_type>)
-          return engine.print();
+          return engine->print();
         else
           return write(cmd_not_found);
       }
 
       const CommandNode<char_type> *cmd_node =
-        get_command(cmd, engine.root(), config_type::access_separator);
+        get_command(cmd, engine->root(), config_type::access_separator);
 
       if (cmd_node == nullptr)
         return write(cmd_not_found);
 
       if (arg.size() == 0) {
-        engine.display_.write('[');
-        engine.display_.write(cmd_node->type);
-        engine.display_.write(
+        engine->display_.write('[');
+        engine->display_.write(cmd_node->type);
+        engine->display_.write(
           View<const char_type>{string_constant<char_type, ']', ':', ' '>{}});
 
         if (cmd_node->description.size() == 0)
@@ -111,11 +111,11 @@ namespace cli {
         write(context_help);
     }
 
-    Engine &engine;
+    Engine *engine;
   };
 
   template<class Engine>
-  constexpr auto create_help_cmd(Engine &engine) noexcept {
+  constexpr auto create_help_cmd() noexcept {
     return funcs::func(
       string_constant<typename Engine::char_type, 'h', 'e', 'l', 'p'>{},
       string_constant<typename Engine::char_type,
@@ -130,7 +130,7 @@ namespace cli {
                       'e',
                       'l',
                       'p'>{},
-      cli::Help<Engine>{engine},
+      cli::Help<Engine>{nullptr},
       funcs::arg<cli::View<const typename Engine::char_type>,
                  string_constant<typename Engine::char_type>{}>(
         string_constant<typename Engine::char_type, 'c', 'm', 'd'>{}),
@@ -140,7 +140,6 @@ namespace cli {
   }
 
   template<class Engine>
-  using HelpCommand =
-    decltype(create_help_cmd<Engine>(std::declval<Engine &>()));
+  using HelpCommand = decltype(create_help_cmd<Engine>());
 } // namespace cli
 #endif

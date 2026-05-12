@@ -19,10 +19,10 @@
 #include "cli/concepts.hpp"
 #include "cli/exec_result.hpp"
 #include "cli/string.hpp"
+#include "cli/tuple.hpp"
 #include "cli/type_list.hpp"
 
 #include <cstddef>
-#include <tuple>
 
 namespace cli {
 
@@ -188,10 +188,10 @@ namespace cli {
     constexpr CommandBase(SubCommands_ &&...cmds) noexcept
       : subcommands{std::forward<SubCommands_>(cmds)...} {}
 
-    constexpr CommandBase(std::tuple<SubCommands...> &&cmds) noexcept
+    constexpr CommandBase(cli::Tuple<SubCommands...> &&cmds) noexcept
       : subcommands{std::move(cmds)} {}
 
-    constexpr CommandBase(const std::tuple<SubCommands...> &cmds) noexcept
+    constexpr CommandBase(const cli::Tuple<SubCommands...> &cmds) noexcept
       : subcommands{cmds} {}
 
     /**
@@ -233,7 +233,7 @@ namespace cli {
     template<class Engine, concepts::Command...>
     friend class CommandTree;
 
-    std::tuple<SubCommands...> subcommands{};
+    cli::Tuple<SubCommands...> subcommands{};
   };
 
   /**

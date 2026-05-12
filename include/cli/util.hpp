@@ -12,6 +12,7 @@
 #include "cli/concepts.hpp"
 #include "cli/ring_buffer.hpp"
 #include "cli/string.hpp"
+#include "cli/tuple.hpp"
 #include "cli/type_list.hpp"
 
 #ifdef _MSC_VER
@@ -121,14 +122,15 @@ namespace cli {
                                  F &&f,
                                  Tuple &&t,
                                  Args &&...args) {
-      (f(std::get<Is>(std::forward<Tuple>(t)), std::forward<Args>(args)...),
-       ...);
+      using std::get;
+      (f(get<Is>(std::forward<Tuple>(t)), std::forward<Args>(args)...), ...);
     }
 
     template<class Tuple, class F, std::size_t... Is>
     constexpr decltype(auto)
     apply_impl(Tuple &&t, F &&f, std::index_sequence<Is...>) {
-      return std::forward<F>(f)(std::get<Is>(std::forward<Tuple>(t))...);
+      using std::get;
+      return std::forward<F>(f)(get<Is>(std::forward<Tuple>(t))...);
     }
   } // namespace dtl
 
@@ -219,6 +221,33 @@ namespace cli {
   template<concepts::Command... Cmds>
   inline constexpr std::size_t minimum_line_length_v =
     dtl::max(num_cmds<Cmds, typename Cmds::sub_command_list>::value...);
+
+  template<concepts::Command C, typename Subcommands>
+  struct help_length_t;
+
+  template<concepts::Command C, template<typename...> typename L>
+  struct help_length_t<C, L<>> {
+    static constexpr std::size_t value =
+      C::type.size() + 4 +
+      (C::description.size() > 0 ? C::description.size() : 24);
+  };
+
+  template<concepts::Command C,
+           template<typename...> typename L,
+           typename... Cmds>
+  struct help_length_t<C, L<Cmds...>> {
+    static constexpr std::size_t len =
+      C::type.size() + 4 +
+      (C::description.size() > 0 ? C::description.size() : 24);
+    static constexpr std::size_t value = std::max(
+      {len, help_length_t<Cmds, typename Cmds::sub_command_list>::value...});
+  };
+
+  template<concepts::Config Cfg, concepts::Command... Cmds>
+  consteval std::size_t maximum_help_line_length() {
+    return std::max(
+      {help_length_t<Cmds, typename Cmds::sub_command_list>::value...});
+  }
 
   // template<concepts::Command C>
   // inline constexpr std::size_t max_name_length_v =

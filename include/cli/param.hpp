@@ -16,6 +16,7 @@
 #include "cli/parse.hpp"
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
+#include "cli/tuple.hpp"
 #include "cli/type_list.hpp"
 #include "cli/util.hpp"
 #include "cli/validator.hpp"
@@ -240,7 +241,7 @@ namespace cli::params {
                       Parse_ &&parse,
                       Format_ &&format,
                       Validate_ &&validate,
-                      std::tuple<SubCommands...> &&cmds) noexcept
+                      cli::Tuple<SubCommands...> &&cmds) noexcept
         : Base(std::move(cmds)),
           get_(std::forward<Get_>(get)),
           set_(std::forward<Set_>(set)),
@@ -262,7 +263,7 @@ namespace cli::params {
                       Parse_ &&parse,
                       Format_ &&format,
                       Validate_ &&validate,
-                      const std::tuple<SubCommands...> &cmds) noexcept
+                      const cli::Tuple<SubCommands...> &cmds) noexcept
         : Base(cmds),
           get_(std::forward<Get_>(get)),
           set_(std::forward<Set_>(set)),
@@ -404,7 +405,7 @@ namespace cli::params {
           Parse &&parse,
           Format &&format,
           Validate &&validate,
-          std::tuple<SubCommands...> &&cmds)
+          cli::Tuple<SubCommands...> &&cmds)
       -> Param<std::decay_t<Name>,
                std::decay_t<Description>,
                std::decay_t<Type>,
@@ -432,7 +433,7 @@ namespace cli::params {
           Parse &&parse,
           Format &&format,
           Validate &&validate,
-          const std::tuple<SubCommands...> &cmds)
+          const cli::Tuple<SubCommands...> &cmds)
       -> Param<std::decay_t<Name>,
                std::decay_t<Description>,
                std::decay_t<Type>,
@@ -454,7 +455,7 @@ namespace cli::params {
     struct MemberData {
       using char_type = get_char_t<Name>;
       MemberPointer f;
-      std::tuple<SubCommands...> subcommands;
+      cli::Tuple<SubCommands...> subcommands;
       CLI_NO_UNIQUE_ADDRESS Parse parse;
       CLI_NO_UNIQUE_ADDRESS Format format;
       CLI_NO_UNIQUE_ADDRESS Validate validate;

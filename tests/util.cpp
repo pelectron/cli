@@ -62,7 +62,7 @@ TEST_CASE("util MemFunBinder") {
 TEST_CASE("util for_each") {
   std::vector<int> vec;
   auto f = [&vec](int i, int k) { vec.push_back(i + k); };
-  std::tuple t{1, 2, 3};
+  cli::Tuple t{1, 2, 3};
   int k = 5;
 
   cli::for_each(f, t, k);
@@ -75,7 +75,7 @@ TEST_CASE("util for_each") {
 
 TEST_CASE("util apply") {
   auto f = [](int i, int j, int k) -> int { return i + j + k; };
-  std::tuple t{1, 2, 3};
+  cli::Tuple t{1, 2, 3};
   int ret = cli::apply(t, f);
   REQUIRE(ret == 6);
 }

@@ -176,10 +176,10 @@ struct MockEngine {
   constexpr MockEngine(Commands... commands)
     : tree(*this, commands...) {}
 
-  constexpr MockEngine(std::tuple<Commands...> &&commands)
+  constexpr MockEngine(cli::Tuple<Commands...> &&commands)
     : tree(*this, std::move(commands)) {}
 
-  constexpr MockEngine(const std::tuple<Commands...> &commands)
+  constexpr MockEngine(const cli::Tuple<Commands...> &commands)
     : tree(*this, commands) {}
 
   constexpr void print() { print_called = true; }

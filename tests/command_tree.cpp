@@ -21,7 +21,7 @@ TEST_CASE("CommandTree") {
 
 TEST_CASE("CommandTree rvalue tuple") {
   MockEngine engine{
-    std::tuple{cli::param("c1"_sc, "c1 desc"_sc, i),
+    cli::Tuple{cli::param("c1"_sc, "c1 desc"_sc, i),
                cli::param("c"_sc, "c desc"_sc, i)}
   };
 
@@ -32,7 +32,7 @@ TEST_CASE("CommandTree rvalue tuple") {
 }
 
 TEST_CASE("CommandTree lvalue tuple") {
-  const std::tuple params{cli::param("c1"_sc, "c1 desc"_sc, i),
+  const cli::Tuple params{cli::param("c1"_sc, "c1 desc"_sc, i),
                           cli::param("c"_sc, "c desc"_sc, i)};
 
   MockEngine engine{params};

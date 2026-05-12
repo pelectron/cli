@@ -11,6 +11,7 @@
 #include "cli/concepts.hpp"
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
+#include "cli/tuple.hpp"
 
 #include <array>
 #include <source_location>
@@ -197,7 +198,7 @@ namespace cli::ctti {
       template<Int V, std::size_t I>
       static consteval std::size_t ith() {
         [[maybe_unused]] CharT buffer[256]{};
-        cli::format::Format<Int, CharT>{}({buffer, 256}, V).size_written;
+        cli::format::Format<Int, CharT>{}({buffer, 256}, V);
         return buffer[I];
       }
 
@@ -1351,7 +1352,7 @@ namespace cli::ctti {
                 p18,
                 p19,
                 p20] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1392,7 +1393,7 @@ namespace cli::ctti {
                 p17,
                 p18,
                 p19] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1431,7 +1432,7 @@ namespace cli::ctti {
                 p16,
                 p17,
                 p18] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1468,7 +1469,7 @@ namespace cli::ctti {
                 p15,
                 p16,
                 p17] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1503,7 +1504,7 @@ namespace cli::ctti {
                 p14,
                 p15,
                 p16] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1524,7 +1525,7 @@ namespace cli::ctti {
         auto
           &&[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15] =
             std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1543,7 +1544,7 @@ namespace cli::ctti {
       } else if constexpr (num_members<T_>() == 14) {
         auto &&[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14] =
           std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1561,7 +1562,7 @@ namespace cli::ctti {
       } else if constexpr (num_members<T_>() == 13) {
         auto &&[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13] =
           std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1578,7 +1579,7 @@ namespace cli::ctti {
       } else if constexpr (num_members<T_>() == 12) {
         auto &&[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12] =
           std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1594,7 +1595,7 @@ namespace cli::ctti {
       } else if constexpr (num_members<T_>() == 11) {
         auto &&[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11] =
           std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1608,7 +1609,7 @@ namespace cli::ctti {
           Field<member_name_t<T_, 10, CharT>, decltype(p11)>{.value = p11});
       } else if constexpr (num_members<T_>() == 10) {
         auto &&[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1621,7 +1622,7 @@ namespace cli::ctti {
           Field<member_name_t<T_, 9, CharT>, decltype(p10)>{.value = p10});
       } else if constexpr (num_members<T_>() == 9) {
         auto &&[p1, p2, p3, p4, p5, p6, p7, p8, p9] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1633,7 +1634,7 @@ namespace cli::ctti {
           Field<member_name_t<T_, 8, CharT>, decltype(p9)>{.value = p9});
       } else if constexpr (num_members<T_>() == 8) {
         auto &&[p1, p2, p3, p4, p5, p6, p7, p8] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1644,7 +1645,7 @@ namespace cli::ctti {
           Field<member_name_t<T_, 7, CharT>, decltype(p8)>{.value = p8});
       } else if constexpr (num_members<T_>() == 7) {
         auto &&[p1, p2, p3, p4, p5, p6, p7] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1654,7 +1655,7 @@ namespace cli::ctti {
           Field<member_name_t<T_, 6, CharT>, decltype(p7)>{.value = p7});
       } else if constexpr (num_members<T_>() == 6) {
         auto &&[p1, p2, p3, p4, p5, p6] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1663,7 +1664,7 @@ namespace cli::ctti {
           Field<member_name_t<T_, 5, CharT>, decltype(p6)>{.value = p6});
       } else if constexpr (num_members<T_>() == 5) {
         auto &&[p1, p2, p3, p4, p5] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
@@ -1671,25 +1672,25 @@ namespace cli::ctti {
           Field<member_name_t<T_, 4, CharT>, decltype(p5)>{.value = p5});
       } else if constexpr (num_members<T_>() == 4) {
         auto &&[p1, p2, p3, p4] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3},
           Field<member_name_t<T_, 3, CharT>, decltype(p4)>{.value = p4});
       } else if constexpr (num_members<T_>() == 3) {
         auto &&[p1, p2, p3] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2},
           Field<member_name_t<T_, 2, CharT>, decltype(p3)>{.value = p3});
       } else if constexpr (num_members<T_>() == 2) {
         auto &&[p1, p2] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1},
           Field<member_name_t<T_, 1, CharT>, decltype(p2)>{.value = p2});
       } else if constexpr (num_members<T_>() == 1) {
         auto &&[p1] = std::forward<T>(t);
-        return std::tuple(
+        return cli::Tuple(
           Field<member_name_t<T_, 0, CharT>, decltype(p1)>{.value = p1});
       } else {
         static_assert(
@@ -1697,14 +1698,14 @@ namespace cli::ctti {
           "Cannot convert T to a tuple because it either cannot be "
           "deconstructed "
           "as a structured binding, or because it has too many members.");
-        return /*std::tuple()*/;
+        return /*cli::Tuple()*/;
       }
     }
 
     template<typename T, typename Tuple, std::size_t... Is>
     [[nodiscard]] constexpr T from_tuple_impl(const Tuple &tuple,
                                               std::index_sequence<Is...>) {
-      return T{std::get<Is>(tuple).value...};
+      return T{get<Is>(tuple).value...};
     }
   } // namespace dtl
 
@@ -1833,7 +1834,7 @@ namespace cli::ctti {
     using type = T;
     using name = cli::ctti::name_t<T, CharT>;
     using fields = TypeList<>;
-    using field_tuple = std::tuple<>;
+    using field_tuple = cli::Tuple<>;
   };
 
   /**
@@ -1851,7 +1852,7 @@ namespace cli::ctti {
     /// a type list of FieldInfo :TypeList<FieldInfo...>
     using fields = decltype([]<std::size_t... Is>(std::index_sequence<Is...>) {
       using namespace dtl;
-      return std::tuple<Field<decltype(member_name<T, Is, CharT>()),
+      return cli::Tuple<Field<decltype(member_name<T, Is, CharT>()),
                               typename member_type<T, Is>::type>...>{};
     }(std::make_index_sequence<::cli::ctti::dtl::num_members<T>()>()));
   };
@@ -1860,7 +1861,7 @@ namespace cli::ctti {
   using field_tuple_t =
     decltype([]<std::size_t... Is>(std::index_sequence<Is...>) {
       using namespace dtl;
-      return std::tuple<Field<decltype(member_name<T, Is, CharT>()),
+      return cli::Tuple<Field<decltype(member_name<T, Is, CharT>()),
                               typename member_type<T, Is>::type>...>{};
     }(std::make_index_sequence<::cli::ctti::dtl::num_members<T>()>()));
 

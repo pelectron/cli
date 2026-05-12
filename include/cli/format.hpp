@@ -60,6 +60,7 @@
 
 #include "cli/basic_format.hpp"
 #include "cli/ctti.hpp"
+#include "cli/tuple.hpp"
 
 namespace cli::format {
 
@@ -151,7 +152,7 @@ namespace cli::format {
   public:
     constexpr FormatResult
     operator()(View<CharT> buf,
-               const std::tuple<Fields...> &fields) const noexcept {
+               const cli::Tuple<Fields...> &fields) const noexcept {
       if (buf.size() == 0)
         return Error::buffer_overflow;
 

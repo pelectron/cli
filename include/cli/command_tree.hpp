@@ -4,10 +4,11 @@
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
 #include "cli/config.hpp"
+#include "cli/function.hpp"
 #include "cli/help.hpp"
 #include "cli/string.hpp"
+#include "cli/tuple.hpp"
 
-#include <tuple>
 #include <utility>
 
 namespace cli {
@@ -29,8 +30,10 @@ namespace cli {
     template<concepts::Command... Cmds>
       requires config::use_help_v<config_type>
     constexpr CommandTree(Engine &e, Cmds &&...cmds) noexcept
-      : commands_{create_help_cmd(e), std::forward<Cmds>(cmds)...} {
+      : commands_{create_help_cmd<Engine>(), std::forward<Cmds>(cmds)...} {
       init_commands();
+      funcs::FuncGetter g;
+      g.get(get<0>(commands_)).engine = &e;
     }
 
     template<concepts::Command... Cmds>
@@ -41,15 +44,21 @@ namespace cli {
     }
 
     template<concepts::Command... Cmds>
-    constexpr CommandTree(Engine &e, const std::tuple<Cmds...> &cmds) noexcept
-      : commands_{init_tuple(e, std::move(cmds))} {
+      requires config::use_help_v<config_type>
+    constexpr CommandTree(Engine &e, cli::Tuple<Cmds...> cmds) noexcept
+      : commands_{init_tuple(std::move(cmds))} {
       init_commands();
+      funcs::FuncGetter g;
+      g.get(get<0>(commands_)).engine = &e;
     }
 
     template<concepts::Command... Cmds>
-    constexpr CommandTree(Engine &e, std::tuple<Cmds...> &&cmds) noexcept
-      : commands_{init_tuple(e, cmds)} {
+      requires(not config::use_help_v<config_type>)
+    constexpr CommandTree(Engine &e, cli::Tuple<Cmds...> cmds) noexcept
+      : commands_{std::move(cmds)} {
       init_commands();
+      funcs::FuncGetter g;
+      g.get(get<0>(commands_)).engine = &e;
     }
 
     /**
@@ -70,8 +79,8 @@ namespace cli {
   private:
     using Help = HelpCommand<Engine>;
     using CommandTuple = std::conditional_t<config::use_help_v<config_type>,
-                                            std::tuple<Help, Commands...>,
-                                            std::tuple<Commands...>>;
+                                            Tuple<Help, Commands...>,
+                                            Tuple<Commands...>>;
     using CommanNodeArray =
       std::array<command_node,
                  (num_cmds_v<Commands> + ...) +
@@ -81,27 +90,14 @@ namespace cli {
     CommandTuple commands_{};
 
     template<concepts::Command... Cmds>
-    constexpr CommandTuple init_tuple(Engine &e,
-                                      const std::tuple<Cmds...> &t) noexcept {
-      return [&t, &e]<std::size_t... Is>(
-               std::index_sequence<Is...>) -> CommandTuple {
-        if constexpr (config::use_help_v<config_type>)
-          return {create_help_cmd(e), std::get<Is>(t)...};
-        else
-          return {std::get<Is>(t)...};
-      }(std::make_index_sequence<sizeof...(Commands)>{});
-    }
-
-    template<concepts::Command... Cmds>
-    constexpr CommandTuple init_tuple(Engine &e,
-                                      std::tuple<Cmds...> &&t) noexcept {
-      return [&t, &e]<std::size_t... Is>(
-               std::index_sequence<Is...>) -> CommandTuple {
-        if constexpr (config::use_help_v<config_type>)
-          return {create_help_cmd(e), std::move(std::get<Is>(t))...};
-        else
-          return {std::move(std::get<Is>(t))...};
-      }(std::make_index_sequence<sizeof...(Commands)>{});
+    constexpr CommandTuple init_tuple(cli::Tuple<Cmds...> &&t) noexcept {
+      return
+        [&t]<std::size_t... Is>(std::index_sequence<Is...>) -> CommandTuple {
+          if constexpr (config::use_help_v<config_type>)
+            return {create_help_cmd<Engine>(), std::move(get<Is>(t))...};
+          else
+            return {std::move(get<Is>(t))...};
+        }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 
     template<typename Cmd>
