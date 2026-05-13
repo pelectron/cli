@@ -45,11 +45,17 @@ namespace cli::format {
   };
 
   template<class F>
+  using formatter_value_type_t = typename formatter_value_type<F>::type;
+
+  template<class F>
   struct formatter_buffer_type {
     using type = std::remove_cvref_t<type_list::type_at_t<
       0,
       typename function_traits<std::decay_t<F>>::arguments>>;
   };
+
+  template<class F>
+  using formatter_buffer_type_t = typename formatter_buffer_type<F>::type;
 
   /**
    * This concept denotes a formatter for T, i.e. a callable that turns a T

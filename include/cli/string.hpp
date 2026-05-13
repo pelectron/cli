@@ -288,8 +288,8 @@ namespace cli {
     }
 
     template<typename Ch>
-    constexpr bool starts_with(View<Ch> s) const noexcept {
-      return dtl::starts_with(str_, size_, s.str_, s.size_);
+    constexpr bool starts_with(View<Ch> str) const noexcept {
+      return dtl::starts_with(str_, size_, str.str_, str.size_);
     }
 
     constexpr std::size_t find_first_of(value_type c,
@@ -297,16 +297,17 @@ namespace cli {
       return dtl::find_first_of<value_type>(str_, size_, &c, 1, pos);
     }
 
-    constexpr std::size_t find_first_of(const value_type *s,
+    constexpr std::size_t find_first_of(const value_type *str,
                                         std::size_t pos = 0) const noexcept {
       return dtl::find_first_of<value_type>(
-        str_, size_, s, dtl::strlen(s), pos);
+        str_, size_, str, dtl::strlen(str), pos);
     }
 
     template<typename Ch>
-    constexpr std::size_t find_first_of(View<Ch> s,
+    constexpr std::size_t find_first_of(View<Ch> str,
                                         std::size_t pos = 0) const noexcept {
-      return dtl::find_first_of<value_type>(str_, size_, s.str_, s.size_, pos);
+      return dtl::find_first_of<value_type>(
+        str_, size_, str.str_, str.size_, pos);
     }
 
     constexpr std::size_t
@@ -322,9 +323,9 @@ namespace cli {
 
     template<typename Ch>
     constexpr std::size_t
-    find_first_not_of(View<Ch> s, std::size_t pos = 0) const noexcept {
+    find_first_not_of(View<Ch> str, std::size_t pos = 0) const noexcept {
       return dtl::find_first_not_of<value_type>(
-        str_, size_, s.str_, s.size_, pos);
+        str_, size_, str.str_, str.size_, pos);
     }
 
     constexpr std::size_t find_last_of(value_type c,
@@ -332,15 +333,17 @@ namespace cli {
       return dtl::find_last_of<value_type>(str_, size_, &c, 1, pos);
     }
 
-    constexpr std::size_t find_last_of(const value_type *s,
+    constexpr std::size_t find_last_of(const value_type *str,
                                        std::size_t pos = npos) const noexcept {
-      return dtl::find_last_of<value_type>(str_, size_, s, dtl::strlen(s), pos);
+      return dtl::find_last_of<value_type>(
+        str_, size_, str, dtl::strlen(str), pos);
     }
 
     template<typename Ch>
-    constexpr std::size_t find_last_of(View<Ch> s,
+    constexpr std::size_t find_last_of(View<Ch> str,
                                        std::size_t pos = npos) const noexcept {
-      return dtl::find_last_of<value_type>(str_, size_, s.str_, s.size_, pos);
+      return dtl::find_last_of<value_type>(
+        str_, size_, str.str_, str.size_, pos);
     }
 
     constexpr std::size_t
@@ -349,17 +352,17 @@ namespace cli {
     }
 
     constexpr std::size_t
-    find_last_not_of(const value_type *s,
+    find_last_not_of(const value_type *str,
                      std::size_t pos = npos) const noexcept {
       return dtl::find_last_not_of<value_type>(
-        str_, size_, s, dtl::strlen(s), pos);
+        str_, size_, str, dtl::strlen(str), pos);
     }
 
     template<typename Ch>
     constexpr std::size_t
-    find_last_not_of(View<Ch> s, std::size_t pos = npos) const noexcept {
+    find_last_not_of(View<Ch> str, std::size_t pos = npos) const noexcept {
       return dtl::find_last_not_of<value_type>(
-        str_, size_, s.str_, s.size_, pos);
+        str_, size_, str.str_, str.size_, pos);
     }
 
     constexpr View substr(std::size_t offset,
@@ -378,14 +381,15 @@ namespace cli {
       return npos;
     }
 
-    constexpr std::size_t find(const value_type *s,
+    constexpr std::size_t find(const value_type *str,
                                std::size_t pos = 0) const noexcept {
-      return dtl::find<value_type>(str_, size_, s, dtl::strlen(s), pos);
+      return dtl::find<value_type>(str_, size_, str, dtl::strlen(str), pos);
     }
 
     template<typename Ch>
-    constexpr std::size_t find(View<Ch> s, std::size_t pos = 0) const noexcept {
-      return dtl::find<value_type>(str_, size_, s.str_, s.size_, pos);
+    constexpr std::size_t find(View<Ch> str,
+                               std::size_t pos = 0) const noexcept {
+      return dtl::find<value_type>(str_, size_, str.str_, str.size_, pos);
     }
 
     constexpr CharType &back() noexcept { return str_[size_ - 1]; }

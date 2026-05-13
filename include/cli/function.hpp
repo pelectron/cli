@@ -1046,6 +1046,12 @@ namespace cli::funcs {
 
     using signature = typename traits::signature_type;
 
+    static_assert(all_same_char_type_v<Name, Description, Type, Args...>,
+                  "name, description, and args must all use the same character "
+                  "type. Make sure the name, the description and the "
+                  "the names and descriptions of the arguments have the same "
+                  "character type.");
+
     template<Callable Func, FuncArg... A>
     constexpr Function(
       Name, Description, Type, Func &&function, A &&...args) noexcept
@@ -1194,8 +1200,21 @@ namespace cli::funcs {
 
     using signature = typename traits::signature_type;
 
+    static_assert(all_same_char_type_v<Name, Description, Type>,
+                  "name and description must use the same character "
+                  "type. Make sure the name and the description use the same "
+                  "character type.");
+
     template<Callable Func>
     constexpr Function(Name, Description, Type, Func &&function) noexcept
+      : func_(std::forward<Func>(function)) {}
+
+    template<Callable Func>
+    constexpr Function(Name,
+                       Description,
+                       Type,
+                       Func &&function,
+                       [[maybe_unused]] Tuple<> args) noexcept
       : func_(std::forward<Func>(function)) {}
 
     constexpr ExecResult<char_type>
@@ -1278,6 +1297,7 @@ namespace cli::funcs {
   template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
   Function(Name, Description, Type, F &&, cli::Tuple<Args...> &&)
     -> Function<Name, Description, Type, std::decay_t<F>, Args...>;
+
   /**
    * @defgroup Functions Functions
    * @ingroup Commands
@@ -1344,20 +1364,20 @@ namespace cli::funcs {
       type_list::list_size_v<typename function_traits<F>::arguments> ==
         sizeof...(Args),
       "All arguments of f must be named");
-    if constexpr (sizeof...(Args) > 0) {
-      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
-      return Function{
-        Name{},
-        Description{},
-        dtl::pretty_signature_name<typename Name::char_type, F>(deduced_),
-        std::forward<F>(f),
-        deduced_};
-    } else {
-      return Function{Name{},
-                      Description{},
-                      dtl::pretty_signature_name<typename Name::char_type, F>(),
-                      std::forward<F>(f)};
-    }
+
+    static_assert(all_same_char_type_v<Name, Description, Args...>,
+                  "name, description, and args must all use the same character "
+                  "type. Make sure the name, the description and the "
+                  "the names and descriptions of the arguments have the same "
+                  "character type.");
+
+    auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
+    return Function{
+      Name{},
+      Description{},
+      dtl::pretty_signature_name<typename Name::char_type, F>(deduced_),
+      std::forward<F>(f),
+      deduced_};
   }
 
   /**
@@ -1394,24 +1414,10 @@ namespace cli::funcs {
   template<Id Name, Callable F, class... Args>
   [[nodiscard]] constexpr auto func(Name name, F &&f, Args &&...args) noexcept {
     (void)name;
-    static_assert(
-      type_list::list_size_v<typename function_traits<F>::arguments> ==
-        sizeof...(Args),
-      "All arguments of f must be named");
-    if constexpr (sizeof...(Args) > 0) {
-      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
-      return Function{
-        Name{},
-        NoDescription<typename Name::char_type>{},
-        dtl::pretty_signature_name<typename Name::char_type, F>(deduced_),
-        std::forward<F>(f),
-        deduced_};
-    } else {
-      return Function{Name{},
-                      NoDescription<typename Name::char_type>{},
-                      dtl::pretty_signature_name<typename Name::char_type, F>(),
-                      std::forward<F>(f)};
-    }
+    return func(Name{},
+                NoDescription<typename Name::char_type>{},
+                std::forward<F>(f),
+                std::forward<Args>(args)...);
   }
 
   /**
@@ -1440,26 +1446,10 @@ namespace cli::funcs {
   [[nodiscard]] constexpr auto
   func(F &&f, Description description, Args &&...args) noexcept {
     (void)description;
-    static_assert(
-      type_list::list_size_v<typename function_traits<F>::arguments> ==
-        sizeof...(Args),
-      "All arguments of f must be named");
-    if constexpr (sizeof...(Args) > 0) {
-      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
-      return Function{
-        ctti::name<std::decay_t<F>>(),
-        Description{},
-        dtl::pretty_signature_name<typename Description::char_type, F>(
-          deduced_),
-        std::forward<F>(f),
-        deduced_};
-    } else {
-      return Function{
-        ctti::name<std::decay_t<F>>(),
-        Description{},
-        dtl::pretty_signature_name<typename Description::char_type, F>(),
-        std::forward<F>(f)};
-    }
+    return func(ctti::name<std::decay_t<F>, typename Description::char_type>(),
+                Description{},
+                std::forward<F>(f),
+                std::forward<Args>(args)...);
   }
 
   /**
@@ -1481,24 +1471,17 @@ namespace cli::funcs {
   template<Callable F, class... Args>
     requires(not std::is_pointer_v<std::decay_t<F>>)
   [[nodiscard]] constexpr auto func(F &&f, Args &&...args) noexcept {
-    // TODO: check that each args char_type if char, or extract the args
-    // char_type
-    static_assert(
-      type_list::list_size_v<typename function_traits<F>::arguments> ==
-        sizeof...(Args),
-      "All arguments of f must be named");
-    if constexpr (sizeof...(Args) > 0) {
-      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
-      return Function{ctti::name<std::decay_t<F>>(),
-                      NoDescription<char>{},
-                      dtl::pretty_signature_name<char, F>(deduced_),
-                      std::forward<F>(f),
-                      deduced_};
+    if constexpr (sizeof...(Args) == 0) {
+      return func(ctti::name<std::decay_t<F>>(),
+                  NoDescription<char>{},
+                  std::forward<F>(f));
     } else {
-      return Function{ctti::name<std::decay_t<F>>(),
-                      NoDescription<char>{},
-                      dtl::pretty_signature_name<char, F>(),
-                      std::forward<F>(f)};
+      using char_type = typename type_list::
+        type_at_t<0, type_list::TypeList<std::decay_t<Args>...>>::char_type;
+      return func(ctti::name<std::decay_t<F>, char_type>(),
+                  NoDescription<char_type>{},
+                  std::forward<F>(f),
+                  std::forward<Args>(args)...);
     }
   }
 
@@ -1541,33 +1524,9 @@ namespace cli::funcs {
                                     Args &&...args) noexcept {
     (void)name;
     (void)description;
-    static_assert(
-      type_list::list_size_v<
-        typename function_traits<MemberFunctionPointer>::arguments> ==
-        sizeof...(Args),
-      "All arguments of mem_fun must be named");
-
     using Binder = MemFunBinder<T, MemberFunctionPointer>;
-    if constexpr (sizeof...(Args) > 0) {
-      auto deduced_ =
-        dtl::deduce_args<MemberFunctionPointer>(std::forward<Args>(args)...);
-      return Function{
-        Name{},
-        Description{},
-        dtl::pretty_signature_name<typename Name::char_type,
-                                   MemberFunctionPointer>(deduced_),
-        Binder{t, mem_fun},
-        deduced_
-      };
-    } else {
-      return Function{
-        Name{},
-        Description{},
-        dtl::pretty_signature_name<typename Name::char_type,
-                                   MemberFunctionPointer>(),
-        Binder{t, mem_fun}
-      };
-    }
+    return func(
+      Name{}, Description{}, Binder{t, mem_fun}, std::forward<Args>(args)...);
   }
 
   /**
@@ -1609,33 +1568,9 @@ namespace cli::funcs {
                                     Args &&...args) noexcept {
     (void)name;
     (void)description;
-    static_assert(
-      type_list::list_size_v<
-        typename function_traits<MemberFunctionPointer>::arguments> ==
-        sizeof...(Args),
-      "All arguments of mem_fun must be named");
-
     using Binder = MemFunBinder<const T, MemberFunctionPointer>;
-    if constexpr (sizeof...(Args) > 0) {
-      auto deduced_ =
-        dtl::deduce_args<MemberFunctionPointer>(std::forward<Args>(args)...);
-      return Function{
-        Name{},
-        Description{},
-        dtl::pretty_signature_name<typename Name::char_type,
-                                   MemberFunctionPointer>(deduced_),
-        Binder{t, mem_fun},
-        deduced_
-      };
-    } else {
-      return Function{
-        Name{},
-        Description{},
-        dtl::pretty_signature_name<typename Name::char_type,
-                                   MemberFunctionPointer>(),
-        Binder{t, mem_fun}
-      };
-    }
+    return func(
+      Name{}, Description{}, Binder{t, mem_fun}, std::forward<Args>(args)...);
   }
 
   /**
@@ -1720,7 +1655,14 @@ namespace cli::funcs {
     static_assert(std::is_member_function_pointer_v<Function>,
                   "A MemberFunctions Function template argument must be a "
                   "pointer to member function");
-    Function f;
+
+    static_assert(all_same_char_type_v<Name, Description, Args...>,
+                  "name, description, and args must all use the same character "
+                  "type. Make sure the name, the description and the "
+                  "the names and descriptions of the arguments have the same "
+                  "character type.");
+
+    Function func;
     cli::Tuple<Args...> args;
 
     constexpr MemberFunction(Name,
@@ -1728,29 +1670,14 @@ namespace cli::funcs {
                              Help,
                              Function mem_fun_ptr,
                              const Args &...func_args) noexcept
-      : f(mem_fun_ptr), args(func_args...) {}
+      : func(mem_fun_ptr), args(func_args...) {}
 
     constexpr MemberFunction(Name,
                              Description,
                              Help,
                              Function mem_fun_ptr,
                              const cli::Tuple<Args...> &func_args) noexcept
-      : f(mem_fun_ptr), args(func_args) {}
-  };
-
-  template<Id Name, SC Description, SC Help, class Function>
-  struct MemberFunction<Name, Description, Help, Function> {
-    using arguments = TypeList<>;
-    static_assert(std::is_member_function_pointer_v<Function>,
-                  "A MemberFunctions Function template argument must be a "
-                  "pointer to member function");
-    Function f;
-
-    constexpr MemberFunction(Name,
-                             Description,
-                             Help,
-                             Function mem_fun_ptr) noexcept
-      : f(mem_fun_ptr) {}
+      : func(mem_fun_ptr), args(func_args) {}
   };
 
   template<Id Name, SC Description, SC Help, class Function, class... Args>
@@ -1848,26 +1775,24 @@ namespace cli::funcs {
                                     Description description,
                                     MemberFunctionPointer mem_fun,
                                     Args &&...args) noexcept {
+    static_assert(all_same_char_type_v<Name, Description, Args...>,
+                  "name, description, and args must all use the same character "
+                  "type. Make sure the name, the description and the "
+                  "the names and descriptions of the arguments have the same "
+                  "character type.");
     (void)name;
     (void)description;
-    if constexpr (sizeof...(Args) > 0) {
-      constexpr auto deduced_args =
-        dtl::deduce_args<decltype(mem_fun)>(std::forward<Args>(args)...);
-      return MemberFunction{
-        Name{},
-        Description{},
-        dtl::pretty_signature_name<typename Name::char_type, decltype(mem_fun)>(
-          deduced_args),
-        mem_fun,
-        deduced_args};
-    } else {
-      return MemberFunction{Name{},
-                            Description{},
-                            dtl::pretty_signature_name<typename Name::char_type,
-                                                       decltype(mem_fun)>(),
-                            mem_fun};
-    }
+    auto deduced_args =
+      dtl::deduce_args<MemberFunctionPointer>(std::forward<Args>(args)...);
+    return MemberFunction{
+      Name{},
+      Description{},
+      dtl::pretty_signature_name<typename Name::char_type, decltype(mem_fun)>(
+        deduced_args),
+      mem_fun,
+      deduced_args};
   }
+
   /**
    * creates a member function command. This command cannot be used
    * standalone. Its parent command must be an object that this member function
@@ -1908,23 +1833,10 @@ namespace cli::funcs {
   [[nodiscard]] constexpr auto
   func(Name name, MemberFunctionPointer mem_fun, Args &&...args) noexcept {
     (void)name;
-    if constexpr (sizeof...(Args) > 0) {
-      constexpr auto deduced_args =
-        dtl::deduce_args<decltype(mem_fun)>(std::forward<Args>(args)...);
-      return MemberFunction{
-        Name{},
-        NoDescription<typename Name::char_type>{},
-        dtl::pretty_signature_name<typename Name::char_type, decltype(mem_fun)>(
-          deduced_args),
-        mem_fun,
-        deduced_args};
-    } else {
-      return MemberFunction{Name{},
-                            NoDescription<typename Name::char_type>{},
-                            dtl::pretty_signature_name<typename Name::char_type,
-                                                       decltype(mem_fun)>(),
-                            mem_fun};
-    }
+    return func(Name{},
+                NoDescription<typename Name::char_type>{},
+                mem_fun,
+                std::forward<Args>(args)...);
   }
 
   /**
@@ -1973,27 +1885,11 @@ namespace cli::funcs {
   [[nodiscard]] constexpr auto func(Description description,
                                     Args &&...args) noexcept {
     (void)description;
-    if constexpr (sizeof...(Args) > 0) {
-      constexpr auto deduced_args =
-        dtl::deduce_args<decltype(MemberFunctionPointer)>(
-          std::forward<Args>(args)...);
-      return MemberFunction{
-        ctti::value_name<MemberFunctionPointer,
-                         typename Description::char_type>(),
-        Description{},
-        dtl::pretty_signature_name<typename Description::char_type,
-                                   decltype(MemberFunctionPointer)>(
-          deduced_args),
-        MemberFunctionPointer,
-        deduced_args};
-    } else {
-      return MemberFunction{
-        ctti::value_name<MemberFunctionPointer>(),
-        Description{},
-        dtl::pretty_signature_name<typename Description::char_type,
-                                   decltype(MemberFunctionPointer)>(),
-        MemberFunctionPointer};
-    }
+    return func(ctti::value_name<MemberFunctionPointer,
+                                 typename Description::char_type>(),
+                Description{},
+                MemberFunctionPointer,
+                std::forward<Args>(args)...);
   }
 
   /**
@@ -2036,6 +1932,10 @@ namespace cli::funcs {
   template<auto MemberFunctionPointer, class... Args>
     requires std::is_member_function_pointer_v<decltype(MemberFunctionPointer)>
   [[nodiscard]] constexpr auto func(Args &&...args) noexcept {
+    static_assert(all_same_char_type_v<Args...>,
+                  "args must all use the same character type. Make sure all "
+                  "the names and descriptions of the arguments have the same "
+                  "character type.");
     if constexpr (sizeof...(Args) > 0) {
       using CharT = typename type_list::
         type_at_t<0, type_list::TypeList<Args...>>::name::char_type;
@@ -2072,13 +1972,15 @@ namespace cli::funcs {
            const MemberFunction<Name, Description, Help, F, Args...>
              &member_function) noexcept {
       if constexpr (sizeof...(Args) == 0)
-        return Function(
-          Name{}, Description{}, Help{}, MemFunBinder(obj, member_function.f));
+        return Function(Name{},
+                        Description{},
+                        Help{},
+                        MemFunBinder(obj, member_function.func));
       else
         return Function(Name{},
                         Description{},
                         Help{},
-                        MemFunBinder(obj, member_function.f),
+                        MemFunBinder(obj, member_function.func),
                         member_function.args);
     }
 
@@ -2091,13 +1993,15 @@ namespace cli::funcs {
            const MemberFunction<Name, Description, Help, F, Args...>
              &member_function) noexcept {
       if constexpr (sizeof...(Args) == 0)
-        return Function(
-          Name{}, Description{}, Help{}, MemFunBinder(obj, member_function.f));
+        return Function(Name{},
+                        Description{},
+                        Help{},
+                        MemFunBinder(obj, member_function.func));
       else
         return Function(Name{},
                         Description{},
                         Help{},
-                        MemFunBinder(obj, member_function.f),
+                        MemFunBinder(obj, member_function.func),
                         member_function.args);
     }
   } // namespace dtl

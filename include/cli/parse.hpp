@@ -226,19 +226,14 @@ namespace cli::parse {
 
   template<typename CharT>
   constexpr View<CharT> trim_ws(View<CharT> str) noexcept {
-    View s = skip_ws(str);
-    std::size_t idx = s.find_last_not_of(View<const CharT>{
+    str = skip_ws(str);
+    std::size_t idx = str.find_last_not_of(View<const CharT>{
       string_constant<CharT, ' ', '\n', '\r', '\t', '\v', '\f'>{}});
 
     if (idx == View<CharT>::npos)
-      return s;
-    return s.substr(0, idx + 1);
+      return str;
+    return str.substr(0, idx + 1);
   }
-
-  //   static_assert(trim_ws(View{" hello "}) == "hello");
-  // static_assert(trim_ws(View{" hello"}) == "hello");
-  // static_assert(trim_ws(View{"hello "}) == "hello");
-  // static_assert(trim_ws(View{"hello"}) == "hello");
 
   /**
    * A parser for integers.
@@ -1127,13 +1122,13 @@ namespace cli::parse {
       if (sv.size() == 0)
         return Error::too_few_characters;
 
-      for (const auto &t : truthy)
-        if (sv.starts_with(t))
-          return {true, sv.substr(t.size())};
+      for (const auto &true_str : truthy)
+        if (sv.starts_with(true_str))
+          return {true, sv.substr(true_str.size())};
 
-      for (const auto &f : falsy)
-        if (sv.starts_with(f))
-          return {false, sv.substr(f.size())};
+      for (const auto &false_str : falsy)
+        if (sv.starts_with(false_str))
+          return {false, sv.substr(false_str.size())};
 
       return {Error::invalid_value, sv};
     }

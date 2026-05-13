@@ -17,8 +17,10 @@
 
 #ifdef _MSC_VER
 #define CLI_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#define CLI_CONSTINIT
 #else
 #define CLI_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#define CLI_CONSTINIT constinit
 #endif
 
 #ifndef CLI_ASSERT
@@ -132,7 +134,26 @@ namespace cli {
       using std::get;
       return std::forward<F>(f)(get<Is>(std::forward<Tuple>(t))...);
     }
+
+    template<typename... Ts>
+    struct all_same_char_type;
+
+    template<>
+    struct all_same_char_type<> : std::true_type {};
+
+    template<typename T>
+    struct all_same_char_type<T> : std::true_type {};
+
+    template<typename T, typename... Ts>
+    struct all_same_char_type<T, Ts...> {
+      static constexpr bool value =
+        (std::is_same_v<typename T::char_type, typename Ts::char_type> and ...);
+    };
   } // namespace dtl
+
+  template<typename... Ts>
+  inline constexpr bool all_same_char_type_v =
+    dtl::all_same_char_type<Ts...>::value;
 
   template<class Tuple, class F>
   constexpr decltype(auto) apply(Tuple &&t, F &&f) {
@@ -236,6 +257,7 @@ namespace cli {
            template<typename...> typename L,
            typename... Cmds>
   struct help_length_t<C, L<Cmds...>> {
+    // TODO: replace magic numbers
     static constexpr std::size_t len =
       C::type.size() + 4 +
       (C::description.size() > 0 ? C::description.size() : 24);

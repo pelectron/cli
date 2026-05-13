@@ -57,7 +57,9 @@ namespace cli::params {
 
   template<typename T>
   inline constexpr bool is_const_lvalue_ref_or_unqualified =
-    not is_non_const_lvalue_ref<T>;
+    (std::is_lvalue_reference_v<T> and
+     std::is_const_v<std::remove_reference_t<T>>) or
+    std::is_same_v<T, std::remove_reference_t<T>>;
 
   /**
    * concept for a Getter with value type V.
@@ -156,21 +158,6 @@ namespace cli::params {
                                Description,
                                Type,
                                SubCommands...>;
-      using value_type = typename getter_value_type<Get>::type;
-      static_assert(
-        std::is_same_v<value_type, typename setter_value_type<Set>::type>,
-        "Get and Set must get/set a value of the same type");
-      static_assert(
-        std::is_same_v<value_type,
-                       parse::value_type_t<get_char_t<Name>, Parse>>,
-        "Parse and Get/Set must have the same value type");
-      static_assert(
-        std::is_same_v<value_type,
-                       typename format::formatter_value_type<Format>::type>,
-        "Format and Get/Set must have the same value type");
-      static_assert(
-        std::is_same_v<value_type, validate::value_type_t<Validate>>,
-        "Validate, Parse and Get/Set must have the same value type");
 
     public:
       using char_type = typename Base::char_type;
@@ -178,6 +165,28 @@ namespace cli::params {
       using Base::name;
       using sub_command_list = typename Base::sub_command_list;
       using Base::type;
+
+      using value_type = getter_value_type_t<Get>;
+
+      static_assert(std::is_same_v<value_type, setter_value_type_t<Set>>,
+                    "Get and Set must get/set a value of the same type");
+
+      static_assert(
+        std::is_same_v<value_type, parse::value_type_t<char_type, Parse>>,
+        "Parse and Get/Set must have the same value type");
+
+      static_assert(
+        std::is_same_v<value_type, format::formatter_value_type_t<Format>>,
+        "Format and Get/Set must have the same value type");
+
+      static_assert(
+        std::is_same_v<value_type, validate::value_type_t<Validate>>,
+        "Validate, Parse and Get/Set must have the same value type");
+
+      static_assert(
+        all_same_char_type_v<Name, Description, Type, SubCommands...>,
+        "The name, description, and the subcommands must all use "
+        "the same character type.");
 
       constexpr Param(const Param &) = default;
       constexpr Param(Param &&) = default;
@@ -270,8 +279,6 @@ namespace cli::params {
           parse_(std::forward<Parse_>(parse)),
           format_(std::forward<Format_>(format)),
           validate_(std::forward<Validate_>(validate)) {}
-
-      // Param(SC /*name*/, const T &value, Get getter, Set setter);
 
       constexpr ExecResult<char_type> execute(View<const char_type> args,
                                               View<char_type> out) noexcept {
@@ -454,7 +461,7 @@ namespace cli::params {
              concepts::Command... SubCommands>
     struct MemberData {
       using char_type = get_char_t<Name>;
-      MemberPointer f;
+      MemberPointer member;
       cli::Tuple<SubCommands...> subcommands;
       CLI_NO_UNIQUE_ADDRESS Parse parse;
       CLI_NO_UNIQUE_ADDRESS Format format;
@@ -472,48 +479,48 @@ namespace cli::params {
                            Format_ &&fmt,
                            Validate_ &&v,
                            SubCommands_ &&...cmds) noexcept
-        : f(mem_ptr),
+        : member(mem_ptr),
           subcommands(std::forward<SubCommands>(cmds)...),
           parse(std::forward<Parse_>(p)),
           format(std::forward<Format_>(fmt)),
           validate(std::forward<Validate_>(v)) {}
     };
 
-    template<Id Name,
-             SC Description,
-             SC Help,
-             class MemberPointer,
-             parse::Parser Parse,
-             format::Formatter Format,
-             validate::Validator Validate>
-    struct MemberData<Name,
-                      Description,
-                      Help,
-                      MemberPointer,
-                      Parse,
-                      Format,
-                      Validate> {
-      using char_type = get_char_t<Name>;
-      MemberPointer f;
-      CLI_NO_UNIQUE_ADDRESS Parse parse;
-      CLI_NO_UNIQUE_ADDRESS Format format;
-      CLI_NO_UNIQUE_ADDRESS Validate validate;
-
-      template<parse::Parser Parse_,
-               format::Formatter Format_,
-               validate::Validator Validate_>
-      constexpr MemberData(Name,
-                           Description,
-                           Help,
-                           MemberPointer mem_ptr,
-                           Parse_ &&p,
-                           Format_ &&fmt,
-                           Validate_ &&v) noexcept
-        : f(mem_ptr),
-          parse(std::forward<Parse_>(p)),
-          format(std::forward<Format_>(fmt)),
-          validate(std::forward<Validate_>(v)) {}
-    };
+    // template<Id Name,
+    //          SC Description,
+    //          SC Help,
+    //          class MemberPointer,
+    //          parse::Parser Parse,
+    //          format::Formatter Format,
+    //          validate::Validator Validate>
+    // struct MemberData<Name,
+    //                   Description,
+    //                   Help,
+    //                   MemberPointer,
+    //                   Parse,
+    //                   Format,
+    //                   Validate> {
+    //   using char_type = get_char_t<Name>;
+    //   MemberPointer member;
+    //   CLI_NO_UNIQUE_ADDRESS Parse parse;
+    //   CLI_NO_UNIQUE_ADDRESS Format format;
+    //   CLI_NO_UNIQUE_ADDRESS Validate validate;
+    //
+    //   template<parse::Parser Parse_,
+    //            format::Formatter Format_,
+    //            validate::Validator Validate_>
+    //   constexpr MemberData(Name,
+    //                        Description,
+    //                        Help,
+    //                        MemberPointer mem_ptr,
+    //                        Parse_ &&p,
+    //                        Format_ &&fmt,
+    //                        Validate_ &&v) noexcept
+    //     : member(mem_ptr),
+    //       parse(std::forward<Parse_>(p)),
+    //       format(std::forward<Format_>(fmt)),
+    //       validate(std::forward<Validate_>(v)) {}
+    // };
 
     template<Id Name,
              SC Description,
@@ -587,8 +594,7 @@ namespace cli::params {
       constexpr DefaultGet &operator=(DefaultGet &&) = default;
 
       constexpr Error operator()(T &t) noexcept {
-        if (value_ == nullptr)
-          return Error::cant_read_param;
+        CLI_ASSERT(value_);
         t = *value_;
         return Error::none;
       }
@@ -605,8 +611,7 @@ namespace cli::params {
       constexpr DefaultSet &operator=(DefaultSet &&) = default;
 
       constexpr Error operator()(const T &t) noexcept {
-        if (value_ == nullptr)
-          return Error::cant_set_param;
+        CLI_ASSERT(value_);
         *value_ = t;
         return Error::none;
       }
@@ -676,8 +681,8 @@ namespace cli::params {
           Name{},
           Description{},
           Help{},
-          MemDataGet<T, MemberPointer>{obj, member_data.f},
-          MemDataSet<T, MemberPointer>{obj, member_data.f},
+          MemDataGet<T, MemberPointer>{obj, member_data.member},
+          MemDataSet<T, MemberPointer>{obj, member_data.member},
           std::move(member_data.parse),
           std::move(member_data.format),
           std::move(member_data.validate),
@@ -688,8 +693,8 @@ namespace cli::params {
           Name{},
           Description{},
           Help{},
-          MemDataGet<T, MemberPointer>{obj, member_data.f},
-          MemDataSet<T, MemberPointer>{obj, member_data.f},
+          MemDataGet<T, MemberPointer>{obj, member_data.member},
+          MemDataSet<T, MemberPointer>{obj, member_data.member},
           std::move(member_data.parse),
           std::move(member_data.format),
           std::move(member_data.validate)
@@ -719,7 +724,7 @@ namespace cli::params {
           Name{},
           Description{},
           Help{},
-          MemDataGet<T, MemberPointer>{obj, member_data.f},
+          MemDataGet<T, MemberPointer>{obj, member_data.member},
           MemDataSet<const T, MemberPointer>{},
           std::move(member_data.parse),
           std::move(member_data.format),
@@ -731,7 +736,7 @@ namespace cli::params {
           Name{},
           Description{},
           Help{},
-          MemDataGet<T, MemberPointer>{obj, member_data.f},
+          MemDataGet<T, MemberPointer>{obj, member_data.member},
           MemDataSet<const T, MemberPointer>{},
           std::move(member_data.parse),
           std::move(member_data.format),
@@ -3325,7 +3330,7 @@ namespace cli::params {
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
-                                     MemberPointer f,
+                                     MemberPointer member,
                                      Parse &&parse,
                                      Format &&format,
                                      Validate &&validate,
@@ -3337,7 +3342,7 @@ namespace cli::params {
       Name{},
       Description{},
       cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
-      f,
+      member,
       std::forward<Parse>(parse),
       std::forward<Format>(format),
       std::forward<Validate>(validate),
@@ -3366,22 +3371,20 @@ namespace cli::params {
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
-                                     MemberPointer f,
+                                     MemberPointer member,
                                      Parse &&parse,
                                      Format &&format,
                                      SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     using namespace dtl;
-    return MemberData{
-      Name{},
-      Description{},
-      cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
-      f,
-      std::forward<Parse>(parse),
-      std::forward<Format>(format),
-      validate::DefaultValidate<mem_data_type<MemberPointer>>{},
-      std::forward<SubCommands>(cmds)...};
+    return param(Name{},
+                 Description{},
+                 member,
+                 std::forward<Parse>(parse),
+                 std::forward<Format>(format),
+                 validate::DefaultValidate<mem_data_type<MemberPointer>>{},
+                 std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -3404,21 +3407,20 @@ namespace cli::params {
              validate::ValidatorOf<Validate, mem_data_type<MemberPointer>>
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
-                                     MemberPointer f,
+                                     MemberPointer member,
                                      Validate &&validate,
                                      SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
     using namespace dtl;
-    return MemberData{
+    return param(
       Name{},
       Description{},
-      cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
-      f,
+      member,
       cli::parse::Parse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
       cli::format::Format<mem_data_type<MemberPointer>, get_char_t<Name>>{},
       std::forward<Validate>(validate),
-      std::forward<SubCommands>(cmds)...};
+      std::forward<SubCommands>(cmds)...);
   }
 
   /**
@@ -3447,7 +3449,7 @@ namespace cli::params {
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
-                                     MemberPointer f,
+                                     MemberPointer member,
                                      SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
@@ -3458,7 +3460,7 @@ namespace cli::params {
         Name{},
         Description{},
         cli::ctti::name<std::remove_const_t<T>, get_char_t<Name>>(),
-        f,
+        member,
         parse::NoParse<T, get_char_t<Name>>{},
         format::Format<T, get_char_t<Name>>{},
         validate::DefaultValidate<mem_data_type<MemberPointer>>{},
@@ -3468,7 +3470,7 @@ namespace cli::params {
         Name{},
         Description{},
         cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
-        f,
+        member,
         parse::Parse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
         format::Format<mem_data_type<MemberPointer>, get_char_t<Name>>{},
         validate::DefaultValidate<mem_data_type<MemberPointer>>{},
@@ -3495,12 +3497,12 @@ namespace cli::params {
   template<Id Name, class MemberPointer, concepts::Command... SubCommands>
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
   [[nodiscard]] constexpr auto
-  param(Name name, MemberPointer f, SubCommands &&...cmds) noexcept {
+  param(Name name, MemberPointer member, SubCommands &&...cmds) noexcept {
     (void)name;
     using namespace dtl;
     return param(Name{},
                  NoDescription<get_char_t<Name>>{},
-                 f,
+                 member,
                  std::forward<SubCommands>(cmds)...);
   }
 
@@ -3621,7 +3623,7 @@ namespace cli::params {
     requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
-                                     MemberPointer f,
+                                     MemberPointer member,
                                      Format &&format,
                                      SubCommands &&...cmds) noexcept {
     (void)name;
@@ -3631,7 +3633,7 @@ namespace cli::params {
       Name{},
       Description{},
       cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
-      f,
+      member,
       parse::NoParse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
       std::forward<Format>(format),
       validate::DefaultValidate<mem_data_type<MemberPointer>>{},

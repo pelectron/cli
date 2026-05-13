@@ -32,6 +32,12 @@ namespace cli {
           break;
         case validation_error:
           index_ = o.index_;
+        case format_error:
+          [[fallthrough]];
+        case set_error:
+          [[fallthrough]];
+        case get_error:
+          [[fallthrough]];
         default:
           break;
       }
@@ -58,6 +64,56 @@ namespace cli {
         default:
           break;
       }
+    }
+
+    constexpr ExecResult &operator=(const ExecResult &o) noexcept {
+      type_ = o.type_;
+      error_ = o.error_;
+      result_ = {};
+      switch (type_) {
+        case success:
+          result_ = o.result_;
+          break;
+        case parse_error:
+          error_location_ = o.error_location_;
+          break;
+        case validation_error:
+          index_ = o.index_;
+        case format_error:
+          [[fallthrough]];
+        case set_error:
+          [[fallthrough]];
+        case get_error:
+          [[fallthrough]];
+        default:
+          break;
+      }
+      return *this;
+    }
+
+    constexpr ExecResult &operator=(ExecResult &&o) noexcept {
+      type_ = o.type_;
+      error_ = o.error_;
+      result_ = {};
+      switch (type_) {
+        case success:
+          result_ = o.result_;
+          break;
+        case parse_error:
+          error_location_ = o.error_location_;
+          break;
+        case validation_error:
+          index_ = o.index_;
+        case format_error:
+          [[fallthrough]];
+        case set_error:
+          [[fallthrough]];
+        case get_error:
+          [[fallthrough]];
+        default:
+          break;
+      }
+      return *this;
     }
 
     static constexpr ExecResult make_success() noexcept { return {}; }

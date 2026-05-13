@@ -32,6 +32,8 @@ struct F2 {
   void apply_e() noexcept {}
   void apply_ce() const noexcept {}
   void f(ns::F3) {}
+  template<typename T>
+  T ret();
 };
 
 using F1Info = cli::ctti::StructInfo<F1>;
@@ -77,6 +79,7 @@ TEST_CASE("ctti::value_name", "[ctti]") {
   REQUIRE(cli::ctti::value_name<&F2::apply_ce>() == "apply_ce"_sc);
   REQUIRE(cli::ctti::value_name<&F2::apply_e>() == "apply_e"_sc);
   REQUIRE(cli::ctti::value_name<&F2::f>() == "f"_sc);
+  REQUIRE(cli::ctti::value_name<&F2::ret<int>>() == "ret<int>"_sc);
 }
 
 // template<class Field, class... Fields>

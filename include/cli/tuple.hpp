@@ -135,6 +135,7 @@ namespace cli {
 #pragma GCC diagnostic pop
 #else
 #endif
+
   template<typename... Ts>
   class Tuple
     : public TupleImpl<std::make_index_sequence<sizeof...(Ts)>, Ts...> {
@@ -175,6 +176,16 @@ namespace cli {
 
   template<typename... T>
   Tuple(T &&...) -> Tuple<std::decay_t<T>...>;
+
+  template<>
+  class Tuple<> {
+  public:
+    constexpr Tuple() = default;
+    constexpr Tuple(const Tuple &) = default;
+    constexpr Tuple(Tuple &&) = default;
+    constexpr Tuple &operator=(const Tuple &) = default;
+    constexpr Tuple &operator=(Tuple &&) = default;
+  };
 
   template<std::size_t I, typename... Ts>
   constexpr auto &get(Tuple<Ts...> &tuple) {

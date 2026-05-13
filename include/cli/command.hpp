@@ -178,11 +178,14 @@ namespace cli {
     static constexpr Description description{};
     static constexpr Type type{};
 
-    CommandBase() = delete;
     constexpr CommandBase(const CommandBase &) = default;
     constexpr CommandBase(CommandBase &&) = default;
     constexpr CommandBase &operator=(const CommandBase &) = default;
     constexpr CommandBase &operator=(CommandBase &&) = default;
+
+    constexpr CommandBase()
+      requires(sizeof...(SubCommands) > 0)
+    {}
 
     template<concepts::Command... SubCommands_>
     constexpr CommandBase(SubCommands_ &&...cmds) noexcept
@@ -234,52 +237,6 @@ namespace cli {
     friend class CommandTree;
 
     cli::Tuple<SubCommands...> subcommands{};
-  };
-
-  /**
-   * The CRTP base class for commands without subcommands
-   *
-   * @tparam Derived the derived class
-   * @tparam Name the command name
-   * @tparam Description the command description
-   * @tparam Type the command type as a string, i.e. the parameters type or the
-   * function signature
-   */
-  template<class Derived, SC CmdName, SC Description, SC Type>
-  class CommandBase<Derived, CmdName, Description, Type> {
-    template<class Engine, concepts::Command...>
-    friend class CommandTree;
-
-  public:
-    static_assert(Id<CmdName>,
-                  "Name must be a valid identifier. Name can't contain "
-                  "whitespace, or any of the characters (){},='\"");
-
-    using char_type = typename CmdName::char_type;
-    using sub_command_list = TypeList<>;
-    static constexpr CmdName name{};
-    static constexpr Description description{};
-    static constexpr Type type{};
-
-    constexpr CommandBase() = default;
-    constexpr CommandBase(const CommandBase &) = default;
-    constexpr CommandBase(CommandBase &&) = default;
-    constexpr CommandBase &operator=(const CommandBase &) = default;
-    constexpr CommandBase &operator=(CommandBase &&) = default;
-
-    /**
-     * executes the command
-     *
-     * @param args the arguments
-     * @param out where to put the results
-     * @param should_print_newline set to true if a newline should be printed
-     *        after executing this command
-     * @return the error
-     */
-    constexpr ExecResult<char_type> execute(View<const char_type> args,
-                                            View<char_type> out) noexcept {
-      return static_cast<Derived *>(this)->execute(args, out);
-    }
   };
 
   template<typename CharT>
