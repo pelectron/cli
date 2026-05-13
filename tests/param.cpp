@@ -30,7 +30,7 @@ static_assert(cli::parse::Parser<decltype(parser)>);
 TEST_CASE("params without object", "[param]") {
   // base form
   {
-    static CLI_CONSTINIT auto p = cli::param<int>(
+    static constinit auto p = cli::param<int>(
       name, description, getter, setter, parser, formatter, validator);
     (void)p;
   }
@@ -38,25 +38,25 @@ TEST_CASE("params without object", "[param]") {
   // missing one parameter{
   // no validate
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param<int>(name, description, getter, setter, parser, formatter);
     (void)p;
   }
   // no format and parse
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param<int>(name, description, getter, setter, validator);
     (void)p;
   }
   // no get -> format not used
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param<int>(name, description, setter, parser, validator);
     (void)p;
   }
   // no set -> parse not used
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param<int>(name, description, getter, formatter, validator);
     (void)p;
   }
@@ -65,26 +65,26 @@ TEST_CASE("params without object", "[param]") {
   // missing two parameters{
   // no validate and format and parse
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param<int>(name, description, getter, setter);
     (void)p;
   }
   // no validate and get -> format not used
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param<int>(name, description, setter, parser);
     (void)p;
   }
   // no validate and set -> parse not used
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param<int>(name, description, getter, formatter);
     (void)p;
   }
 
   // no format/parse and get
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param<int>(name, description, setter, validator);
     (void)p;
   }
@@ -93,12 +93,12 @@ TEST_CASE("params without object", "[param]") {
   // missing three parameters {
   // no validate, format/parse and set
   {
-    static CLI_CONSTINIT auto p = cli::param<int>(name, description, getter);
+    static constinit auto p = cli::param<int>(name, description, getter);
     (void)p;
   }
   // no validate, format/parse and get
   {
-    static CLI_CONSTINIT auto p = cli::param<int>(name, description, setter);
+    static constinit auto p = cli::param<int>(name, description, setter);
     (void)p;
   }
   // }
@@ -109,27 +109,27 @@ static constinit int global_i = 0;
 TEST_CASE("params with object", "[param]") {
   // base form
   {
-    static CLI_CONSTINIT auto p = cli::param(name,
-                                             description,
-                                             global_i,
-                                             getter,
-                                             setter,
-                                             parser,
-                                             formatter,
-                                             validator);
+    static constinit auto p = cli::param(name,
+                                         description,
+                                         global_i,
+                                         getter,
+                                         setter,
+                                         parser,
+                                         formatter,
+                                         validator);
     (void)p;
   }
 
   // missing one parameter{
   // no validate
   {
-    static CLI_CONSTINIT auto p = cli::param(
+    static constinit auto p = cli::param(
       name, description, global_i, getter, setter, parser, formatter);
     (void)p;
   }
   // no format and parse
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, getter, setter, validator);
     (void)p;
   }
@@ -141,7 +141,7 @@ TEST_CASE("params with object", "[param]") {
   }
   // no set
   {
-    static CLI_CONSTINIT auto p = cli::param(
+    static constinit auto p = cli::param(
       name, description, global_i, getter, parser, formatter, validator);
     (void)p;
   }
@@ -150,38 +150,38 @@ TEST_CASE("params with object", "[param]") {
   // missing two parameters{
   // no validate and format/parse
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, getter, setter);
     (void)p;
   }
   // no validate and get
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, setter, parser, formatter);
     (void)p;
   }
   // no validate and set
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, getter, parser, formatter);
     (void)p;
   }
 
   // no format/parse and get
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, setter, validator);
     (void)p;
   }
   // no format/parse and set
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, getter, validator);
     (void)p;
   }
   // no set and get
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, parser, formatter, validator);
     (void)p;
   }
@@ -190,32 +190,30 @@ TEST_CASE("params with object", "[param]") {
   // missing three parameters {
   // no validate, format/parse and set
   {
-    static CLI_CONSTINIT auto p =
-      cli::param(name, description, global_i, getter);
+    static constinit auto p = cli::param(name, description, global_i, getter);
     (void)p;
   }
   // no validate, format/parse and get
   {
-    static CLI_CONSTINIT auto p =
-      cli::param(name, description, global_i, setter);
+    static constinit auto p = cli::param(name, description, global_i, setter);
     (void)p;
   }
   // no get, set and validate
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, parser, formatter);
     (void)p;
   }
   // no get, set and format/parse
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, global_i, validator);
     (void)p;
   }
   // }
   //
   {
-    static CLI_CONSTINIT auto p = cli::param(name, description, global_i);
+    static constinit auto p = cli::param(name, description, global_i);
     (void)p;
   }
 }
@@ -226,7 +224,7 @@ TEST_CASE("params with const object", "[param]") {
 
   // base form
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, i, getter, formatter);
     (void)p;
   }
@@ -235,19 +233,19 @@ TEST_CASE("params with const object", "[param]") {
   //{
   //  no format
   {
-    static CLI_CONSTINIT auto p = cli::param(name, description, i, getter);
+    static constinit auto p = cli::param(name, description, i, getter);
     (void)p;
   }
   // no get
   {
-    static CLI_CONSTINIT auto p = cli::param(name, description, i, formatter);
+    static constinit auto p = cli::param(name, description, i, formatter);
     (void)p;
   }
   //}
 
   // missing two parameters
   {
-    static CLI_CONSTINIT auto p = cli::param(name, description, i);
+    static constinit auto p = cli::param(name, description, i);
     (void)p;
   }
 }
@@ -261,7 +259,7 @@ TEST_CASE("member data commands", "[param]") {
   static constinit S s;
   // base form
   {
-    static CLI_CONSTINIT auto p = cli::param(
+    static constinit auto p = cli::param(
       name,
       description,
       s,
@@ -272,7 +270,7 @@ TEST_CASE("member data commands", "[param]") {
 
   // no validate
   {
-    static CLI_CONSTINIT auto p = cli::param(
+    static constinit auto p = cli::param(
       name,
       description,
       s,
@@ -282,7 +280,7 @@ TEST_CASE("member data commands", "[param]") {
 
   // no parse/format
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name,
                  description,
                  s,
@@ -291,7 +289,7 @@ TEST_CASE("member data commands", "[param]") {
   }
   // no parse/format and validate
   {
-    static CLI_CONSTINIT auto p = cli::param(
+    static constinit auto p = cli::param(
       name, description, s, cli::param("foo"_sc, "foo mode"_sc, &S::foo));
     (void)p;
   }
@@ -301,7 +299,7 @@ TEST_CASE("const member data commands", "[param]") {
   static constexpr S s{};
   // base form
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name,
                  description,
                  s,
@@ -309,20 +307,20 @@ TEST_CASE("const member data commands", "[param]") {
     (void)p;
   }
   {
-    static CLI_CONSTINIT auto p = cli::param(
+    static constinit auto p = cli::param(
       name, description, s, cli::param("k"_sc, "k mode"_sc, &S::k, formatter));
     (void)p;
   }
 
   // no parse/format and validate
   {
-    static CLI_CONSTINIT auto p = cli::param(
+    static constinit auto p = cli::param(
       name, description, s, cli::param("foo"_sc, "foo mode"_sc, &S::foo));
     (void)p;
   }
 
   {
-    static CLI_CONSTINIT auto p =
+    static constinit auto p =
       cli::param(name, description, s, cli::param("k"_sc, "k mode"_sc, &S::k));
     (void)p;
   }
@@ -371,6 +369,8 @@ TEST_CASE("param", "[param]") {
 
   exec_result = const_p.execute("=21", {buffer, 10});
   REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::cant_set_param);
 
   exec_result = const_p.execute({}, {buffer, 10});
   REQUIRE(exec_result);
@@ -382,6 +382,7 @@ TEST_CASE("param", "[param]") {
   exec_result = write_only_p.execute({}, {buffer, 10});
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
+  REQUIRE(exec_result.error() == cli::Error::cant_read_param);
   exec_result = write_only_p.execute("=10", {buffer, 10});
   REQUIRE(exec_result);
   REQUIRE(var == 10);

@@ -123,6 +123,9 @@ namespace cli::params {
   using get_char_t = typename Str::char_type;
 
   namespace dtl {
+
+    struct invalid_tag_t {};
+
     template<Id Name,
              SC Description,
              SC Type,
@@ -305,36 +308,52 @@ namespace cli::params {
     private:
       constexpr ExecResult<char_type>
       set_value(View<const char_type> args) noexcept {
-        parse::ParseResult parse_result = parse_(args);
-        if (not parse_result)
-          return ExecResult<char_type>::make_parse_error(
-            parse_result.error, parse_result.rest.data());
+        if constexpr (requires {
+                        {
+                          Set::invalid_tag
+                        } -> std::convertible_to<dtl::invalid_tag_t>;
+                      }) {
+          return ExecResult<char_type>::make_set_error(Error::cant_set_param);
+        } else {
+          parse::ParseResult parse_result = parse_(args);
+          if (not parse_result)
+            return ExecResult<char_type>::make_parse_error(
+              parse_result.error, parse_result.rest.data());
 
-        if (parse_result.rest.size() != 0)
-          return ExecResult<char_type>::make_parse_error(
-            Error::unexpected_characters, parse_result.rest.data());
+          if (parse_result.rest.size() != 0)
+            return ExecResult<char_type>::make_parse_error(
+              Error::unexpected_characters, parse_result.rest.data());
 
-        if (not validate_(parse_result.value))
-          return ExecResult<char_type>::make_set_error(Error::invalid_value);
+          if (not validate_(parse_result.value))
+            return ExecResult<char_type>::make_set_error(Error::invalid_value);
 
-        Error e = set_(parse_result.value);
-        if (e != Error::none)
-          return ExecResult<char_type>::make_set_error(e);
-        else
-          return ExecResult<char_type>::make_success();
+          Error e = set_(parse_result.value);
+          if (e != Error::none)
+            return ExecResult<char_type>::make_set_error(e);
+          else
+            return ExecResult<char_type>::make_success();
+        }
       }
 
       constexpr ExecResult<char_type> get_value(View<char_type> out) noexcept {
-        value_type t{};
-        if (Error err = get_(t); err != Error::none)
-          return ExecResult<char_type>::make_get_error(err);
+        if constexpr (requires {
+                        {
+                          Get::invalid_tag
+                        } -> std::convertible_to<dtl::invalid_tag_t>;
+                      }) {
+          return ExecResult<char_type>::make_get_error(Error::cant_read_param);
+        } else {
+          value_type t{};
+          if (Error err = get_(t); err != Error::none)
+            return ExecResult<char_type>::make_get_error(err);
 
-        format::FormatResult res = format_(out, t);
-        if (res.error != Error::none)
-          return ExecResult<char_type>::make_format_error(res.error);
-        else
-          return ExecResult<char_type>::make_success(
-            out.substr(0, res.size_written));
+          format::FormatResult res = format_(out, t);
+          if (res.error != Error::none)
+            return ExecResult<char_type>::make_format_error(res.error);
+          else
+            return ExecResult<char_type>::make_success(
+              out.substr(0, res.size_written));
+        }
       }
 
       CLI_NO_UNIQUE_ADDRESS Get get_;
@@ -646,6 +665,7 @@ namespace cli::params {
 
     template<typename T>
     struct InvalidGet {
+      static constexpr invalid_tag_t invalid_tag{};
       cli::Error operator()(T &) const noexcept {
         return cli::Error::cant_read_param;
       }
@@ -653,6 +673,7 @@ namespace cli::params {
 
     template<typename T>
     struct InvalidSet {
+      static constexpr invalid_tag_t invalid_tag{};
       cli::Error operator()(const T &) const noexcept {
         return cli::Error::cant_set_param;
       }
@@ -1250,8 +1271,8 @@ namespace cli::params {
   }
 
   /**
-   * creates a parameter command from its individual parts. The default parser,
-   * formatter and validator are used
+   * creates a parameter command from its individual parts. The default
+   * parser, formatter and validator are used
    *
    * Usage:
    * ```
@@ -1559,8 +1580,8 @@ namespace cli::params {
    *   See also @ref Formatting, cli::format::Formatter and
    * cli::format::FormatterOf. cli::format::Formatter and
    * cli::format::FormatterOf.
-   * - validate: a Validator for a T. It validates parsed values before they are
-   * set. See also cli::validate::Validator.
+   * - validate: a Validator for a T. It validates parsed values before they
+   * are set. See also cli::validate::Validator.
    *
    * There are a multitide of overloads so that certain parts can be left out,
    * if you wish to use the defaults provided by cli.
@@ -2794,8 +2815,8 @@ namespace cli::params {
   //  * @param cmds additional optional subcommands
   //  * @return a Command
   //  */
-  // template <Id Name, SC Description, typename T, GetterOf<T> Get, SetterOf<T>
-  // Set,
+  // template <Id Name, SC Description, typename T, GetterOf<T> Get,
+  // SetterOf<T> Set,
   //           validate::ValidatorOf<T> Validate, concepts::Command...
   //           SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
@@ -2945,7 +2966,8 @@ namespace cli::params {
   // template <Id Name, typename T, SetterOf<T> Set, concepts::Command...
   // SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // [[nodiscard]] constexpr auto param(Name name, T &t, Set &&set, SubCommands
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Set &&set,
+  // SubCommands
   // &&...cmds) {
   //   (void)name;
   //   using namespace dtl;
@@ -2977,7 +2999,8 @@ namespace cli::params {
   // template <Id Name, typename T, GetterOf<T> Get, concepts::Command...
   // SubCommands>
   //   requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  // [[nodiscard]] constexpr auto param(Name name, T &t, Get &&get, SubCommands
+  // [[nodiscard]] constexpr auto param(Name name, T &t, Get &&get,
+  // SubCommands
   // &&...cmds) {
   //   (void)name;
   //   using namespace dtl;
@@ -3048,8 +3071,8 @@ namespace cli::params {
   //  * additional info.
   //  * @param parse the parser of the parameter. See cli::parse::Parser for
   //  * additional info.
-  //  * @param format the formatter of the parameter. See cli::format::Formatter
-  //  for
+  //  * @param format the formatter of the parameter. See
+  //  cli::format::Formatter for
   //  * additional info.
   //  * @param validate the validator of the parameter. See
   //  cli::validate::Validator
@@ -3060,8 +3083,8 @@ namespace cli::params {
   // template <Id Name, SC Description, SC Type, Getter Get, Setter Set,
   //           parse::Parser Parse, format::Formatter Format,
   //           validate::Validator Validate, concepts::Command... SubCommands>
-  // [[nodiscard]] constexpr auto param(Name name, Description description, Type
-  // type, Get
+  // [[nodiscard]] constexpr auto param(Name name, Description description,
+  // Type type, Get
   // &&get,
   //                      Set &&set, Parse &&parse, Format &&format,
   //                      Validate &&validate, SubCommands &&...cmds) {
@@ -3084,7 +3107,8 @@ namespace cli::params {
   //  * creates a parameter command. The value of the parameter, i.e. t, can
   //  * then be retrieved by its name. This opverload can take member data and
   //  member
-  //  * functions in addition to sub commands. Uses the default getter, setter,
+  //  * functions in addition to sub commands. Uses the default getter,
+  //  setter,
   //  * parsing, formatting, and validation facilities.
   //  *
   //  * @tparam T the parameters type
@@ -3119,7 +3143,8 @@ namespace cli::params {
   //  * creates a parameter command. The value of the parameter, i.e. t, can
   //  * then be retrieved by its name. This overload can take member data and
   //  member
-  //  * functions in addition to sub commands. Uses the default getter, setter,
+  //  * functions in addition to sub commands. Uses the default getter,
+  //  setter,
   //  * parsing, formatting, and validation facilities.
   //  *
   //  * @tparam T the parameters type
@@ -3157,9 +3182,11 @@ namespace cli::params {
   //
   // /**
   //  * creates a parameter command. The value of the parameter, i.e. Obj, can
-  //  * then be retrieved by its name, which is deduced. This overload can take
+  //  * then be retrieved by its name, which is deduced. This overload can
+  //  take
   //  * member data and member functions in addition to sub commands. Uses the
-  //  * default getter, setter, parsing, formatting, and validation facilities.
+  //  * default getter, setter, parsing, formatting, and validation
+  //  facilities.
   //  *
   //  * Example:
   //  * ```
@@ -3195,9 +3222,11 @@ namespace cli::params {
   // }
   // /**
   //  * creates a parameter command. The value of the parameter, i.e. Obj, can
-  //  * then be retrieved by its name, which is deduced. This overload can take
+  //  * then be retrieved by its name, which is deduced. This overload can
+  //  take
   //  * member data and member functions in addition to sub commands. Uses the
-  //  * default getter, setter, parsing, formatting, and validation facilities.
+  //  * default getter, setter, parsing, formatting, and validation
+  //  facilities.
   //  *
   //  * Example:
   //  * ```
@@ -3284,8 +3313,8 @@ namespace cli::params {
    *  static Settings settings;
    * ```
    *
-   * To make the settings and its members foo and baz available to cli, you can
-   * use the following functions to easily setup this structure.
+   * To make the settings and its members foo and baz available to cli, you
+   * can use the following functions to easily setup this structure.
    *
    * ```
    *  param("settings"_sc, "core Settings", settings,
@@ -3433,11 +3462,12 @@ namespace cli::params {
    *    int a;
    *  };
    *  static S s;
-   *  auto cmd = param("s"_sc, s, mem_data("a"_sc, "a description"_sc, &S::a));
+   *  auto cmd = param("s"_sc, s, mem_data("a"_sc, "a description"_sc,
+   * &S::a));
    * ```
    *
    * @param name the name of f. Must be a cli::string_constant.
-   * @param f member data pointer
+   * @param member member data pointer
    * @param description the description of MemberPointer. Must be a
    * cli::string_constant.
    * @param cmds the subcommands
@@ -3491,7 +3521,7 @@ namespace cli::params {
    * ```
    *
    * @param name the name of f. Must be a cli::string_constant.
-   * @param f member data pointer
+   * @param member member data pointer
    * @param cmds the subcommands
    */
   template<Id Name, class MemberPointer, concepts::Command... SubCommands>
@@ -3583,8 +3613,8 @@ namespace cli::params {
    *  static const Settings settings;
    * ```
    *
-   * To make the settings and its members foo and baz available to cli, you can
-   * use the following functions to easily setup this structure.
+   * To make the settings and its members foo and baz available to cli, you
+   * can use the following functions to easily setup this structure.
    *
    * ```
    *  param("settings"_sc, "core Settings", settings,
