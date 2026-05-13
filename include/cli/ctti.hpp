@@ -124,20 +124,29 @@ namespace cli::ctti {
       static_assert(name.starts_with(CTTI_VALUE_PREFIX));
       constexpr auto size = name.size() - CTTI_VALUE_LEFT - CTTI_VALUE_RIGHT;
       constexpr CharView sub = name.substr(CTTI_VALUE_LEFT, size);
-      constexpr std::size_t parens = sub.find('(');
-      if (parens == CharView::npos) {
-        constexpr std::size_t col = sub.find_last_of(" :");
+      auto remove_namespace_and_params = [](CharView sub) {
+        std::size_t parens = sub.find('(');
+        if (parens == CharView::npos) {
+          std::size_t col = sub.find_last_of(" :");
+          if (col == CharView::npos)
+            return sub;
+          else
+            return sub.substr(col + 1);
+        }
+        View sub2 = sub.substr(0, parens);
+        std::size_t col = sub2.find_last_of(" :");
         if (col == CharView::npos)
-          return sub;
+          return sub2;
         else
-          return sub.substr(col + 1);
-      }
-      constexpr View sub2 = sub.substr(0, parens);
-      constexpr std::size_t col = sub2.find_last_of(" :");
-      if (col == CharView::npos)
-        return sub2;
-      else
-        return sub2.substr(col + 1);
+          return sub2.substr(col + 1);
+      };
+      auto remove_angle_brackets = [](CharView str) {
+        std::size_t pos = str.find('<');
+        if (pos == CharView::npos)
+          return str;
+        return str.substr(0, pos);
+      };
+      return remove_angle_brackets(remove_namespace_and_params(sub));
     }
 
     template<typename T, typename CharT = char>

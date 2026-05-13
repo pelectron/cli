@@ -79,7 +79,7 @@ TEST_CASE("ctti::value_name", "[ctti]") {
   REQUIRE(cli::ctti::value_name<&F2::apply_ce>() == "apply_ce"_sc);
   REQUIRE(cli::ctti::value_name<&F2::apply_e>() == "apply_e"_sc);
   REQUIRE(cli::ctti::value_name<&F2::f>() == "f"_sc);
-  REQUIRE(cli::ctti::value_name<&F2::ret<int>>() == "ret<int>"_sc);
+  REQUIRE(cli::ctti::value_name<&F2::ret<int>>() == "ret"_sc);
 }
 
 // template<class Field, class... Fields>
