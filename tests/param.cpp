@@ -1,6 +1,7 @@
 #include "cli/param.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "cli.hpp"
+#include "cli/basic_format.hpp"
 #include "cli/enums.hpp"
 #include "cli/exec_result.hpp"
 #include "cli/format.hpp"
@@ -335,17 +336,29 @@ TEST_CASE("param", "[param]") {
     return cli::Error::none;
   };
 
+  auto invalid_get_var = [](int &) {
+    return cli::Error::invalid_sequence_value;
+  };
+
   static_assert(cli::params::Getter<decltype(get_var)>);
   auto set_var = [](int i_) {
     var = i_;
     return cli::Error::none;
   };
 
+  auto invalid_set_var = [](int) { return cli::Error::invalid_sequence_value; };
+
   static_assert(cli::params::Setter<decltype(set_var)>);
 
   auto validate_var = [](int i) { return i >= 0 and i <= 42; };
 
   static_assert(cli::validate::Validator<decltype(validate_var)>);
+
+  auto bogus_format = [](cli::View<char>, int) -> cli::format::FormatResult {
+    return cli::Error::buffer_overflow;
+  };
+
+  static_assert(cli::format::Formatter<decltype(bogus_format)>);
 
   auto p = cli::param<int>("i"_sc, "i desc"_sc, get_var, set_var, validate_var);
   REQUIRE(p.name == "i"_sc);
@@ -364,6 +377,14 @@ TEST_CASE("param", "[param]") {
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
   REQUIRE(exec_result.error() == cli::Error::invalid_value);
+
+  exec_result = p.execute("=", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::expected_value);
+
+  exec_result = p.execute("=100 k", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::unexpected_characters);
 
   auto const_p = cli::param<int>("i"_sc, "i desc"_sc, get_var);
 
@@ -386,4 +407,23 @@ TEST_CASE("param", "[param]") {
   exec_result = write_only_p.execute("=10", {buffer, 10});
   REQUIRE(exec_result);
   REQUIRE(var == 10);
+
+  auto inv_get_var_p = cli::param<int>("i"_sc, "i desc"_sc, invalid_get_var);
+  exec_result = inv_get_var_p.execute("", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
+
+  auto inv_set_var_p = cli::param<int>("i"_sc, "i desc"_sc, invalid_set_var);
+  exec_result = inv_set_var_p.execute("=21", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
+
+  auto bogus_format_p =
+    cli::param<int>("i"_sc, "i desc"_sc, get_var, bogus_format);
+  exec_result = bogus_format_p.execute("", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::format_error);
+  REQUIRE(exec_result.error() == cli::Error::buffer_overflow);
 }
