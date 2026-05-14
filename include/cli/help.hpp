@@ -133,10 +133,40 @@ namespace cli {
       cli::Help<Engine>{nullptr},
       funcs::arg<cli::View<const typename Engine::char_type>,
                  string_constant<typename Engine::char_type>{}>(
-        string_constant<typename Engine::char_type, 'c', 'm', 'd'>{}),
+        string_constant<typename Engine::char_type, 'c', 'm', 'd'>{},
+        string_constant<typename Engine::char_type,
+                        't',
+                        'h',
+                        'e',
+                        ' ',
+                        'c',
+                        'o',
+                        'm',
+                        'm',
+                        'a',
+                        'n',
+                        'd'>{}),
       funcs::arg<cli::View<const typename Engine::char_type>,
                  string_constant<typename Engine::char_type>{}>(
-        string_constant<typename Engine::char_type, 'a', 'r', 'g'>{}));
+        string_constant<typename Engine::char_type, 'a', 'r', 'g'>{},
+        string_constant<typename Engine::char_type,
+                        'f',
+                        'u',
+                        'n',
+                        'c',
+                        't',
+                        'i',
+                        'o',
+                        'n',
+                        ' ',
+                        'a',
+                        'r',
+                        'g',
+                        ' ',
+                        'n',
+                        'a',
+                        'm',
+                        'e'>{}));
   }
 
   template<class Engine>

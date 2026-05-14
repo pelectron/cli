@@ -298,7 +298,7 @@ namespace cli::funcs {
       return Name{} + string_constant<CharT, ':', ' '>{} +
              ctti::name<T, CharT>() +
              string_constant<CharT, '?', ' ', '=', ' '>{} +
-             ctti::dtl::value<T>::template get<DefaultValue>();
+             ctti::dtl::value<T, CharT>::template get<DefaultValue>();
     }
 
     template<FuncArg A, FuncArg... As>
@@ -334,7 +334,8 @@ namespace cli::funcs {
 
     template<typename CharT, Callable F>
     constexpr auto pretty_signature_name() {
-      return "()->"_sc + ctti::name<typename function_traits<F>::return_type>();
+      return cli::string_constant<CharT, '(', ')', '-', '>'>{} +
+             ctti::name<typename function_traits<F>::return_type, CharT>();
     }
 
     template<Id Name,
@@ -1017,6 +1018,37 @@ namespace cli::funcs {
     }
   };
 
+  template<typename CharT>
+  constexpr ExecResult<CharT> preparse_args(View<const CharT> &args) {
+    View<const CharT> args_ = parse::trim_ws(args);
+
+    if (args_.size() == 0) {
+      return ExecResult<CharT>::make_parse_error(Error::expected_lparen,
+                                                 args.begin());
+    } else if (args_.size() == 1) {
+      if (args_[0] == '(')
+        return ExecResult<CharT>::make_parse_error(Error::expected_rparen,
+                                                   nullptr);
+      else
+        return ExecResult<CharT>::make_parse_error(Error::expected_lparen,
+                                                   nullptr);
+    } else if (args_.size() == 2) {
+      if (args_[0] != '(')
+        return ExecResult<CharT>::make_parse_error(Error::expected_lparen,
+                                                   args_.begin());
+      if (args_[1] != ')') {
+        return ExecResult<CharT>::make_parse_error(Error::expected_rparen,
+                                                   args_.begin() + 1);
+      }
+    } else {
+      if (args_[0] != '(')
+        return ExecResult<CharT>::make_parse_error(Error::expected_lparen,
+                                                   args_.begin());
+    }
+    args = args_;
+    return ExecResult<CharT>::make_success();
+  }
+
   template<Id Name, SC Description, SC Type, Callable F, FuncArg... Args>
   class Function
     : public CommandBase<Function<Name, Description, Type, F, Args...>,
@@ -1081,31 +1113,9 @@ namespace cli::funcs {
 
       Parser parse{dtl::parse_field_from_args(this->args_)};
 
-      args = parse::trim_ws(args);
-
-      if (args.size() == 0) {
-        return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                       nullptr);
-      } else if (args.size() == 1) {
-        if (args[0] == '(')
-          return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
-                                                         nullptr);
-        else
-          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                         nullptr);
-      } else if (args.size() == 2) {
-        if (args[0] != '(')
-          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                         args.begin());
-        if (args[1] != ')') {
-          return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
-                                                         args.begin() + 1);
-        }
-      } else {
-        if (args[0] != '(')
-          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                         args.begin());
-      }
+      ExecResult exec_res = preparse_args(args);
+      if (not exec_res)
+        return exec_res;
 
       parse::ParseResult res = parse(args);
 
@@ -1201,6 +1211,49 @@ namespace cli::funcs {
     CLI_NO_UNIQUE_ADDRESS cli::Tuple<Args...> args_{};
   };
 
+  template<typename CharT>
+  constexpr ExecResult<CharT> parse_void_args(View<const CharT> args) {
+    args = parse::trim_ws(args);
+
+    if (args.size() == 0) {
+      return ExecResult<CharT>::make_parse_error(Error::expected_lparen,
+                                                 nullptr);
+    }
+
+    if (args.size() == 1) {
+      if (args[0] == '(')
+        return ExecResult<CharT>::make_parse_error(Error::expected_rparen,
+                                                   args.end());
+      else
+        return ExecResult<CharT>::make_parse_error(Error::expected_lparen,
+                                                   args.end());
+    }
+
+    if (args.size() > 1) {
+      if (args[0] == '(') {
+        View rest = parse::skip_ws(args.substr(1));
+        if (rest.size() == 0) {
+          return ExecResult<CharT>::make_parse_error(Error::expected_rparen,
+                                                     args.end());
+        }
+
+        if (rest[0] != ')') {
+          return ExecResult<CharT>::make_parse_error(Error::invalid_argument,
+                                                     args.begin());
+        }
+        View end = rest.substr(1);
+        if (end.size() != 0) {
+          return ExecResult<CharT>::make_parse_error(
+            Error::unexpected_characters_after_closing_paren, end.begin());
+        }
+      } else {
+        return ExecResult<CharT>::make_parse_error(Error::expected_lparen,
+                                                   args.begin());
+      }
+    }
+    return ExecResult<CharT>::make_success();
+  }
+
   template<Id Name, SC Description, SC Type, Callable F>
   class Function<Name, Description, Type, F>
     : public CommandBase<Function<Name, Description, Type, F>,
@@ -1245,44 +1298,9 @@ namespace cli::funcs {
             [[maybe_unused]] View<char_type> out) noexcept {
       using Ret = typename traits::return_type;
 
-      args = parse::trim_ws(args);
-
-      if (args.size() == 0) {
-        return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                       nullptr);
-      }
-
-      if (args.size() == 1) {
-        if (args[0] == '(')
-          return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
-                                                         args.end());
-        else
-          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                         args.end());
-      }
-
-      if (args.size() > 1) {
-        if (args[0] == '(') {
-          View rest = parse::skip_ws(args.substr(1));
-          if (rest.size() == 0) {
-            return ExecResult<char_type>::make_parse_error(
-              Error::expected_rparen, args.end());
-          }
-
-          if (rest[0] != ')') {
-            return ExecResult<char_type>::make_parse_error(
-              Error::invalid_argument, args.begin());
-          }
-          View end = rest.substr(1);
-          if (end.size() != 0) {
-            return ExecResult<char_type>::make_parse_error(
-              Error::unexpected_characters_after_closing_paren, end.begin());
-          }
-        } else {
-          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                         args.begin());
-        }
-      }
+      ExecResult<char_type> exec_res = parse_void_args(args);
+      if (not exec_res)
+        return exec_res;
 
       if constexpr (std::is_same_v<void, Ret>) {
         func_();

@@ -1112,9 +1112,13 @@ namespace cli::parse {
   template<typename CharT>
   struct Parse<bool, CharT> {
     static constexpr View<const CharT> truthy[]{
-      "true", "TRUE", "1", "yes", "y"};
+      string_constant<CharT, 't', 'r', 'u', 'e'>{},
+      string_constant<CharT, 'T', 'R', 'U', 'E'>{},
+      string_constant<CharT, '1'>{}};
     static constexpr View<const CharT> falsy[]{
-      "false", "FALSE", "0", "no", "n"};
+      string_constant<CharT, 'f', 'a', 'l', 's', 'e'>{},
+      string_constant<CharT, 'F', 'A', 'L', 'S', 'E'>{},
+      string_constant<CharT, '0'>{}};
 
   public:
     constexpr ParseResult<bool, CharT>
@@ -1523,7 +1527,7 @@ namespace cli::parse {
 
     using type = type_list::apply_t<
       type_,
-      type_list::transform_t<tpf, typename ctti::TypeInfo<T>::fields>>;
+      type_list::transform_t<tpf, typename ctti::TypeInfo<T, CharT>::fields>>;
   };
 
   template<concepts::Struct T,

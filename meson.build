@@ -220,6 +220,21 @@ if (build_tests.allowed())
   )
 
   test('unit test', ut)
+
+  executable(
+    'no-prefix',
+    'tests/prefix.cpp', 
+    include_directories: [test_inc, inc])
+
+  executable(
+    'u-prefix', 
+    'tests/prefix-16.cpp',
+    include_directories: [test_inc, inc])
+  
+  executable('U-prefix', 
+    'tests/prefix-32.cpp',
+    include_directories: [test_inc,inc])
+
 endif
 
 if (get_option('docs'))

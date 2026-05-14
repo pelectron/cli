@@ -1040,7 +1040,7 @@ namespace cli::params {
     (void)description;
     return dtl::Param{Name{},
                       Description{},
-                      ctti::name<T, typename Name::char_type>(),
+                      ctti::name<T, get_char_t<Name>>(),
                       std::forward<Get>(get),
                       std::forward<Set>(set),
                       std::forward<Parse>(parse),
@@ -1658,7 +1658,7 @@ namespace cli::params {
     (void)description;
     return dtl::Param{Name{},
                       Description{},
-                      ctti::name<T>(),
+                      ctti::name<T, get_char_t<Name>>(),
                       std::forward<Get>(get),
                       std::forward<Set>(set),
                       std::forward<Parse>(parse),
@@ -2550,7 +2550,7 @@ namespace cli::params {
     (void)description;
     return dtl::Param{Name{},
                       Description{},
-                      ctti::name<T>(),
+                      ctti::name<T, get_char_t<Name>>(),
                       std::forward<Get>(get),
                       dtl::InvalidSet<T>{},
                       parse::NoParse<T, get_char_t<Name>>{},

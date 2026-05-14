@@ -12,6 +12,11 @@
 
 namespace cli::sim {
 
+  Engine::~Engine() {
+    if (engine_)
+      delete engine_;
+  }
+
   cli::Error Engine::error() const { return error_; }
 
   void Engine::write_view(cli::View<const char> s) {
@@ -28,8 +33,9 @@ namespace cli::sim {
 
           switch (key.value) {
             case Term::Key::Ctrl_C:
-              Term::cout << std::endl;
-              exit(0);
+              if (not engine_->has_multiline_display())
+                Term::cout << std::endl;
+              return false;
             case Term::Key::Ctrl_J:
               // clear screen
               for (auto c : cli::View{"\x1b[2J"})

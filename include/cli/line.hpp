@@ -567,6 +567,7 @@ namespace cli {
           case ExecResult<CharT>::get_error:
             [[fallthrough]];
           default:
+            display_.newline();
             display_.write(string_constant<CharT, 'e', 'r', 'r', 'o', 'r'>{});
         }
       }

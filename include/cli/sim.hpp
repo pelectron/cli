@@ -16,6 +16,7 @@
 #include "cli.hpp"
 #include "cli/config.hpp"
 #include "cli/enums.hpp"
+#include "display.hpp"
 
 namespace cli::sim {
 
@@ -46,6 +47,8 @@ namespace cli::sim {
       (void)number_of_lines;
     }
 
+    ~Engine();
+
     cli::Error error() const;
 
     bool get_input_and_process();
@@ -68,6 +71,7 @@ namespace cli::sim {
       virtual void reset() = 0;
       virtual void print() = 0;
       virtual cli::Delimiter delimiter() const = 0;
+      virtual bool has_multiline_display() const = 0;
       virtual ~EngineInterface();
     };
 
@@ -82,6 +86,8 @@ namespace cli::sim {
                    constant<std::size_t{NumLines}>{}},
             std::forward<Commands>(commands)...
       } {}
+
+      ~EngineImpl() {}
 
       cli::Error on_char(char c) override { return engine.on_char(c); }
 
@@ -99,6 +105,8 @@ namespace cli::sim {
         return cli::config::input_delimiter_v<Config>;
       }
 
+      virtual bool has_multiline_display() const { return NumLines > 0; }
+
       cli::Engine<Config,
                   cli::AnsiDisplay<decltype(&Engine::write_view),
                                    static_cast<std::size_t>(NumLines)>,
@@ -114,7 +122,7 @@ namespace cli::sim {
                     NumLines,
                     std::remove_cvref_t<Commands>...>;
 
-    std::unique_ptr<EngineInterface> engine_;
+    EngineInterface *engine_;
     cli::Error error_{cli::Error::none};
   };
 
