@@ -600,7 +600,7 @@ namespace cli {
         }
 
         size_ = 0;
-        return Error::invalid_cmd;
+        return Error::none;
       }
 
       // execute the command

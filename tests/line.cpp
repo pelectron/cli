@@ -224,7 +224,7 @@ TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
     SECTION("invalid command") {
       if constexpr (not std::is_same_v<TestType, NoCursor_Autocomplete>) {
         line.set_data("c5long");
-        REQUIRE(line.execute(out) == cli::Error::invalid_cmd);
+        REQUIRE(line.execute(out) == cli::Error::none);
         REQUIRE(d.data == "invalid_cmd");
         REQUIRE(d.past == std::vector<std::string>{"c5long"});
       }
@@ -300,7 +300,7 @@ TEMPLATE_TEST_CASE("cli::Line::execute and on_char after execute",
     SECTION("invalid command") {
       if constexpr (not std::is_same_v<TestType, NoCursor_Autocomplete>) {
         line.set_data("c5long");
-        REQUIRE(line.execute(out) == cli::Error::invalid_cmd);
+        REQUIRE(line.execute(out) == cli::Error::none);
         REQUIRE(d.data.empty());
         REQUIRE(d.past == std::vector<std::string>{"c5long", "invalid_cmd"});
       }
