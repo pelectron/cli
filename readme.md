@@ -201,7 +201,7 @@ To build `cli-term`, the `cli-term` option must be enabled. Simply execute the
 following command in the project root directory:
 
 ```bash
-meson setup build -Dcli-term=enabled -Dauto_features=disabled 
+meson setup build -Dcli-term=enabled -Dauto_features=disabled
 meson compile -C build
 ```
 
@@ -235,9 +235,10 @@ meson setup build -Dcli-term=enabled -Dauto_features=disabled --vsenv --prefix="
 meson install -C build --tags bin --skip-subprojects
 ```
 
-#### Installing The Headers 
+#### Installing The Headers
 
-Either copy the `include` directory to the desired location or use meson's install command.
+Either copy the `include` directory to the desired location or use meson's
+install command.
 
 ```bash
 meson setup build -Dauto_features=disabled
@@ -251,7 +252,7 @@ meson setup build -Dauto_features=disabled --vsenv
 meson install -C build --tags devel --skip-subprojects
 ```
 
-#### Installing All In One 
+#### Installing All In One
 
 ```bash
 meson setup build -Dauto_features=disabled -Dcli-term=enabled
@@ -266,13 +267,18 @@ Just add CLI's `include` folder to your build
 system's include directories and you are set.
 
 To use the simulation component, you must have
-[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available, add
-it's include path and link against it.
+[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available, compile
+`source/sim.cpp` and link against it.
+
+```bash
+gcc -c source/sim.cpp -o sim.o -Iinclude -Ipath-to-cpp-terminal
+ar rcs libcli-sim.a sim.o
+```
 
 #### Building
 
 To build `cli-term`, you must have [asio](https://think-async.com/Asio/) and
-[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available. 
+[cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) available.
 
 Compile `source/cli-term/cli-term.cpp` and `source/cli-term/main.cpp` into `cli-term`.
 
@@ -343,7 +349,7 @@ This project is documented using doxygen. Either use the provided `Doxyfile`
 and manually invoke doxygen or build the documentation with meson by setting
 the `docs` project option to true.
 
-To get a good overview of the main components and a condensed reference, use
+To get a good overview of the main components and a reference, use
 the [accompanying markdown documentation (docs.md)](./docs.md).
 
 ```bash
@@ -354,17 +360,18 @@ meson compile -C build
 ## Design Rationale
 
 Why C++20 and not some earlier standard?
-  - concepts 
-  - consteval
-  - constinit
 
-## Supported Compilers 
+- concepts
+- consteval
+- constinit
 
-`CLI` is tested  with `clang`, `gcc`, `arm-none-eabi-gcc` and `msvc`. If you
-want to use `CLI` with another compiler, `cli/ctti.hpp` most likely needs to be
-extended.
+## Supported Compilers
+
+`CLI` is tested with `clang`, `gcc`, `arm-none-eabi-gcc` and `msvc`. If you
+want to use `CLI` with another compiler, `cli/compiler.hpp` and `cli/ctti.hpp`
+need to be extended.
 
 ## Contributions
 
 Contributions are welcome and appreciated, especially for adding additional
-compiler support. Just make a pull request. 
+compiler support. Just make a pull request.

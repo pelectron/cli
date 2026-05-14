@@ -16,7 +16,7 @@ simulation = get_option('sim')
 cli_term = get_option('cli-term')
 embedded = get_option('embedded')
 
-# testing, building examples, simulation, and cli-term can only be used
+# testing, building examples, simulation, and cli-term can only be built
 # for non-embeded targets
 build_tests.disable_if(
   embedded,
@@ -192,6 +192,7 @@ if (build_tests.allowed())
     'tests/parse_format/int.cpp',
     'tests/parse_format/sequence.cpp',
     'tests/parse_format/struct.cpp',
+    # component tests
     'tests/ansidisplay.cpp',
     'tests/command.cpp',
     'tests/command_tree.cpp',
