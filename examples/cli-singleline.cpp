@@ -65,7 +65,10 @@ using cli::arg;
 using cli::func;
 using cli::param;
 
-struct Config : cli::default_config {};
+struct Config : cli::default_config {
+  static constexpr std::size_t output_size = 256;
+  static constexpr bool use_detailed_error_messages = true;
+};
 
 // clang-format off
 // the cli object itself
@@ -85,7 +88,7 @@ static cli::sim::Engine engine {
   func("lambda"_sc, 
       [](int /*i*/, char /*arg*/='k') {},
       "i"_arg, 
-      cli::arg<'k'>("k"_sc,"k desc"_sc)),
+      cli::arg<'x'>("k"_sc,"k desc"_sc)),
   // and any other functor without templated call operator
   func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
   func(MyFunctor2{}, "f"_arg),

@@ -66,6 +66,7 @@ using cli::func;
 using cli::param;
 
 struct Config : cli::default_config {
+  static constexpr std::size_t output_size = 256;
   static constexpr bool use_detailed_error_messages = true;
 };
 
