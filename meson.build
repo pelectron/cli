@@ -206,6 +206,7 @@ if (not build_tests.disabled())
     'tests/elem.cpp',
     'tests/event.cpp',
     'tests/exec_result.cpp',
+    'tests/function.cpp',
     'tests/history.cpp',
     'tests/input.cpp',
     'tests/help.cpp',

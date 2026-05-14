@@ -19,6 +19,7 @@
 #include "cli/command.hpp"
 #include "cli/ctti.hpp"
 #include "cli/enums.hpp"
+#include "cli/exec_result.hpp"
 #include "cli/format.hpp"
 #include "cli/parse.hpp"
 #include "cli/string.hpp"
@@ -1082,6 +1083,30 @@ namespace cli::funcs {
 
       args = parse::trim_ws(args);
 
+      if (args.size() == 0) {
+        return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
+                                                       nullptr);
+      } else if (args.size() == 1) {
+        if (args[0] == '(')
+          return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
+                                                         nullptr);
+        else
+          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
+                                                         nullptr);
+      } else if (args.size() == 2) {
+        if (args[0] != '(')
+          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
+                                                         nullptr);
+        if (args[1] != ')') {
+          return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
+                                                         nullptr);
+        }
+      } else {
+        if (args[0] != '(')
+          return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
+                                                         nullptr);
+      }
+
       parse::ParseResult res = parse(args);
 
       if (not res)
@@ -1240,11 +1265,12 @@ namespace cli::funcs {
 
       if (args.size() > 1) {
         if (args[0] == '(') {
-          View rest = parse::skip_ws(args);
+          View rest = parse::skip_ws(args.substr(1));
           if (rest.size() == 0) {
             return ExecResult<char_type>::make_parse_error(
               Error::expected_rparen, args.end());
           }
+
           if (rest[0] != ')') {
             return ExecResult<char_type>::make_parse_error(
               Error::invalid_argument, args.begin());
@@ -1371,13 +1397,20 @@ namespace cli::funcs {
                   "the names and descriptions of the arguments have the same "
                   "character type.");
 
-    auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
-    return Function{
-      Name{},
-      Description{},
-      dtl::pretty_signature_name<typename Name::char_type, F>(deduced_),
-      std::forward<F>(f),
-      deduced_};
+    if constexpr (sizeof...(Args) > 0) {
+      auto deduced_ = dtl::deduce_args<F>(std::forward<Args>(args)...);
+      return Function{
+        Name{},
+        Description{},
+        dtl::pretty_signature_name<typename Name::char_type, F>(deduced_),
+        std::forward<F>(f),
+        deduced_};
+    } else {
+      return Function{Name{},
+                      Description{},
+                      dtl::pretty_signature_name<typename Name::char_type, F>(),
+                      std::forward<F>(f)};
+    }
   }
 
   /**

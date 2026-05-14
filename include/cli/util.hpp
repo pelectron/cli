@@ -538,7 +538,8 @@ namespace cli {
   };
 
   template<typename F>
-  struct function_traits : signature_traits<extract_signature_t<F>> {};
+  struct function_traits
+    : signature_traits<extract_signature_t<std::decay_t<F>>> {};
 
   template<typename R, class T, class... A>
   struct function_traits<R (T::*)(A...)> {
