@@ -80,7 +80,7 @@ if (simulation.allowed())
   )
 
   cpp_terminal_dep = dependency('cpp-terminal', required: true, default_options: ['warning_level=0'])
-  clisim_lib = library('clisim', 'source/sim.cpp', include_directories: inc, dependencies: cpp_terminal_dep)
+  clisim_lib = static_library('clisim', 'source/sim.cpp', include_directories: inc, dependencies: cpp_terminal_dep)
   cli_dep = declare_dependency(include_directories: inc, link_with: clisim_lib)
 else
   cli_dep = declare_dependency(include_directories: inc)
@@ -232,7 +232,7 @@ if (cli_term.allowed())
   deps = [
     dependency(
       'cpp-terminal',
-      default_options: ['warning_level=0', 'buildtype=release'],
+      default_options: ['warning_level=0'],
       required: true,
     ),
     dependency('asio', required: true),
@@ -245,7 +245,7 @@ if (cli_term.allowed())
     dependencies: deps,
     include_directories: inc,
     install: true,
-    override_options: ['warning_level=3', 'buildtype=release'],
+    override_options: ['warning_level=3'],
     cpp_args: [
       '-DASIO_NO_DEPRECATED',
     ],
