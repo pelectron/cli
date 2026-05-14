@@ -4,7 +4,6 @@
 #include "cli/traits.hpp"
 
 #include <cstdint>
-#include <ostream>
 #include <string>
 #include <type_traits>
 #include <vector>

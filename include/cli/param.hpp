@@ -612,7 +612,7 @@ namespace cli::params {
       constexpr DefaultGet &operator=(const DefaultGet &) = default;
       constexpr DefaultGet &operator=(DefaultGet &&) = default;
 
-      constexpr Error operator()(T &t) noexcept {
+      constexpr Error operator()(T &t) const noexcept {
         CLI_ASSERT(value_);
         t = *value_;
         return Error::none;

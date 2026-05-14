@@ -57,8 +57,6 @@ namespace cli {
     constexpr CommandTree(Engine &e, cli::Tuple<Cmds...> cmds) noexcept
       : commands_{std::move(cmds)} {
       init_commands();
-      funcs::FuncGetter g;
-      g.get(get<0>(commands_)).engine = &e;
     }
 
     /**
@@ -91,12 +89,10 @@ namespace cli {
 
     template<concepts::Command... Cmds>
     constexpr CommandTuple init_tuple(cli::Tuple<Cmds...> &&t) noexcept {
+      static_assert(config::use_help_v<config_type>);
       return
         [&t]<std::size_t... Is>(std::index_sequence<Is...>) -> CommandTuple {
-          if constexpr (config::use_help_v<config_type>)
-            return {create_help_cmd<Engine>(), std::move(get<Is>(t))...};
-          else
-            return {std::move(get<Is>(t))...};
+          return {create_help_cmd<Engine>(), std::move(get<Is>(t))...};
         }(std::make_index_sequence<sizeof...(Commands)>{});
     }
 

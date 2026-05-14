@@ -80,12 +80,12 @@ namespace cli {
                   "available. Either set is_multiline_display to false or set "
                   "number_of_lines to a value greater than 1.");
 
-    static_assert(
-      not is_multiline_display_v<Display> ? number_of_lines_v<Display> == 1
-                                          : true,
-      "A display can't be single line and only have more than one line "
-      "available. Either set is_multiline_display to true or set "
-      "number_of_lines to 1.");
+    static_assert(not is_multiline_display_v<Display>
+                    ? number_of_lines_v<Display> == 1
+                    : true,
+                  "A display can't be single line and have more than one line "
+                  "available. Either set is_multiline_display to true or set "
+                  "number_of_lines to 1.");
 
     static_assert(
       (name_is_not_help<config::use_help_v<config_type>,

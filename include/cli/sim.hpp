@@ -14,27 +14,109 @@
 #define CLI_SIM_HPP
 
 #include "cli.hpp"
-#include "cli/util.hpp"
-#include "enums.hpp"
-
-#include <cpp-terminal/exception.hpp>
-#include <cpp-terminal/input.hpp>
-#include <cpp-terminal/iostream.hpp>
-#include <cpp-terminal/key.hpp>
-#include <cpp-terminal/options.hpp>
-#include <cpp-terminal/terminal.hpp>
-#include <cpp-terminal/tty.hpp>
-#include <cstddef>
-#include <ostream>
-#include <string_view>
+#include "cli/config.hpp"
+#include "cli/enums.hpp"
 
 namespace cli::sim {
 
-  namespace dtl {
-    inline void write(cli::View<const char> s) {
-      Term::cout << std::string_view(s.data(), s.size()) << std::flush;
+  class Engine {
+  public:
+    template<concepts::Config Config, concepts::Command... Commands>
+    Engine(Config config, Commands &&...commands)
+      : engine_{
+          new EngineImpl{Config{},
+                         constant_v<std::numeric_limits<std::size_t>::max()>,
+                         std::forward<Commands>(commands)...}
+    } {
+      (void)config;
     }
-  } // namespace dtl
+
+    template<concepts::Config Config,
+             auto NumLines,
+             concepts::Command... Commands>
+    Engine(Config config,
+           constant<NumLines> number_of_lines,
+           Commands &&...commands)
+      : engine_{
+          new EngineImpl{Config{},
+                         constant_v<NumLines>,
+                         std::forward<Commands>(commands)...}
+    } {
+      (void)config;
+      (void)number_of_lines;
+    }
+
+    cli::Error error() const;
+
+    bool get_input_and_process();
+
+    cli::Error on_char(char c);
+
+    cli::Error on_control(cli::Control ctrl, std::uint8_t n = 1);
+
+    void print();
+
+    void reset();
+
+  private:
+    static void write_view(cli::View<const char> s);
+
+    struct EngineInterface {
+      virtual cli::Error on_char(char c) = 0;
+      virtual cli::Error on_control(cli::Control ctrl, std::uint8_t n = 1) = 0;
+      virtual cli::Error process() = 0;
+      virtual void reset() = 0;
+      virtual void print() = 0;
+      virtual cli::Delimiter delimiter() const = 0;
+      virtual ~EngineInterface();
+    };
+
+    template<concepts::Config Config,
+             auto NumLines,
+             concepts::Command... Commands>
+    struct EngineImpl : EngineInterface {
+      EngineImpl(Config, constant<NumLines>, Commands &&...commands)
+        : engine{
+            Config{},
+            cli::AnsiDisplay{&Engine::write_view,
+                   constant<std::size_t{NumLines}>{}},
+            std::forward<Commands>(commands)...
+      } {}
+
+      cli::Error on_char(char c) override { return engine.on_char(c); }
+
+      cli::Error on_control(cli::Control ctrl, std::uint8_t n = 1) override {
+        return engine.on_control(ctrl, n);
+      }
+
+      cli::Error process() override { return engine.process(); }
+
+      void print() override { return engine.print(); }
+
+      void reset() override { return engine.reset(); }
+
+      cli::Delimiter delimiter() const override {
+        return cli::config::input_delimiter_v<Config>;
+      }
+
+      cli::Engine<Config,
+                  cli::AnsiDisplay<decltype(&Engine::write_view),
+                                   static_cast<std::size_t>(NumLines)>,
+                  Commands...>
+        engine;
+    };
+
+    template<concepts::Config Config,
+             auto NumLines,
+             concepts::Command... Commands>
+    EngineImpl(Config, constant<NumLines>, Commands &&...)
+      -> EngineImpl<std::remove_cvref_t<Config>,
+                    NumLines,
+                    std::remove_cvref_t<Commands>...>;
+
+    std::unique_ptr<EngineInterface> engine_;
+    cli::Error error_{cli::Error::none};
+  };
 
   /**
    * @brief The init function for the sim.
@@ -42,159 +124,8 @@ namespace cli::sim {
    * @ingroup Simulation
    * @return true if init succeded, else false.
    */
-  inline bool init() {
-    // check if the terminal is capable of handling input
-    Term::terminal.setOptions(
-      Term::Option::NoSignalKeys, Term::Option::Cursor, Term::Option::Raw);
+  bool init();
 
-    if (!Term::is_stdin_a_tty()) {
-      Term::cerr << "The terminal is not attached to a TTY and "
-                    "therefore can't catch user input. Exiting..."
-                 << std::flush;
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * @brief gets an input and processes it on the cli. Returns false when ctrl-C
-   * is pressed.
-   *
-   * @ingroup Simulation
-   * @param engine the engine object
-   */
-  template<typename Engine>
-  bool get_input_and_process(Engine &engine) {
-    try {
-      // 1. gather input and call on_char().
-      Term::Event event = Term::read_event();
-      switch (event.type()) {
-        case Term::Event::Type::Key: {
-          Term::Key key(event);
-
-          switch (key.value) {
-            case Term::Key::Ctrl_C:
-              Term::cout << std::endl;
-              exit(0);
-            case Term::Key::Ctrl_J:
-              // clear screen
-              for (auto c : cli::View{"\x1b[2J"})
-                engine.on_char(c);
-              break;
-            case Term::Key::Ctrl_K:
-              // clear to end of line
-              for (auto c : cli::View{"\x1b[0K"})
-                engine.on_char(c);
-              break;
-            case Term::Key::Ctrl_L:
-              // clear entire line
-              for (auto c : cli::View{"\x1b[2K"})
-                engine.on_char(c);
-              break;
-            case Term::Key::Ctrl_U:
-              // clear to begin of line
-              for (auto c : cli::View{"\x1b[1K"})
-                engine.on_char(c);
-              break;
-            case Term::Key::Enter:
-              if constexpr (cli::config::input_delimiter_v<
-                              typename Engine::config_type> == Delimiter::lf) {
-                engine.on_char('\n');
-              } else if constexpr (cli::config::input_delimiter_v<
-                                     typename Engine::config_type> ==
-                                   Delimiter::cr) {
-                engine.on_char('\r');
-              } else if constexpr (cli::config::input_delimiter_v<
-                                     typename Engine::config_type> ==
-                                   Delimiter::crlf) {
-                engine.on_char('\r');
-                engine.on_char('\n');
-              }
-              break;
-            case Term::Key::ArrowDown:
-              for (auto c : cli::View{"\x1b[B"})
-                engine.on_char(c);
-              break;
-            case Term::Key::ArrowUp:
-              for (auto c : cli::View{"\x1b[A"})
-                engine.on_char(c);
-              break;
-            case Term::Key::ArrowRight:
-              for (auto c : cli::View{"\x1b[C"})
-                engine.on_char(c);
-              break;
-            case Term::Key::ArrowLeft:
-              for (auto c : cli::View{"\x1b[D"})
-                engine.on_char(c);
-              break;
-            default:
-              engine.on_char(static_cast<char>(key.value));
-          }
-        } break;
-        case Term::Event::Type::Empty:
-          [[fallthrough]];
-        case Term::Event::Type::Cursor:
-          [[fallthrough]];
-        case Term::Event::Type::Screen:
-          [[fallthrough]];
-        case Term::Event::Type::Focus:
-          [[fallthrough]];
-        case Term::Event::Type::Mouse:
-          [[fallthrough]];
-        case Term::Event::Type::CopyPaste:
-          [[fallthrough]];
-        default:
-          break;
-      }
-
-      // call process()
-      cli::Error err = engine.process();
-
-      // ignore errors
-      (void)err;
-      return true;
-    } catch (const Term::Exception &re) {
-      Term::cerr << "cpp-terminal error: " << re.what() << std::endl;
-      return false;
-    } catch (...) {
-      Term::cerr << "Unknown error." << std::endl;
-      return false;
-    }
-  }
-
-  /**
-   * @brief creates and returns the engine object from the config and commands
-   *
-   * @ingroup Simulation
-   * @param config the cli::Config
-   * @param commands the commands
-   * @return cli::Engine
-   */
-  template<cli::concepts::Config Config, cli::concepts::Command... Commands>
-  constexpr auto create(Config, Commands &&...commands) /* -> cli::Engine */ {
-    static_assert(std::is_same_v<char, typename Config::char_type>,
-                  "char_type must be char. Others are unsupported for now.");
-
-    return cli::Engine{Config{},
-                       cli::AnsiDisplay{&::cli::sim::dtl::write},
-                       std::forward<Commands>(commands)...};
-  }
-
-  template<cli::concepts::Config Config,
-           auto NumLines,
-           cli::concepts::Command... Commands>
-  constexpr auto create(Config,
-                        constant<NumLines>,
-                        Commands &&...commands) /* -> cli::Engine */ {
-    static_assert(std::is_same_v<char, typename Config::char_type>,
-                  "char_type must be char. Others are unsupported for now.");
-
-    return cli::Engine{
-      Config{},
-      cli::AnsiDisplay{&::cli::sim::dtl::write, constant<NumLines>{}},
-      std::forward<Commands>(commands)...
-    };
-  }
 } // namespace cli::sim
 
 #endif

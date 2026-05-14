@@ -1142,11 +1142,9 @@ namespace cli::funcs {
     }
 
     template<std::size_t I, std::size_t... Is>
-    static constexpr dtl::ValidateResult
+    constexpr dtl::ValidateResult
     validate(const auto &tuple, std::index_sequence<I, Is...>) noexcept {
-      auto valid =
-        typename type_list::type_at_t<I, TypeList<Args...>>::validator{}(
-          get<I>(tuple).value);
+      auto valid = get<I>(args_).validate(get<I>(tuple).value);
       if constexpr (sizeof...(Is) == 0)
         return {.valid = valid, .index = type_list::list_size_v<arguments>};
       else {

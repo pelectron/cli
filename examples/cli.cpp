@@ -5,10 +5,7 @@
  * PC and played around with.
  */
 
-#include "cli/config.hpp"
-#include "cli/display.hpp"
 #include "cli/sim.hpp"
-#include "cli/util.hpp"
 
 // the parameters and functions used in this example
 constinit static bool enable = false;
@@ -68,11 +65,13 @@ using cli::arg;
 using cli::func;
 using cli::param;
 
-struct Config : cli::default_config {};
+struct Config : cli::default_config {
+  static constexpr bool use_detailed_error_messages = true;
+};
 
 // clang-format off
 // the cli object itself
-static cli::Engine cli_ = cli::sim::create(
+static cli::sim::Engine engine{
   Config{},
   param<int>("foo"_sc, 
             "foo description"_sc, 
@@ -114,16 +113,16 @@ static cli::Engine cli_ = cli::sim::create(
         param<&Settings::a_long_param>(),
         param("c"_sc, &Settings::c),
         func<&Settings::apply>())
-);
+};
 // clang-format on
 
 int main() {
   if (not cli::sim::init())
     return -1;
 
-  // cli_.print();
+  engine.print();
 
-  while (cli::sim::get_input_and_process(cli_)) {
+  while (engine.get_input_and_process()) {
   }
 
   return 0;

@@ -360,6 +360,11 @@ TEST_CASE("param", "[param]") {
 
   static_assert(cli::format::Formatter<decltype(bogus_format)>);
 
+  auto bogus_parse =
+    [](cli::View<const char>) -> cli::parse::ParseResult<int, char> {
+    return cli::Error::unknown;
+  };
+
   auto p = cli::param<int>("i"_sc, "i desc"_sc, get_var, set_var, validate_var);
   REQUIRE(p.name == "i"_sc);
   REQUIRE(p.description == "i desc"_sc);
@@ -381,6 +386,10 @@ TEST_CASE("param", "[param]") {
   exec_result = p.execute("=", {buffer, 10});
   REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
   REQUIRE(exec_result.error() == cli::Error::expected_value);
+
+  exec_result = p.execute("k", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::expected_assignment);
 
   exec_result = p.execute("=100 k", {buffer, 10});
   REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
@@ -426,4 +435,27 @@ TEST_CASE("param", "[param]") {
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::format_error);
   REQUIRE(exec_result.error() == cli::Error::buffer_overflow);
+
+  auto bogus_parse_p =
+    cli::param<int>("i"_sc, "i desc"_sc, set_var, bogus_parse);
+  exec_result = bogus_parse_p.execute("=21", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::unknown);
+}
+
+TEST_CASE("DefaultGet") {
+  static constexpr int i = 5;
+  constexpr cli::params::dtl::DefaultGet<int> get{i};
+  int out = 0;
+  REQUIRE(get(out) == cli::Error::none);
+  REQUIRE(out == 5);
+}
+
+TEST_CASE("DefaultSet") {
+  static int i = 5;
+  cli::params::dtl::DefaultSet<int> set{i};
+  int val = 10;
+  REQUIRE(set(val) == cli::Error::none);
+  REQUIRE(i == val);
 }

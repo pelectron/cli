@@ -15,8 +15,10 @@ using cli::funcs::operator""_arg;
 TEST_CASE("arg with default", "[function]") {
 
   constexpr auto parse_i =
-    [](cli::View<const char>) -> cli::parse::ParseResult<int, char> {};
-  constexpr auto validate_i = [](int) -> bool {};
+    [](cli::View<const char>) -> cli::parse::ParseResult<int, char> {
+    return cli::Error::none;
+  };
+  constexpr auto validate_i = [](int) -> bool { return true; };
 
   {
     static constinit auto a =
@@ -65,8 +67,10 @@ TEST_CASE("arg with default", "[function]") {
 
 TEST_CASE("arg without default", "[function]") {
   constexpr auto parse_i =
-    [](cli::View<const char>) -> cli::parse::ParseResult<int, char> {};
-  constexpr auto validate_i = [](int) -> bool {};
+    [](cli::View<const char>) -> cli::parse::ParseResult<int, char> {
+    return cli::Error::none;
+  };
+  constexpr auto validate_i = [](int) -> bool { return true; };
 
   {
     static constinit auto a =

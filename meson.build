@@ -23,31 +23,20 @@ build_tests.disable_if(
   error_message: 'can\'t build tests for embedded targets',
 )
 
-build_examples.disable_if(
-  embedded,
-  error_message: 'can\'t build examples on embedded targets',
-)
-
 simulation.disable_if(
   embedded,
   error_message: 'can\'t have simulation with embedded targets',
+)
+
+build_examples.disable_if(
+  embedded or simulation.disabled(),
+  error_message: 'can\'t build examples on embedded targets, or when simulation is disabled',
 )
 
 cli_term.disable_if(
   embedded,
   error_message: 'cli-term can\'t be built for embedded targets',
 )
-
-# settings up the cli dependency
-deps = []
-
-if (not simulation.disabled())
-  deps += dependency('cpp-terminal', required: true, default_options: ['warning_level=0'])
-endif
-
-cli_dep = declare_dependency(include_directories: inc, dependencies: deps)
-
-meson.override_dependency('cli', cli_dep)
 
 # headers to install
 install_headers(
@@ -84,18 +73,24 @@ install_headers(
   subdir: 'cli',
 )
 
-if (not simulation.disabled())
+if (simulation.allowed())
   install_headers(
     'include/cli/sim.hpp',
     subdir: 'cli',
   )
+
+  cpp_terminal_dep = dependency('cpp-terminal', required: true, default_options: ['warning_level=0'])
+  clisim_lib = library('clisim', 'source/sim.cpp', include_directories: inc, dependencies: cpp_terminal_dep)
+  cli_dep = declare_dependency(include_directories: inc, link_with: clisim_lib)
+else
+  cli_dep = declare_dependency(include_directories: inc)
 endif
 
-if (not build_examples.disabled())
-  if (not simulation.disabled())
-    executable('cli', 'examples/cli.cpp', dependencies: cli_dep)
-    executable('cli-singleline', 'examples/cli-singleline.cpp', dependencies: cli_dep)
-  endif
+meson.override_dependency('cli', cli_dep)
+
+if (build_examples.allowed())
+  executable('cli', 'examples/cli.cpp', dependencies: cli_dep)
+  executable('cli-singleline', 'examples/cli-singleline.cpp', dependencies: cli_dep)
 endif
 
 if get_option('led-example').enabled()
@@ -114,8 +109,7 @@ if get_option('led-example').enabled()
   )
 endif
 
-if (not build_tests.disabled())
-
+if (build_tests.allowed())
   # check for failing tests that need to fail
   must_fail_to_compile = files('tests/fails/param_t.cpp')
 
@@ -219,9 +213,9 @@ if (not build_tests.disabled())
     'tests/tuple.cpp',
     'tests/util.cpp',
     'tests/validate.cpp',
-    include_directories: test_inc,
+    include_directories: [test_inc, inc],
     cpp_args: exclude_warnings,
-    dependencies: [cli_dep, catch_dep],
+    dependencies: [catch_dep],
     install_tag: 'tests',
   )
 
@@ -233,7 +227,7 @@ if (get_option('docs'))
   run_command(doxygen, 'Doxyfile', check: false)
 endif
 
-if (not cli_term.disabled())
+if (cli_term.allowed())
   # cli-term dependencies
   deps = [
     dependency(
