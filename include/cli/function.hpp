@@ -1096,15 +1096,15 @@ namespace cli::funcs {
       } else if (args.size() == 2) {
         if (args[0] != '(')
           return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                         nullptr);
+                                                         args.begin());
         if (args[1] != ')') {
           return ExecResult<char_type>::make_parse_error(Error::expected_rparen,
-                                                         nullptr);
+                                                         args.begin() + 1);
         }
       } else {
         if (args[0] != '(')
           return ExecResult<char_type>::make_parse_error(Error::expected_lparen,
-                                                         nullptr);
+                                                         args.begin());
       }
 
       parse::ParseResult res = parse(args);
