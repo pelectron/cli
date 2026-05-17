@@ -25,8 +25,8 @@
 #ifndef CLI_DISPLAY_HPP
 #define CLI_DISPLAY_HPP
 
+#include "cli/basic_format.hpp"
 #include "cli/concepts.hpp"
-#include "cli/format.hpp"
 #include "cli/string.hpp"
 #include "cli/util.hpp"
 
@@ -210,7 +210,7 @@ namespace cli {
    *
    * @ingroup Display
    * @tparam Out the type to output characters.
-   * @tparam NumLines thenumber of lines in the displays.
+   * @tparam NumLines the number of lines in the displays.
    */
   template<concepts::Output Out, std::size_t NumLines = unlimited_lines>
   class AnsiDisplay {
@@ -240,19 +240,21 @@ namespace cli {
      *  AnsiDisplay disp{output, cli::constant<10>{}};
      * ```
      * @param output the output
-     * @param NLines the number of lines
+     * @param num_lines the number of lines as a cli::constant
+     * @tparam NLines the number of lines
      */
     template<concepts::Output O, auto NLines>
-    constexpr AnsiDisplay(O &&output, constant<NLines>) noexcept(
+    constexpr AnsiDisplay(O &&output, constant<NLines> num_lines) noexcept(
       std::is_nothrow_constructible_v<Out, O &&>)
-      : out_(std::forward<O>(output)) {}
+      : out_(std::forward<O>(output)) {
+      (void)num_lines;
+    }
 
     /**
      * constructs an AnsiDisplay by forwarding args to its output.
      *
      * @tparam Args
      * @param args
-     * @return
      */
     template<typename... Args>
     constexpr AnsiDisplay(Args &&...args) noexcept(

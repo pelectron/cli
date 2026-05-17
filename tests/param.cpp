@@ -9,6 +9,7 @@
 #include "cli/validator.hpp"
 
 #include <catch2/catch_all.hpp>
+#include <tuple>
 
 using cli::operator""_sc;
 constexpr auto name = "name"_sc;
@@ -458,4 +459,64 @@ TEST_CASE("DefaultSet") {
   int val = 10;
   REQUIRE(set(val) == cli::Error::none);
   REQUIRE(i == val);
+}
+
+struct SubSubSettings {
+  char a = 'x';
+};
+struct SubSettings {
+  int i = 1;
+  SubSubSettings subsubsettings;
+};
+struct Settings {
+  int var = 5;
+  char c = 'x';
+  SubSettings subsettings{};
+};
+
+TEST_CASE("recursive param with callback and validate") {
+  constexpr auto validate = [](const Settings &s) -> bool {
+    return (s.var > 0 and s.var <= 5) and
+           (s.c == 'x' or s.c == 'y' or s.c == 'z') and
+           (s.subsettings.i > 0) and (s.subsettings.subsubsettings.a == 'x');
+  };
+
+  static constinit bool callback_called = false;
+  constexpr auto callback = [](const Settings &) { callback_called = true; };
+
+  static_assert(cli::params::SetCallback<decltype(callback), Settings>);
+  static_assert(cli::validate::ValidatorOf<decltype(validate), Settings>);
+
+  static constinit Settings settings;
+  auto p = cli::param("settings"_sc,
+                      "description"_sc,
+                      settings,
+                      callback,
+                      validate,
+                      cli::recursive);
+  using cli::get;
+  auto &var = get<0>(p);
+  auto &c = get<1>(p);
+  auto &subsettings = get<2>(p);
+  static_assert(subsettings.name == "subsettings"_sc);
+  auto &i = get<0>(subsettings);
+  static_assert(i.name == "i"_sc);
+  auto &subsubsettings = get<1>(subsettings);
+  static_assert(subsubsettings.name == "subsubsettings"_sc);
+  auto &a = get<0>(subsubsettings);
+  static_assert(a.name == "a"_sc);
+
+  var.execute("=1", {});
+  REQUIRE(settings.var == 1);
+  REQUIRE(callback_called);
+  callback_called = false;
+
+  i.execute("=10", {});
+  REQUIRE(settings.subsettings.i == 10);
+  REQUIRE(callback_called);
+  callback_called = false;
+
+  a.execute("=z", {});
+  REQUIRE(settings.subsettings.subsubsettings.a == 'x');
+  REQUIRE_FALSE(callback_called);
 }

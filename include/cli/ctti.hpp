@@ -13,6 +13,7 @@
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
 #include "cli/tuple.hpp"
+#include "cli/util.hpp"
 
 #include <array>
 #include <source_location>
@@ -727,10 +728,1168 @@ namespace cli::ctti {
         return 0;
       }
     }
+
+    template<auto N, class T, class Arg>
+    constexpr void set(T &t, Arg &&arg) {
+      static_assert(num_members<std::remove_cvref_t<T>>() > 0 and
+                      num_members<std::remove_cvref_t<T>>() <= 20,
+                    "T must have at least one and less than 20 members.");
+      static_assert(N >= 0 and N < num_members<std::remove_cvref_t<T>>(),
+                    "N must be smaller than the number of members in T.");
+      if constexpr (num_members<std::remove_cvref_t<T>>() == 20) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16,
+               p17,
+               p18,
+               p19,
+               p20] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+        else if constexpr (N == 12)
+          p13 = std::forward<Arg>(arg);
+        else if constexpr (N == 13)
+          p14 = std::forward<Arg>(arg);
+        else if constexpr (N == 14)
+          p15 = std::forward<Arg>(arg);
+        else if constexpr (N == 15)
+          p16 = std::forward<Arg>(arg);
+        else if constexpr (N == 16)
+          p17 = std::forward<Arg>(arg);
+        else if constexpr (N == 17)
+          p18 = std::forward<Arg>(arg);
+        else if constexpr (N == 18)
+          p19 = std::forward<Arg>(arg);
+        else if constexpr (N == 19)
+          p20 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 19) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16,
+               p17,
+               p18,
+               p19] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+        else if constexpr (N == 12)
+          p13 = std::forward<Arg>(arg);
+        else if constexpr (N == 13)
+          p14 = std::forward<Arg>(arg);
+        else if constexpr (N == 14)
+          p15 = std::forward<Arg>(arg);
+        else if constexpr (N == 15)
+          p16 = std::forward<Arg>(arg);
+        else if constexpr (N == 16)
+          p17 = std::forward<Arg>(arg);
+        else if constexpr (N == 17)
+          p18 = std::forward<Arg>(arg);
+        else if constexpr (N == 18)
+          p19 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 18) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16,
+               p17,
+               p18] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+        else if constexpr (N == 12)
+          p13 = std::forward<Arg>(arg);
+        else if constexpr (N == 13)
+          p14 = std::forward<Arg>(arg);
+        else if constexpr (N == 14)
+          p15 = std::forward<Arg>(arg);
+        else if constexpr (N == 15)
+          p16 = std::forward<Arg>(arg);
+        else if constexpr (N == 16)
+          p17 = std::forward<Arg>(arg);
+        else if constexpr (N == 17)
+          p18 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 17) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16,
+               p17] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+        else if constexpr (N == 12)
+          p13 = std::forward<Arg>(arg);
+        else if constexpr (N == 13)
+          p14 = std::forward<Arg>(arg);
+        else if constexpr (N == 14)
+          p15 = std::forward<Arg>(arg);
+        else if constexpr (N == 15)
+          p16 = std::forward<Arg>(arg);
+        else if constexpr (N == 16)
+          p17 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 16) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+        else if constexpr (N == 12)
+          p13 = std::forward<Arg>(arg);
+        else if constexpr (N == 13)
+          p14 = std::forward<Arg>(arg);
+        else if constexpr (N == 14)
+          p15 = std::forward<Arg>(arg);
+        else if constexpr (N == 15)
+          p16 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 15) {
+        auto
+          &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15] =
+            t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+        else if constexpr (N == 12)
+          p13 = std::forward<Arg>(arg);
+        else if constexpr (N == 13)
+          p14 = std::forward<Arg>(arg);
+        else if constexpr (N == 14)
+          p15 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 14) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+        else if constexpr (N == 12)
+          p13 = std::forward<Arg>(arg);
+        else if constexpr (N == 13)
+          p14 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 13) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+        else if constexpr (N == 12)
+          p13 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 12) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+        else if constexpr (N == 11)
+          p12 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 11) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+        else if constexpr (N == 10)
+          p11 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 10) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+        else if constexpr (N == 9)
+          p10 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 9) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+        else if constexpr (N == 8)
+          p9 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 8) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+        else if constexpr (N == 7)
+          p8 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 7) {
+        auto &[p1, p2, p3, p4, p5, p6, p7] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+        else if constexpr (N == 6)
+          p7 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 6) {
+        auto &[p1, p2, p3, p4, p5, p6] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+        else if constexpr (N == 5)
+          p6 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 5) {
+        auto &[p1, p2, p3, p4, p5] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+        else if constexpr (N == 4)
+          p5 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 4) {
+        auto &[p1, p2, p3, p4] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+        else if constexpr (N == 3)
+          p4 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 3) {
+        auto &[p1, p2, p3] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+        else if constexpr (N == 2)
+          p3 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 2) {
+        auto &[p1, p2] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+        else if constexpr (N == 1)
+          p2 = std::forward<Arg>(arg);
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 1) {
+        auto &[p1] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          p1 = std::forward<Arg>(arg);
+      }
+    }
+
+    template<auto N, class T>
+    constexpr auto &get_ref(T &t) {
+      static_assert(num_members<std::remove_cvref_t<T>>() > 0 and
+                      num_members<std::remove_cvref_t<T>>() <= 20,
+                    "T must have at least one and less than 20 members.");
+      static_assert(N >= 0 and N < num_members<std::remove_cvref_t<T>>(),
+                    "N must be smaller than the number of members in T.");
+      if constexpr (num_members<std::remove_cvref_t<T>>() == 20) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16,
+               p17,
+               p18,
+               p19,
+               p20] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+        else if constexpr (N == 12)
+          return p13;
+        else if constexpr (N == 13)
+          return p14;
+        else if constexpr (N == 14)
+          return p15;
+        else if constexpr (N == 15)
+          return p16;
+        else if constexpr (N == 16)
+          return p17;
+        else if constexpr (N == 17)
+          return p18;
+        else if constexpr (N == 18)
+          return p19;
+        else if constexpr (N == 19)
+          return p20;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 19) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16,
+               p17,
+               p18,
+               p19] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+        else if constexpr (N == 12)
+          return p13;
+        else if constexpr (N == 13)
+          return p14;
+        else if constexpr (N == 14)
+          return p15;
+        else if constexpr (N == 15)
+          return p16;
+        else if constexpr (N == 16)
+          return p17;
+        else if constexpr (N == 17)
+          return p18;
+        else if constexpr (N == 18)
+          return p19;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 18) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16,
+               p17,
+               p18] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+        else if constexpr (N == 12)
+          return p13;
+        else if constexpr (N == 13)
+          return p14;
+        else if constexpr (N == 14)
+          return p15;
+        else if constexpr (N == 15)
+          return p16;
+        else if constexpr (N == 16)
+          return p17;
+        else if constexpr (N == 17)
+          return p18;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 17) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16,
+               p17] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+        else if constexpr (N == 12)
+          return p13;
+        else if constexpr (N == 13)
+          return p14;
+        else if constexpr (N == 14)
+          return p15;
+        else if constexpr (N == 15)
+          return p16;
+        else if constexpr (N == 16)
+          return p17;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 16) {
+        auto &[p1,
+               p2,
+               p3,
+               p4,
+               p5,
+               p6,
+               p7,
+               p8,
+               p9,
+               p10,
+               p11,
+               p12,
+               p13,
+               p14,
+               p15,
+               p16] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+        else if constexpr (N == 12)
+          return p13;
+        else if constexpr (N == 13)
+          return p14;
+        else if constexpr (N == 14)
+          return p15;
+        else if constexpr (N == 15)
+          return p16;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 15) {
+        auto
+          &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15] =
+            t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+        else if constexpr (N == 12)
+          return p13;
+        else if constexpr (N == 13)
+          return p14;
+        else if constexpr (N == 14)
+          return p15;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 14) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+        else if constexpr (N == 12)
+          return p13;
+        else if constexpr (N == 13)
+          return p14;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 13) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+        else if constexpr (N == 12)
+          return p13;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 12) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+        else if constexpr (N == 11)
+          return p12;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 11) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+        else if constexpr (N == 10)
+          return p11;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 10) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9, p10] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+        else if constexpr (N == 9)
+          return p10;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 9) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8, p9] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+        else if constexpr (N == 8)
+          return p9;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 8) {
+        auto &[p1, p2, p3, p4, p5, p6, p7, p8] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+        else if constexpr (N == 7)
+          return p8;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 7) {
+        auto &[p1, p2, p3, p4, p5, p6, p7] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+        else if constexpr (N == 6)
+          return p7;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 6) {
+        auto &[p1, p2, p3, p4, p5, p6] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+        else if constexpr (N == 5)
+          return p6;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 5) {
+        auto &[p1, p2, p3, p4, p5] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+        else if constexpr (N == 4)
+          return p5;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 4) {
+        auto &[p1, p2, p3, p4] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+        else if constexpr (N == 3)
+          return p4;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 3) {
+        auto &[p1, p2, p3] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+        else if constexpr (N == 2)
+          return p3;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 2) {
+        auto &[p1, p2] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+        else if constexpr (N == 1)
+          return p2;
+      } else if constexpr (num_members<std::remove_cvref_t<T>>() == 1) {
+        auto &[p1] = t;
+        // structure bindings is not constexpr :/
+        if constexpr (N == 0)
+          return p1;
+      }
+    }
+
     template<auto N, class T>
     constexpr auto get(T &&t) {
-      static_assert(num_members<std::remove_cvref_t<T>>() > 0,
+      static_assert(num_members<std::remove_cvref_t<T>>() > 0 and
+                      num_members<std::remove_cvref_t<T>>() <= 20,
                     "T must have at least one and less than 20 members.");
+      static_assert(N >= 0 and N < num_members<std::remove_cvref_t<T>>(),
+                    "N must be smaller than the number of members in T.");
       if constexpr (num_members<std::remove_cvref_t<T>>() == 20) {
         auto &&[p1,
                 p2,
@@ -1311,6 +2470,9 @@ namespace cli::ctti {
       using type = std::remove_cvref_t<typename decltype(get<N>(
         external<std::remove_cvref_t<T>>))::type>;
     };
+
+    template<class T, auto N>
+    using member_type_t = typename member_type<T, N>::type;
 
     template<class T, auto N, typename CharT = char>
     [[nodiscard]] consteval auto member_name() {

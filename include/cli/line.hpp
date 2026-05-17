@@ -5,6 +5,7 @@
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
 #include "cli/config.hpp"
+#include "cli/ctti.hpp"
 #include "cli/display.hpp"
 #include "cli/enums.hpp"
 #include "cli/exec_result.hpp"

@@ -69,9 +69,11 @@ namespace cli {
     }
 
     /**
-     * returns the description of cmd
+     * executes the help command.
      *
-     * @param cmd the command
+     * @param cmd the command name
+     * @param arg if cmd is a function command, arg can be a function argument
+     *        to get the description of.
      */
     constexpr void operator()(View<const char_type> cmd,
                               View<const char_type> arg) noexcept {

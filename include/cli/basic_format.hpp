@@ -111,8 +111,6 @@ namespace cli::format {
      *
      * @note the call operator doesn't have to be const.
      *
-     * @param buf the buffer to format into
-     * @param t the value to format
      * @return FormatResult
      */
     constexpr FormatResult operator()(View<CharT>, const T &) const noexcept {

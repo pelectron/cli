@@ -108,6 +108,8 @@ namespace cli::parse {
   struct ParseResult {
 
     /// constructs a failed parse with the error reason
+    /// @param e the error
+    /// @param rest_str the unparsed rest of the string
     constexpr ParseResult(Error e, View<const CharT> rest_str = {}) noexcept
       requires(not std::same_as<T, Error>)
       : error{e}, value{}, rest{rest_str} {}
@@ -116,8 +118,8 @@ namespace cli::parse {
      * construct a successful parse result from a value and the rest of the
      * string that hasn't been parsed.
      *
-     * @param value the parse value
-     * @param rest the unparsed rest of the string
+     * @param val the parse value
+     * @param rest_str the unparsed rest of the string
      */
     constexpr ParseResult(const T &val,
                           View<const CharT> rest_str = {}) noexcept
@@ -128,8 +130,8 @@ namespace cli::parse {
      * construct a successful parse result from a value and the rest of the
      * string that hasn't been parsed.
      *
-     * @param value the parse value
-     * @param rest the unparsed rest of the string
+     * @param val the parse value
+     * @param rest_str the unparsed rest of the string
      */
     constexpr ParseResult(T &&val, View<const CharT> rest_str = {}) noexcept
       requires(not std::same_as<T, Error>)
@@ -139,8 +141,8 @@ namespace cli::parse {
      * construct a successful parse result from a value and the rest of the
      * string that hasn't been parsed.
      *
-     * @param value the parse value
-     * @param rest the unparsed rest of the string
+     * @param val the parse value
+     * @param rest_str the unparsed rest of the string
      */
     template<class U>
     constexpr ParseResult(from_value_t,
@@ -149,6 +151,8 @@ namespace cli::parse {
       : error{Error::none}, value{std::forward<U>(val)}, rest{rest_str} {}
 
     /// constructs a failed parse with the error reason
+    /// @param e the error
+    /// @param rest_str the unparsed rest of the string
     constexpr ParseResult(from_error_t,
                           Error e,
                           View<const CharT> rest_str = {}) noexcept
@@ -1079,11 +1083,11 @@ namespace cli::parse {
      *
      * @note the call operator doesn't have to be const.
      *
-     * @param buf the buffer to parse from
      * @return ParseResult<T, CharT>
      */
     constexpr ParseResult<T, CharT>
-    operator()(View<const CharT>) const noexcept {
+    operator()(View<const CharT> buf) const noexcept {
+      (void)buf;
       static_assert(always_false<T>, "No default parser for T available!");
     }
   };

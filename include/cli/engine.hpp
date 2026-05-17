@@ -121,6 +121,7 @@ namespace cli {
      * Notifies the engine of a newly received control.
      *
      * @param ctrl the Control
+     * @param param the parameter count, usually how many controls to execute.
      * @return Error::none on success, Error::buffer_overflow if the input can't
      * handle more events.
      */

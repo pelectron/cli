@@ -99,8 +99,6 @@ namespace cli {
      *
      * @param args the arguments
      * @param out where to put the results
-     * @param should_print_newline will be set to true if a newline should be
-     *        printed after execution.
      * @return the error
      */
     constexpr ExecResult<CharT> execute(View<const CharT> args,
@@ -202,8 +200,6 @@ namespace cli {
      *
      * @param args the arguments
      * @param out where to put the results
-     * @param should_print_newline set to true if a newline should be printed
-     *        after executing this command.
      * @return the error
      */
     constexpr ExecResult<char_type> execute(View<const char_type> args,
@@ -212,6 +208,18 @@ namespace cli {
     }
 
   protected:
+    template<std::size_t I>
+      requires(sizeof...(SubCommands) > 0)
+    constexpr friend auto &get(CommandBase &cmd) {
+      return get<I>(cmd.subcommands);
+    }
+
+    template<std::size_t I>
+      requires(sizeof...(SubCommands) > 0)
+    constexpr friend const auto &get(const CommandBase &cmd) {
+      return get<I>(cmd.subcommands);
+    }
+
     template<class D, SC C, SC Desc, SC H, concepts::Command... SubC>
     constexpr auto count_cmds(const CommandBase<D, C, Desc, H, SubC...> &c);
     template<class F,

@@ -5,11 +5,11 @@
  * PC and played around with.
  */
 
+#include "cli.hpp"
 #include "cli/sim.hpp"
 
 // the parameters and functions used in this example
 constinit static bool enable = false;
-constinit static int virtual_ = 0;
 constinit static bool enable_virtual = false;
 constinit static int enable_opts = 0xFF;
 
@@ -56,6 +56,27 @@ static constinit struct Settings {
   void apply() {}
 } settings{};
 
+struct FooSettings {
+  int glorb = 5;
+  char k = 'x';
+};
+
+struct BazSettings {
+  enum class Mode {
+    normal,
+    fast,
+    extreme
+  };
+  int num;
+  Mode mode;
+};
+
+static constinit struct Settings2 {
+  char k = 'x';
+  FooSettings foo{};
+  BazSettings baz{};
+} settings2;
+
 // using declarations for literal operators
 using cli::operator""_sc;
 using cli::operator""_arg;
@@ -74,14 +95,13 @@ struct Config : cli::default_config {
 // the cli object itself
 static cli::sim::Engine engine{
   Config{},
+  // parameter without object
   param<int>("foo"_sc, 
             "foo description"_sc, 
             &foo_getter, 
             &foo_setter, 
             &validate_foo),
-  // functions
-  // @{
-  // free functions
+  // free function
   func("free1"_sc, &free1, cli::arg("param"_sc,"a parameter"_sc)),
   // lambdas without templated call operator
   func("lambda"_sc, 
@@ -93,13 +113,11 @@ static cli::sim::Engine engine{
   func(MyFunctor2{}, "f"_arg),
   // member functions
   func("free2"_sc, s_, &S::free2, "x"_arg),
-// @}
-// global objects
+  // parameters with object declarations
   param("enable"_sc,"enables stuff"_sc, enable),
   // virtual hierarchies
-  param("virtual"_sc,
-        "virtual group"_sc, 
-        virtual_,
+  param("enable group"_sc,
+        "a group of enable and options"_sc, 
         param("enable"_sc,
               "virtual enable"_sc, 
               enable_virtual,
@@ -109,11 +127,18 @@ static cli::sim::Engine engine{
   param("settings"_sc,
         "core settings"_sc, 
         settings,
+        // member data parameters
         param("b"_sc, &Settings::b),
         param<&Settings::a>(),
         param<&Settings::a_long_param>(),
         param("c"_sc, &Settings::c),
-        func<&Settings::apply>())
+        // member function command
+        func<&Settings::apply>()),
+  // recrusive parameter
+  param("settings2"_sc,
+        "settings 2 description"_sc,
+        settings2,
+        cli::recursive)
 };
 // clang-format on
 

@@ -7,6 +7,7 @@
 #ifndef CLI_PARAM_HPP
 #define CLI_PARAM_HPP
 
+#include "cli.hpp"
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
 #include "cli/ctti.hpp"
@@ -15,7 +16,6 @@
 #include "cli/function.hpp"
 #include "cli/parse.hpp"
 #include "cli/string.hpp"
-#include "cli/traits.hpp"
 #include "cli/tuple.hpp"
 #include "cli/type_list.hpp"
 #include "cli/util.hpp"
@@ -23,6 +23,7 @@
 
 #include <concepts>
 #include <type_traits>
+#include <utility>
 
 namespace cli::params {
 
@@ -3317,7 +3318,7 @@ namespace cli::params {
    * can use the following functions to easily setup this structure.
    *
    * ```
-   *  param("settings"_sc, "core Settings", settings,
+   *  param("settings"_sc, "core settings", settings,
    *          param("foo"_sc, "foo mode"_sc, &Settings::foo),
    *          param("baz"_sc, "baz setting"_sc, &Settings::baz));
    * ```
@@ -3336,17 +3337,17 @@ namespace cli::params {
    */
 
   /**
-   * @brief
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
    *
-   * @tparam MemberPointer
-   * @param name
-   * @param description
-   * @param f
-   * @param parse
-   * @param format
-   * @param validate the validator used when parsing a T. See @ref Validation.
-   * @param cmds
-   * @return
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param validate the validator used for validating the member
+   * @param cmds additional subcommands
+   * @return a partial command
    */
   template<
     Id Name,
@@ -3379,16 +3380,16 @@ namespace cli::params {
   }
 
   /**
-   * @brief
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
    *
-   * @tparam MemberPointer
-   * @param name
-   * @param description
-   * @param f
-   * @param parse
-   * @param format
-   * @param cmds
-   * @return
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param cmds additional subcommands
+   * @return a partial command
    */
   template<
     Id Name,
@@ -3417,15 +3418,15 @@ namespace cli::params {
   }
 
   /**
-   * @brief
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
    *
-   * @tparam MemberPointer
-   * @param name
-   * @param description
-   * @param f
-   * @param validate the validator used when parsing a T. See @ref Validation.
-   * @param cmds
-   * @return
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param validate the validator used for validating the member
+   * @param cmds additional subcommands
+   * @return a partial command
    */
   template<Id Name,
            SC Description,
@@ -3462,8 +3463,11 @@ namespace cli::params {
    *    int a;
    *  };
    *  static S s;
-   *  auto cmd = param("s"_sc, s, mem_data("a"_sc, "a description"_sc,
-   * &S::a));
+   *  auto cmd = param("s"_sc,
+   *                   s,
+   *                   mem_data("a"_sc,
+   *                            "a description"_sc,
+   *                             &S::a));
    * ```
    *
    * @param name the name of f. Must be a cli::string_constant.
@@ -3634,15 +3638,14 @@ namespace cli::params {
    */
 
   /**
-   * @brief
+   * @brief cretes a member data parameter. Must be used as a subcommand.
    *
-   * @tparam MemberPointer
-   * @param name
-   * @param description
-   * @param f
-   * @param format
-   * @param cmds
-   * @return
+   * @param name the paramter name. Must be a string_constant.
+   * @param description the parameter description. Must be a string_constant.
+   * @param member the member data pointer
+   * @param format a foramtter for te type pointed to by member.
+   * @param cmds any additional subocmmands.
+   * @return a partial command.
    */
   template<
     Id Name,
@@ -3673,6 +3676,640 @@ namespace cli::params {
   /**
    * @}
    */
+
+  inline constexpr struct recursive_t {
+  } recursive;
+
+  template<typename C, typename T>
+  concept SetCallback = requires(std::remove_cvref_t<C> callback, const T &t) {
+    { callback(t) } -> std::same_as<void>;
+  };
+
+  /**
+   * @defgroup recursive-params Recursive Parameters
+   * @ingroup Parameters
+   *
+   * Recursive parameters are created by any of the following param overloads:
+   *
+   * ```
+   *  cli::param(name, description, t, set_callback, validate, cli::recursive)
+   *  cli::param(name, description, t, validate, cli::recursive)
+   *  cli::param(name, description, t, set_callback, cli::recursive)
+   *  cli::param(name, description, t, cli::recursive)
+   *  cli::param(name, t, set_callback, validate, cli::recursive)
+   *  cli::param(name, t, validate, cli::recursive)
+   *  cli::param(name, t, set_callback, cli::recursive)
+   *  cli::param(name, t, cli::recursive)
+   * ```
+   *
+   * where:
+   * - **name** and **description** are string_constants,
+   * - **t** is the object of the parameter
+   * - **set_callback** is a callable the takes a T and returns void. Is is
+   *   called when t or any of its subparameters are set.
+   * - **validate**:  is a validator for a T.
+   *
+   * A call to these overloads will recursively build up subcommands of all the
+   * members of t.
+   *
+   * For example, given the structs and variable:
+   *
+   * ```
+   *  struct SubSettings{
+   *    int i = 0;
+   *  };
+   *
+   *  struct Settings{
+   *    char c = 'x';
+   *    SubSettings subsettings{};
+   *  }
+   *
+   *  static constinit Settings settings;
+   * ```
+   *
+   *  and this call to cli::param
+   *
+   * ```
+   *  cli::param("settings"_sc, settings, cli::recursive);
+   * ```
+   *
+   * will generate the following command structure:
+   *
+   *  - settings [Settings]
+   *    - c [char]
+   *    - subsettings [SubSettings]
+   *      - i [int]
+   * @{
+   */
+
+  /**
+   * construct a parameter command for t and adds all members of t as
+   * subparameters/subcommands.
+   *
+   * Example:
+   * ```
+   * struct SubSettings{
+   *  int a = 100;
+   * };
+   *
+   * struct Settings{
+   *  char c = 'a';
+   *  SubSettings subsettings;
+   * };
+   *
+   * void on_settings_update(const Settings& s);
+   *
+   * static Settings settings;
+   *
+   *
+   * cli::param("settings"_sc,
+   *            "a description"_sc,
+   *            settings,
+   *            &on_settings_update,
+   *            [](const Settings& s)-> bool{
+   *              return s.c >= 'a' and s.c <= 'z' and s.subsettings.a >= 100;
+   *            },
+   *            cli::recursive);
+   * ```
+   *
+   * @param name the parameter name
+   * @param description the parameter description
+   * @param t the parameter object
+   * @param set_callback called when the parameter or any subparameter is set.
+   * @param validate A validator of T. Validates the object before this
+   *        parameters or any subparameters are set.
+   * @param r must be cli::recursive.
+   * @return parameter command
+   */
+  template<Id Name,
+           SC Description,
+           class T,
+           SetCallback<T> Callback,
+           validate::ValidatorOf<T> Validate>
+    requires(std::is_copy_constructible_v<T> and not std::is_const_v<T>)
+  constexpr concepts::Command auto param(Name name,
+                                         Description description,
+                                         T &t,
+                                         Callback set_callback,
+                                         Validate validate,
+                                         recursive_t r) {
+    (void)name;
+    (void)description;
+    (void)r;
+    if constexpr (ctti::dtl::num_members<T>() == 1 and
+                  not concepts::Struct<T>) {
+      return param(
+        Name{},
+        Description{},
+        t,
+        // setter
+        [&t, cb = set_callback](const T &t_set) -> Error {
+          t = t_set;
+          cb(t);
+          return Error::none;
+        },
+        // validator
+        validate);
+    } else if constexpr (ctti::dtl::num_members<T>() == 1 and
+                         concepts::Struct<T>) {
+      using CharT = get_char_t<Name>;
+      return param(
+        Name{},
+        Description{},
+        t,
+        // setter
+        [&t, cb = set_callback](const T &t_set) -> Error {
+          t = t_set;
+          cb(t);
+          return Error::none;
+        },
+        // validator
+        validate,
+        param(
+          ctti::dtl::member_name<T, 0, CharT>(),
+          NoDescription<CharT>{},
+          ctti::dtl::get_ref<0>(t),
+          // set callback
+          [&t, cb = set_callback](
+            const ctti::dtl::member_type_t<T, 0> &) -> void { cb(t); },
+          // validator
+          [&t, validate](const ctti::dtl::member_type_t<T, 0> &val) -> bool {
+            T t_ = t;
+            ctti::dtl::get_ref<0>(t_) = val;
+            return validate(t_);
+          },
+          recursive));
+    } else {
+      using CharT = get_char_t<Name>;
+      return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return param(
+          Name{},
+          Description{},
+          t,
+          // setter
+          [&t, cb = set_callback](const T &t_set) -> Error {
+            t = t_set;
+            cb(t);
+            return Error::none;
+          },
+          validate,
+          param(
+            ctti::dtl::member_name<T, Is, CharT>(),
+            NoDescription<CharT>{},
+            ctti::dtl::get_ref<Is>(t),
+            // set callback
+            [&t, cb = set_callback](
+              const ctti::dtl::member_type_t<T, Is> &) -> void { cb(t); },
+            // validator
+            [&t, validate](const ctti::dtl::member_type_t<T, Is> &val) -> bool {
+              T t_ = t;
+              ctti::dtl::get_ref<Is>(t_) = val;
+              return validate(t_);
+            },
+            recursive)...);
+      }(std::make_index_sequence<ctti::dtl::num_members<T>()>{});
+    }
+  }
+
+  /**
+   * construct a parameter command for t and adds all members of t as
+   * subparameters/subcommands.
+   *
+   * Example:
+   * ```
+   * struct SubSettings{
+   *  int a = 100;
+   * };
+   *
+   * struct Settings{
+   *  char c = 'a';
+   *  SubSettings subsettings;
+   * };
+   *
+   * void on_settings_update(const Settings& s);
+   *
+   * static Settings settings;
+   *
+   *
+   * cli::param("settings"_sc,
+   *            settings,
+   *            &on_settings_update,
+   *            [](const Settings& s)-> bool{
+   *              return s.c >= 'a' and s.c <= 'z' and s.subsettings.a >= 100;
+   *            },
+   *            cli::recursive);
+   * ```
+   *
+   * @param name the parameter name
+   * @param t the parameter object
+   * @param set_callback called when the parameter or any subparameter is set.
+   * @param validate A validator of T. Validates the object before this
+   *        parameters or any subparameters are set.
+   * @param r must be cli::recursive.
+   * @return parameter command
+   */
+  template<Id Name,
+           class T,
+           SetCallback<T> Callback,
+           validate::ValidatorOf<T> Validate>
+    requires(std::is_copy_constructible_v<T> and not std::is_const_v<T>)
+  constexpr concepts::Command auto param(
+    Name name, T &t, Callback set_callback, Validate validate, recursive_t r) {
+    (void)name;
+    (void)r;
+    return param(Name{},
+                 NoDescription<get_char_t<Name>>{},
+                 t,
+                 std::move(set_callback),
+                 std::move(validate),
+                 recursive);
+  }
+
+  /**
+   * construct a parameter command for t and adds all members of t as
+   * subparameters/subcommands.
+   *
+   * Example:
+   * ```
+   * struct SubSettings{
+   *  int a = 100;
+   * };
+   *
+   * struct Settings{
+   *  char c = 'a';
+   *  SubSettings subsettings;
+   * };
+   *
+   * void on_settings_update(const Settings& s);
+   *
+   * static Settings settings;
+   *
+   *
+   * cli::param("settings"_sc,
+   *            "a description"_sc,
+   *            settings,
+   *            &on_settings_update,
+   *            cli::recursive);
+   * ```
+   *
+   * @param name the parameter name
+   * @param description the parameter description
+   * @param t the parameter object
+   * @param set_callback called when the parameter or any subparameter is set.
+   * @param r must be cli::recursive.
+   * @return parameter command
+   */
+  template<Id Name,
+           SC Description,
+           class T,
+           SetCallback<T> Callback,
+           validate::ValidatorOf<T> Validate>
+    requires(std::is_copy_constructible_v<T> and not std::is_const_v<T>)
+  constexpr concepts::Command auto param(Name name,
+                                         Description description,
+                                         T &t,
+                                         Callback set_callback,
+                                         recursive_t r) {
+    (void)name;
+    (void)description;
+    (void)r;
+    if constexpr (ctti::dtl::num_members<T>() == 1 and
+                  not concepts::Struct<T>) {
+      return param(Name{},
+                   Description{},
+                   t,
+                   // setter
+                   [&t, cb = set_callback](const T &t_set) -> Error {
+                     t = t_set;
+                     cb(t);
+                     return Error::none;
+                   });
+    } else if constexpr (ctti::dtl::num_members<T>() == 1 and
+                         concepts::Struct<T>) {
+      using CharT = get_char_t<Name>;
+      return param(
+        Name{},
+        Description{},
+        t,
+        // setter
+        [&t, cb = set_callback](const T &t_set) -> Error {
+          t = t_set;
+          cb(t);
+          return Error::none;
+        },
+        // validator
+        param(
+          ctti::dtl::member_name<T, 0, CharT>(),
+          NoDescription<CharT>{},
+          ctti::dtl::get_ref<0>(t),
+          // set callback
+          [&t, cb = set_callback](
+            const ctti::dtl::member_type_t<T, 0> &) -> void { cb(t); },
+          recursive));
+    } else {
+      using CharT = get_char_t<Name>;
+      return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return param(
+          Name{},
+          Description{},
+          t,
+          // setter
+          [&t, cb = set_callback](const T &t_set) -> Error {
+            t = t_set;
+            cb(t);
+            return Error::none;
+          },
+          param(
+            ctti::dtl::member_name<T, Is, CharT>(),
+            NoDescription<CharT>{},
+            ctti::dtl::get_ref<Is>(t),
+            // set callback
+            [&t, cb = set_callback](
+              const ctti::dtl::member_type_t<T, Is> &) -> void { cb(t); },
+            recursive)...);
+      }(std::make_index_sequence<ctti::dtl::num_members<T>()>{});
+    }
+  }
+
+  /**
+   * construct a parameter command for t and adds all members of t as
+   * subparameters/subcommands.
+   *
+   * Example:
+   * ```
+   * struct SubSettings{
+   *  int a = 100;
+   * };
+   *
+   * struct Settings{
+   *  char c = 'a';
+   *  SubSettings subsettings;
+   * };
+   *
+   * void on_settings_update(const Settings& s);
+   *
+   * static Settings settings;
+   *
+   *
+   * cli::param("settings"_sc,
+   *            settings,
+   *            &on_settings_update,
+   *            cli::recursive);
+   * ```
+   *
+   * @param name the parameter name
+   * @param t the parameter object
+   * @param set_callback called when the parameter or any subparameter is set.
+   * @param r must be cli::recursive.
+   * @return parameter command
+   */
+  template<Id Name,
+           class T,
+           SetCallback<T> Callback,
+           validate::ValidatorOf<T> Validate>
+    requires(std::is_copy_constructible_v<T> and not std::is_const_v<T>)
+  constexpr concepts::Command auto
+  param(Name name, T &t, Callback set_callback, recursive_t r) {
+    (void)name;
+    (void)r;
+    return param(Name{},
+                 NoDescription<get_char_t<Name>>{},
+                 t,
+                 std::move(set_callback),
+                 recursive);
+  }
+
+  /**
+   * construct a parameter command for t and adds all members of t as
+   * subparameters/subcommands.
+   *
+   * Example:
+   * ```
+   * struct SubSettings{
+   *  int a = 100;
+   * };
+   *
+   * struct Settings{
+   *  char c = 'a';
+   *  SubSettings subsettings;
+   * };
+   *
+   * static Settings settings;
+   *
+   *
+   * cli::param("settings"_sc,
+   *            "a description"_sc,
+   *            settings,
+   *            [](const Settings& s)-> bool{
+   *              return s.c >= 'a' and s.c <= 'z' and s.subsettings.a >= 100;
+   *            },
+   *            cli::recursive);
+   * ```
+   *
+   * @param name the parameter name
+   * @param description the parameter description
+   * @param t the parameter object
+   * @param validate A validator of T. Validates the object before this
+   *        parameters or any subparameters are set.
+   * @param r must be cli::recursive.
+   * @return parameter command
+   */
+  template<Id Name, SC Description, class T, validate::ValidatorOf<T> Validate>
+    requires(std::is_copy_constructible_v<T> and not std::is_const_v<T>)
+  constexpr concepts::Command auto param(Name name,
+                                         Description description,
+                                         T &t,
+                                         Validate validate,
+                                         recursive_t r) {
+    (void)name;
+    (void)description;
+    (void)r;
+    if constexpr (ctti::dtl::num_members<T>() == 1 and
+                  not concepts::Struct<T>) {
+      return param(Name{}, Description{}, t);
+    } else if constexpr (ctti::dtl::num_members<T>() == 1) {
+      using CharT = get_char_t<Name>;
+      return param(
+        Name{},
+        Description{},
+        t,
+        param(
+          ctti::dtl::member_name<T, 0, CharT>(),
+          NoDescription<CharT>{},
+          ctti::dtl::get_ref<0>(t),
+          [&t, validate](const ctti::dtl::member_type_t<T, 0> &val) -> bool {
+            T t_ = t;
+            ctti::dtl::get_ref<0>(t_) = val;
+            return validate(t_);
+          },
+          recursive));
+    } else {
+      using CharT = get_char_t<Name>;
+      return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return param(
+          Name{},
+          Description{},
+          t,
+          validate,
+          param(
+            ctti::dtl::member_name<T, Is, CharT>(),
+            NoDescription<CharT>{},
+            ctti::dtl::get_ref<Is>(t),
+            [&t, validate](const ctti::dtl::member_type_t<T, Is> &val) -> bool {
+              T t_ = t;
+              ctti::dtl::get_ref<Is>(t_) = val;
+              return validate(t_);
+            },
+            recursive)...);
+      }(std::make_index_sequence<ctti::dtl::num_members<T>()>{});
+    }
+  }
+
+  /**
+   * construct a parameter command for t and adds all members of t as
+   * subparameters/subcommands.
+   *
+   * Example:
+   * ```
+   * struct SubSettings{
+   *  int a = 100;
+   * };
+   *
+   * struct Settings{
+   *  char c = 'a';
+   *  SubSettings subsettings;
+   * };
+   *
+   * static Settings settings;
+   *
+   *
+   * cli::param("settings"_sc,
+   *            settings,
+   *            [](const Settings& s)-> bool{
+   *              return s.c >= 'a' and s.c <= 'z' and s.subsettings.a >= 100;
+   *            },
+   *            cli::recursive);
+   * ```
+   *
+   * @param name the parameter name
+   * @param t the parameter object
+   * @param validate A validator of T. Validates the object before this
+   *        parameters or any subparameters are set.
+   * @param r must be cli::recursive.
+   * @return parameter command
+   */
+  template<Id Name, class T, validate::ValidatorOf<T> Validate>
+    requires(std::is_copy_constructible_v<T> and not std::is_const_v<T>)
+  constexpr concepts::Command auto
+  param(Name name, T &t, Validate validate, recursive_t r) {
+    (void)name;
+    (void)r;
+    return param(Name{},
+                 NoDescription<get_char_t<Name>>{},
+                 t,
+                 std::move(validate),
+                 recursive);
+  }
+
+  /**
+   * construct a parameter command for t and adds all members of t as
+   * subparameters/subcommands.
+   *
+   * Example:
+   * ```
+   * struct SubSettings{
+   *  int a = 100;
+   * };
+   *
+   * struct Settings{
+   *  char c = 'a';
+   *  SubSettings subsettings;
+   * };
+   *
+   * static Settings settings;
+   *
+   *
+   * cli::param("settings"_sc,
+   *            "a description"_sc,
+   *            settings,
+   *            cli::recursive);
+   * ```
+   *
+   * @param name the parameter name
+   * @param description the parameter description
+   * @param t the parameter object
+   * @param r must be cli::recursive.
+   * @return parameter command
+   */
+  template<Id Name, SC Description, class T>
+  constexpr concepts::Command auto
+  param(Name name, Description description, T &t, recursive_t r) {
+    (void)name;
+    (void)description;
+    (void)r;
+    using T_ = std::remove_cvref_t<T>;
+    if constexpr (ctti::dtl::num_members<T_>() == 1 and
+                  not concepts::Struct<T_>) {
+      return param(Name{}, Description{}, t);
+    } else if constexpr (ctti::dtl::num_members<T_>() == 1) {
+      using CharT = get_char_t<Name>;
+      return param(Name{},
+                   Description{},
+                   t,
+                   param(ctti::dtl::member_name<T_, 0, CharT>(),
+                         NoDescription<CharT>{},
+                         ctti::dtl::get_ref<0>(t),
+                         recursive));
+    } else {
+      using CharT = get_char_t<Name>;
+      return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return param(Name{},
+                     Description{},
+                     t,
+                     param(ctti::dtl::member_name<T_, Is, CharT>(),
+                           NoDescription<CharT>{},
+                           ctti::dtl::get_ref<Is>(t),
+                           recursive)...);
+      }(std::make_index_sequence<ctti::dtl::num_members<T_>()>{});
+    }
+  }
+
+  /**
+   * construct a parameter command for t and adds all members of t as
+   * subparameters/subcommands.
+   *
+   * Example:
+   * ```
+   * struct SubSettings{
+   *  int a = 100;
+   * };
+   *
+   * struct Settings{
+   *  char c = 'a';
+   *  SubSettings subsettings;
+   * };
+   *
+   * static Settings settings;
+   *
+   *
+   * cli::param("settings"_sc,
+   *            settings,
+   *            cli::recursive);
+   * ```
+   *
+   * @param name the parameter name
+   * @param t the parameter object
+   * @param r must be cli::recursive.
+   * @return parameter command
+   */
+  template<Id Name, class T>
+  constexpr concepts::Command auto param(Name name, T &t, recursive_t r) {
+    (void)name;
+    (void)r;
+    return param(Name{}, NoDescription<get_char_t<Name>>{}, t, recursive);
+  }
+
+  /// @}
 
 } // namespace cli::params
 #endif

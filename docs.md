@@ -32,7 +32,7 @@
   - [Example](#input-example)
 - [Display](#display)
   - [Displays Without Cursor](#display-without-cursor)
-    [Example Of A Display Without Cursor](#example-of-a-display-with-cursor)
+    - [Example Of A Display Without Cursor](#example-of-a-display-with-cursor)
   - [Displays With Cursor](#display-with-cursor)
     - [Example Of A Display With Cursor](#example-of-a-display-with-cursor)
   - [AnsiDisplay](#ansidisplay)
@@ -48,6 +48,7 @@
     - [Parameters With Object/Variable Declarations](#parameters-with-objectvariable-declarations)
     - [Parameters With Const Object/Variable Declarations](#parameters-with-const-objectvariable-declarations)
     - [Member Data Parameters](#member-data-parameters)
+    - [Recursive Parameters](#recursive-parameters)
     - [Getters](#getters)
     - [Setters](#setters)
   - [Functions](#functions)
@@ -70,7 +71,6 @@
   - [Custom Parsing](#custom-parsing)
 - [Validation](#validation)
 - [Simulation](#simulation)
-  - [Simulation Functions](#simulation-functions)
 - [cli-term](#cli-term)
   - [Usage](#cli-term-usage)
   - [Mappings](#mappings)
@@ -618,7 +618,7 @@ public:
 a ANSI compliant display device, for example a terminal.
 
 ```cpp
-template<cli::concepts::Output Out,std::size_t NumLines = cli::unlimited_lines>
+template<cli::concepts::Output Out, std::size_t NumLines = cli::unlimited_lines>
 class AnsiDisplay;
 ```
 
@@ -1016,6 +1016,60 @@ There are also overloads available for const member data.
 param(name, description, ptr_to_member, format);
 param(name, description, ptr_to_member);
 ```
+
+#### Recursive Parameters
+
+Recursive parameters are created by any of the following param overloads:
+
+```cpp
+ cli::param(name, description, t, set_callback, validate, cli::recursive)
+ cli::param(name, description, t, validate, cli::recursive)
+ cli::param(name, description, t, set_callback, cli::recursive)
+ cli::param(name, description, t, cli::recursive)
+ cli::param(name, t, set_callback, validate, cli::recursive)
+ cli::param(name, t, validate, cli::recursive)
+ cli::param(name, t, set_callback, cli::recursive)
+ cli::param(name, t, cli::recursive)
+```
+
+where:
+
+- **name** and **description** are string_constants,
+- **t** is the object of the parameter of type `T`.
+- **set_callback** is a callable the takes a `T` and returns `void`. Is is
+  called when **t** or any of its subparameters are set.
+- **validate**: is a validator for a `T`.
+
+A call to these overloads will recursively build up subcommands of all the
+members of t.
+
+For example, given the structs and variable:
+
+```cpp
+struct SubSettings{
+  int i = 0;
+};
+
+struct Settings{
+  char c = 'x';
+  SubSettings subsettings{};
+}
+
+static constinit Settings settings;
+```
+
+and this call to `cli::param`
+
+```cpp
+cli::param("settings"_sc, settings, cli::recursive);
+```
+
+will generate the following command structure:
+
+- settings \[Settings\]
+  - c \[char\]
+  - subsettings \[SubSettings\]
+    - i \[int\]
 
 #### Getters
 
@@ -1813,15 +1867,18 @@ An example:
 
 struct Config{...};
 
+cli::sim::Engine engine{
+  Config{},
+  commands...
+};
+
 int main(){
   if (not cli::sim::init())
     return -1;
 
-  cli::Engine my_cli = cli::sim::create(Config{}, commands...);
+  engine.print();
 
-  my_cli.print();
-
-  while (cli::sim::get_input_and_process(my_cli)) {
+  while (engine.get_input_and_process()) {
   }
 
   return 0;
@@ -1844,28 +1901,8 @@ There are the following key mappings available:
 - Enter: executes the current line.
 
 **Note:** [cpp-terminal](https://github.com/jupyter-xeus/cpp-terminal) is
-required to run simulations.
-
-### Simulation Functions
-
-#### bool cli::sim::init()
-
-Initializes the sim. Returns false if initialization failed.
-
-#### cli::Engine cli::sim::create(config, commands...)
-
-Creates an Engine with the specified config and commads.
-
-#### cli::Engine cli::sim::create(config, cli::constant\<NumberOfLines\>, commands...)
-
-Creates an Engine with the specified config and commands. The display will act
-as if it only has `NumberOfLines` lines.
-
-Example:
-
-```cpp
-cli::Engine e = cli::sim::create(cli::default_config{}, cli::constant<10>{}, commands...);
-```
+required to run simulations. For meson projects, the option `sim` must be
+enabled.
 
 ## cli-term
 

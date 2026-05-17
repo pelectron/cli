@@ -12,6 +12,7 @@ namespace cli {
   using funcs::operator""_arg;
   using funcs::func;
   using params::param;
+  using params::recursive;
 } // namespace cli
 
 #endif
