@@ -116,7 +116,7 @@ static cli::sim::Engine engine{
   // parameters with object declarations
   param("enable"_sc,"enables stuff"_sc, enable),
   // virtual hierarchies
-  param("enable group"_sc,
+  param("enable-group"_sc,
         "a group of enable and options"_sc, 
         param("enable"_sc,
               "virtual enable"_sc, 

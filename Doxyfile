@@ -1008,7 +1008,6 @@ WARN_LOGFILE           =
 INPUT                  = include \
                          examples/cli.cpp \
                          examples/led.cpp \
-                         source/cli-term.cpp \
                          readme.md \
                          docs.md
 

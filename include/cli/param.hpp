@@ -7,7 +7,6 @@
 #ifndef CLI_PARAM_HPP
 #define CLI_PARAM_HPP
 
-#include "cli.hpp"
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
 #include "cli/ctti.hpp"

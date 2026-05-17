@@ -785,6 +785,8 @@ There are four parameter categories:
    a parent parameter.
 4. [Virtual parameters](#virtual-parameters). These can't be read or written
    to, but act as a grouping for sub commands.
+5. [Recursive Parameters](#recursive-parameters). These parameters enable low
+   boilerplate for nested structures.
 
 The second and third category reduce the boilerplate required of the first
 category and provide sensible defaults.

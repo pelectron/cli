@@ -240,7 +240,16 @@ endif
 
 if (get_option('docs'))
   doxygen = find_program('doxygen', required: true)
-  run_command(doxygen, 'Doxyfile', check: false)
+  doxyfile = files('Doxyfile')
+  run_command(doxygen, doxyfile, check: true)
+
+  mdtohtml = find_program('mdtohtml', required: true)
+  run_command(
+    mdtohtml,
+    meson.project_source_root() / 'docs.md',
+    meson.project_source_root() / 'docs' / 'docs.html',
+    check: true
+  )
 endif
 
 if (cli_term.allowed())
