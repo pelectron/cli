@@ -239,17 +239,25 @@ if (build_tests.allowed())
 endif
 
 if (get_option('docs'))
-  doxygen = find_program('doxygen', required: true)
-  doxyfile = files('Doxyfile')
-  run_command(doxygen, doxyfile, check: true)
+  doxygen = find_program('doxygen', required: false)
+  if doxygen.found()
+    doxyfile = files('Doxyfile')
+    run_command(doxygen, doxyfile, check: true)
+  else
+    message('Doxyen is not found. Not building doyxgen documentation')
+  endif
 
-  mdtohtml = find_program('mdtohtml', required: true)
-  run_command(
-    mdtohtml,
-    meson.project_source_root() / 'docs.md',
-    meson.project_source_root() / 'docs' / 'docs.html',
-    check: true
-  )
+  mdtohtml = find_program('mdtohtml', required: false)
+  if(mdtohtml.found())
+    run_command(
+      mdtohtml,
+      meson.project_source_root() / 'docs.md',
+      meson.project_source_root() / 'docs' / 'docs.html',
+      check: true
+    )
+  else
+    message('mtdohtml not found. Not generating docs.html')
+  endif
 endif
 
 if (cli_term.allowed())

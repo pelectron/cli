@@ -72,7 +72,6 @@ struct BazSettings {
 };
 
 static constinit struct Settings2 {
-  char k = 'x';
   FooSettings foo{};
   BazSettings baz{};
 } settings2;
