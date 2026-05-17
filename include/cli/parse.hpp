@@ -430,7 +430,8 @@ namespace cli::parse {
         return parse_dec(str);
       }
 
-      return {Error::invalid_character, str};
+      if constexpr ((Format & Fmt::normal) != Fmt::normal)
+        return {Error::invalid_character, str};
     }
   };
 
