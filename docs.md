@@ -63,12 +63,16 @@
 - [Formatting](#formatting)
   - [Custom Formatting](#custom-formatting)
 - [Parsing](#parsing)
-  - [Enum Parsing](#enum-parsing)
-  - [Sequence Parsing](#sequence-parsing)
-  - [String Parsing](#string-parsing)
-  - [Fixpoint Parsing](#fixpoint-parsing)
-  - [Struct Parsing](#struct-parsing)
   - [Custom Parsing](#custom-parsing)
+- [Traits](#traits)
+  - [enum_traits](#enum_traits)
+- [Concepts](#concepts)
+  - [Sequence](#sequence)
+  - [FixedSizeSequence](#fixedsizesequence)
+  - [String](#string)
+  - [StringVIew](#stringview)
+  - [Fixpoint](#fixpoint)
+  - [Struct](#struct)
 - [Validation](#validation)
 - [Simulation](#simulation)
 - [cli-term](#cli-term)
@@ -246,7 +250,7 @@ and typedefs to satisfy the `Config` concept:
 - **char_type**: a **typedef** for the character type to use. Can be any of _char_,
   _signed char_, _unsigned char_, _char8_t_, _char16_t_, _char32_t_.
 - **name**: convertible to `cli::View<const char_type>`. The name of the cli as
-  a string.
+  a string. Must be an [Id](#id).
 - **description**: convertible to `cli::View<const char_type>`. The description
   of the cli.
 - **access_separator**: of type `char_type`. This specifies what kind of
@@ -827,7 +831,8 @@ param<T>(name, description, get, set, parse, format, validate, subcommands...);
 The parts have the following functions:
 
 - **T**: the parameter's type
-- **name**: a `cli::string_constant` that makes up the command name.
+- **name**: a `cli::string_constant` that makes up the command name. Must be an
+  [Id](#id).
 - **description**: a `cli::string_constant` that describes the command.
 - **get**: a [Getter](#getters) for a T. It retrieves the value associated with
   the parameter. See also `cli::param::Setter` and `cli::param::SetterOf`.
@@ -900,7 +905,7 @@ param(name, description, t, get, set, parse, format, validate, subcommands...);
 
 The parts have the following functions:
 
-- **name**: a `cli::string_constant` that makes up the command name.
+- **name**: a `cli::string_constant` that makes up the command name. Must be an [Id](#id).
 - **description**: a `cli::string_constant` that describes the command.
 - **t**: the variable/object of type T that holds the value of the parameter.
 - **get**: a [Getter](#getters) for a T. It retrieves the value associated with
@@ -1036,14 +1041,15 @@ Recursive parameters are created by any of the following param overloads:
 
 where:
 
-- **name** and **description** are string_constants,
+- **name** and **description** are `cli::string_constants`. **name** must be
+  an [Id](#id).
 - **t** is the object of the parameter of type `T`.
 - **set_callback** is a callable the takes a `T` and returns `void`. Is is
   called when **t** or any of its subparameters are set.
 - **validate**: is a validator for a `T`.
 
 A call to these overloads will recursively build up subcommands of all the
-members of t.
+members of **t**.
 
 For example, given the structs and variable:
 
@@ -1055,7 +1061,11 @@ struct SubSettings{
 struct Settings{
   char c = 'x';
   SubSettings subsettings{};
-}
+};
+
+void settings_callback(const Settings& s);
+
+bool validate_settings(const Settings& s);
 
 static constinit Settings settings;
 ```
@@ -1063,7 +1073,7 @@ static constinit Settings settings;
 and this call to `cli::param`
 
 ```cpp
-cli::param("settings"_sc, settings, cli::recursive);
+cli::param("settings"_sc, settings, &settings_callback, &validate_settings, cli::recursive);
 ```
 
 will generate the following command structure:
@@ -1156,15 +1166,16 @@ To create a function, you can use the `cli::func` template overload set.
 
 A function is fully defined by:
 
-- name: the function's name. Must be a `cli::string_constant`.
-- description: the function's description. Must be a `cli::string_constant`.
-- f: the C++ callable that actually performs the action. This
+- **name**: the function's name. Must be an [Id](#id).
+- **description**: the function's description. Must be a `cli::string_constant`.
+- **f**: the C++ callable that actually performs the action. This
   may be a free function, a functor/lambda, or a member function.
-- arguments: Elements that describe the callable's arguments.
-  [Arguments](#arguments) are created with the `cli::arg` overload set.
+- **arguments**: Elements that describe the callable's arguments.
+  [Arguments](#arguments) are created with the `cli::arg` overload set. All
+  arguments of **f** must be specified.
 
 The following overloads are available for free functions and
-functors/callables:
+callables:
 
 ```cpp
 // the base form
@@ -1213,6 +1224,7 @@ These functions can then be called on the cli like so:
 free1(i = 5, c = k)
 free2()
 func1(k=10)
+func1(10)
 func2(k=10, c = d)
 ```
 
@@ -1267,9 +1279,10 @@ struct S{
 
 static S s;
 
-cii::param("s"_sc,
+cii::param("s"_sc, // <- the parent command
            "s description"_sc,
            s,
+           // the member function commands
            cli::func("apply"_sc, &S::apply),
            cli::func<&S::foo>())
 ```
@@ -1295,7 +1308,8 @@ There are two kinds of function arguments:
 
 Arguments are fully specified by their:
 
-- **name**: the human readable name in form of a `cli::string_constant`.
+- **name**: the human readable name in form of a `cli::string_constant`. Must
+  be an [Id](#id).
 - **description**: a string that is used by the help functionality. A
   `cli::string_constant`.
 - **T**: the value type of the argument
@@ -1309,7 +1323,7 @@ Arguments are fully specified by their:
 
 These overloads for optional arguments are available:
 
-For this first overload set, T is explicitly specified.
+For this first overload set, `T` is explicitly specified.
 
 ```cpp
 cli::arg<T, Default>(name, description, parser, validator);
@@ -1328,8 +1342,8 @@ cli::arg<double, DefaultValue>(
   cli::validate::DefaultValidate<double, char>{});
 ```
 
-For the following overloads, T is deduced from the parser (if available), or
-the validator. This requires that parser and/or validator don't have a
+For the following overloads, `T` is deduced from the parser (if available), or
+the validator. This requires that **parser** and/or **validator** don't have a
 templated call operator.
 
 ```cpp
@@ -1344,7 +1358,7 @@ cli::arg<1>("x"_sc,
             cli::validate::DefaultValidate<double, char>{});
 ```
 
-For this overload set, T is deduced from Default, i.e. T is `decltype(Default)`
+For this overload set, `T` is deduced from Default, i.e. `T` is `decltype(Default)`
 
 ```cpp
 cli::arg<Default>(name, description);
@@ -1359,10 +1373,20 @@ cli::arg<100>("x"_sc, "the target x position"_sc);
 These overloads for required arguments are available:
 
 ```cpp
+// the base form
 cli::arg<T>(name, description, parser, validator);
+
+// default validator is used
 cli::arg<T>(name, description, parser);
+
+// default parser is used
 cli::arg<T>(name, description, validator);
+
+// default parser and validator are used
 cli::arg<T>(name, description);
+
+// default parser and validator are used and no description will be available
+// with the help command.
 cli::arg<T>(name);
 
 // Example usage:
@@ -1374,9 +1398,9 @@ cli::arg<double>("x"_sc,
 
 ##### Deduced Arguments
 
-Deduced arguments are required arguments that have their type deduced. The
-default parser and validator are always used for these type of arguments. The
-benefit of deduced arguments is the shorter notation.
+Deduced arguments are required arguments that have their type, i.e `T`,
+deduced. The default parser and validator are always used for these type of
+arguments. The benefit of deduced arguments is the shorter notation.
 
 There are two functions for creating deduced arguments:
 
@@ -1482,17 +1506,19 @@ auto s32 = U"hello"_sc; // CharT is char32_t
 
 ### Id
 
-The concept `cli::Id` is a special form of `cli::string_constant` which does
-not contain whitespac or any of these characters: `(){},='"`.
+The concept `cli::Id` denotes a `cli::string_constant` which does
+not contain whitespace or any of these characters: `(){},='"`.
 
 ## Formatting
 
-A Formatter takes a `cli::View<CharT>` as its first argument and a `T` as its
-second argument, and returns a `cli::format::FormatResult`. The first argument
-specifies the buffer into which the second argument should be formatted into.
-The concepts `cli::format::FormatterOf` and `cli::format::Formatter` formalize
-the interface. All formatting utilities can be found in the header
-`cli/format.hpp`.
+Formatting in `CLI` is performed with **Formatters**.
+
+A **Formatter** takes a `cli::View<CharT>` as its first argument and a `T` as
+its second argument, and returns a `cli::format::FormatResult`. The first
+argument specifies the buffer into which the `T` should be formatted into. The
+concepts `cli::format::FormatterOf` and `cli::format::Formatter` formalize the
+interface. All formatting utilities can be found in the headers
+`cli/basic_format.hpp` and `cli/format.hpp`.
 
 An example of formatters:
 
@@ -1504,6 +1530,9 @@ auto format_char(cli::View<char> output, char c)
   output[0] = c;
   return 1;
 }
+
+static_assert(cli::format::Formatter<decltype(format_char)>);
+static_assert(cli::format::FormatterOf<decltype(format_char), char, char>);
 
 auto format_quoted_char(cli::View<char> output, char c)
   -> cli::format::FormatResult {
@@ -1536,25 +1565,53 @@ auto format_bool(cli::View<char> output, bool b)
     return 5;
   }
 }
+
+static_assert(cli::format::Formatter<decltype(format_bool)>);
+static_assert(cli::format::FormatterOf<decltype(format_bool), bool, char>);
 ```
 
 Default implementations of formatters can be found in the `cli::format`
-namespace. There are default formatters for:
+namespace, defined in the headers `cli/basic_format.hpp` and `cli/format.hpp`.
+There are default formatters for:
 
-- bool
-- characters
-- enumerations
-- integers
-- fixpoint numbers
-- sequences, i.e. arrays/lists/vectors
-- strings
-- aggregates, i.e. simple structs
+- **bool**: formats as `true` and `false`. See also `cli::format::Bool`.
+- **characters**: characters enclosed in **'**. For example `'c'`. See also
+  `cli:format::Char`.
+- **enumerations**: formats enumeration with their name. The namespace and enum
+  type names are stripped. Example: `cli::Error::none` is formatted as `none`.
+  Flag enums will have their bit name printed, separated by `|`.
+  See also `cli::format::Enum`.
+- **integers**: integers are formatted in decimal form. See also
+  `cli::format::Int`.
+- **fixpoint numbers**: to be documented.
+- **sequences**: Sequences are formatted by formatting each element separated
+  by `,`, and enclosed by square brackets (`[]`). Example: `[1, 2, 3]`. See also
+  `cli::format::Sequence` and `cli::format::FixedSizeSequence`.
+- **strings**: strings without spaces are put in as is. Strings with spaces are
+  enclosed by double quotes (`"`). See also `cli::format::String` and
+  `cli::format::StringView`.
+- **aggregates**, i.e. simple structs. Their elements are formatted in the form
+  `name = value`, enclosed by curly braces (`{}`). Example:
+  `{name1=val1, name2 = val2}`. See also `cli::format::Struct`.
 - TODO: floating point numbers
 
-To see how to enable formatting for your custom type, see [Parsing](#parsing).
-Enumerations, sequences, strings, and aggregates/structs need to opt in the
-same way as described there, i.e. by specializing the corresponding traits
-structure.
+To enable formatting for custom types, first see if the type fulfills any of
+these [concepts](#concepts):
+
+- `Enum`
+- `(FixedSize)Sequence`
+- `String(View)`
+- `Fixpoint`
+- `Struct`
+
+If so, you will just need to specialize the trait predicate as described in
+[traits](#traits).
+
+### FormatResult
+
+`cli::format::FormatResult` is the type returned by formatters. It either
+contains a `cli::Error`, indicating what went wrong (usually the buffer to
+format into is too small), or the number of characters written into the buffer.
 
 ### Custom Formatting
 
@@ -1577,11 +1634,28 @@ namespace cli::format{
 }
 ```
 
+To overrride default formatting behaviour, for example using hex format for
+integers, you can explicitly specialize the corresponding formatter. But for
+this to work, the character type of the buffer must be explicitly specified as
+well. An example for integer formatters:
+
+```cpp
+#include <cli/format.hpp>
+
+namespace cli::format{
+  template<concepts::Integer T>
+  struct Format<T,
+                char /*<- your character type*/
+                >: Int<T, char, Fmt::hex>{
+  };
+}
+```
+
 ## Parsing
 
 Parsing in CLI is based on two things:
 
-- the class `cli::parse::ParseResult`: the result of a parsing operation.
+- the class template `cli::parse::ParseResult`: the result of a parsing operation.
 - `cli::parse::Parser`: the parser concept.
 
 A parser of `T` is a callable that parses a `T` from a string and returns a
@@ -1602,7 +1676,7 @@ parse_bool(vli::View<const char> buf){
   }else if(buf.starts_with("false")){
     return {false, buf.substr(5)};
   }else{
-    return cli::Error::invalid_character;
+    return {cli::Error::invalid_character, buf};
   }
 }
 
@@ -1611,197 +1685,46 @@ static_assert(cli::parse::ParserOf<decltype(parse_bool), bool, char>);
 
 CLI provides defaults for parsing for the following types:
 
-- bool
-- characters
-- enumerations
-- integers
-- fixpoint numbers
-- sequences, i.e. arrays/lists/vectors
-- strings
-- aggregates, i.e. simple structs
+- **bool**: accepts `true`, `TRUE`, `1`, `false`, `FALSE`, and `0`.
+- **characters**: accepts unquoted characters, quoted characters and hex
+  numbers. See also `cli::parse::Char`.
+- **enumerations**: enums are parsed by their name. For example a parser of
+  `cli::Error` would parse the string `none` as `cli::Error::none`. See also
+  `cli::parse::Enum`.
+- **integers**: by default integers can be written in decimal, hex, and binary
+  notation. See also `cli::parse::Int`.
+- **fixpoint numbers**: TBD!
+- **sequences**: sequences need their elements comma separated and have the
+  whole things surrounded by square brackets. Example: `[1, 2 , 3]`. See also
+  `cli::parse::Sequence` and `cli::parse::FixedSizeSequence`.
+- **strings**: string can be unquoted, if they don't have any spaces. If they
+  are quoted, then the inner quote can be escaped by `\`. See also
+  `cli::parse::String` and `cli::parse::StringView`.
+- **aggregates**: aggregates are key value pairs, separated by `,`, and
+  enclosed by curly braces. Example: `{name1 = val1, ame2 = val2}`. The names are
+  optional.
 
-### Enum Parsing
+### ParseResult
 
-enum parsing is available for enum classes by default. These must be an enum
-class and not weak C style enumerations, because casting a weak enum outside
-its value range is undefined behaviour. If you wish to use weak enums, you must
-specialize `cli::traits::enum:traits`.
+`ParseResult<T, CharT>` is the class templated used as the parser return value.
 
-If your enum is signed and only has values in the range [-128, 127] or your
-enum is unsigned and has values in the range of [0, 255], then you don't have
-to write anything to get enum class parsing support. If that is not the case, or
-your enum is a weak enum, you will have to write your own enum traits. Do this
-by specializing `cli::traits::enum_traits` and adjusting the parameters.
-
-```cpp
- #include "cli/traits.hpp"
-
- namespace your_namespace{
-   enum class YourEnum : std::unit32_t{
-       A = 5,
-       ...
-       ABCD = 300
-   };
- }
-
- namespace cli::traits{
-   template<>
-   struct enum_traits<your_namespace::YourEnum>{
-     // the minimum value
-     static constexpr unit32_t min = 5;
-     // the maximum value
-     static constexpr uint32_t max = 300;
-     // set to false if your enum is not a flag enum, else true
-     static constexpr bool is_flag = false;
-   };
- }
-```
-
-Enumerations don't include the enum class name when formatted and parsed by
-CLI. In the exampe above, the string "A" would be parsed as `YourEnum::A`
-and "ABCD" would be parsed as `YourEnum::ABCD`.
-
-### Sequence Parsing
-
-To tell CLI that your type is a sequence, you must specialize
-`cli::traits::is_sequence` or `cli::traits::is_fixed_size_sequence`.
-If your type then also conforms to the (fixed size) sequence interface, your
-type will be parseable by CLI.
-
-A fixed sequence is a list of fixed size, for example arrrays.
-A non-fixed sequence is a list of variable size, for example
-`cli::FixedCapacityVector`.
-
-Sequences have the following format:
-
-`[e1, e2, e3, ..., en]`
-
-where `ex` are the elements of the sequence, delimited by commas.
-
-See the concepts `cli::traits::Sequence` and `cli::traits::FixedSizeSequence` for
-the requirements on the interface.
-
-Example for specializing the traits structure:
+There are four ways to construct a `ParseResult`. For the following section,
+`e` is a value of type `cli::Error`, `val` is a value of type `T`, and `rest`
+is a value of type `View<const CharT>`. `e` is the error that occurred during
+parsing. `val` is the result of a successful parse. `rest`, in case of an
+unsuccessful parse, can add context to the error location, but it is ok to
+either return an empty rest string, just return the original buffer passed in,
+or the just the view from the error location to the end. In case of success,
+`rest` must contain the leftover string after the parsing operation.
 
 ```cpp
-#include "cli/traits.hpp"
-namespace A{
- class Vec{
- public:
-   using value_type = T;
-   Vec();
-   Vec(const Vec&);
-   iterator begin();
-   iterator end();
-   std::size_t size() const;
-   std::size_t max_size() const;
-   void push_back(const T&);
- };
+// construct a failed result
+ParseResult<T, CharT>(e, rest);
+ParseResult<T, CharT>(cli::parse::from_error, e, rest);
 
- class Array{
- public:
-   using value_type = T;
-   Array();
-   Array(const Array&);
-   iterator begin();
-   iterator end();
-   std::size_t size() const;
-   T& operator[](std::size_t i);
- };
-}
+ParseResult<T, CharT>(val, rest);
+ParseResult<T, CharT>(cli::parse::from_value, val, rest);
 
-namespace cli::traits{
- template<>
- struct is_sequence<A::Vec> : std::true_type{};
-
- template<>
- struct is_fixed_size_sequence<A::Array> : std::true_type{};
-}
-
-static_assert(cli::traits::Sequence<A::Vec>);
-static_assert(cli::traits::FixedSizeSequence<A::Array>);
-```
-
-### String Parsing
-
-To enable parsing for your custom string type, specialize
-`cli::traits::is_string` and conform to the interface detailed by the concept
-`cli::traits::String`.
-
-Strings can either be unescaped, in which case they can't contain spaces, or
-escaped with the \" character. Inner \" characters can be escaped by backslash.
-
-Examples of valid strings:
-
-```
-hello
-"hello world"
-"hello \"world\""
-hello"world
-```
-
-Example:
-
-```cpp
- #include "cli/traits.hpp"
- class MyString{
-   using value_type = char;
-   MyString(const value_type* s, std::size_t n);
- };
-
- namespace cli::traits{
-   template<>
-   struct is_string<MyString> : std::true_type{};
- }
-```
-
-There is also parsing for string views, i.e. non owning strings, available.
-Keep in mind however that escaped quotes will remain as they are and not
-converted due to views not owning any memory. Additionally, the referenced
-memory area may change contents when a new command is entered. For string
-views, `cli::traits::is_string_view` must be specialized.
-
-### Fixpoint Parsing
-
-TBD
-
-### Struct Parsing
-
-Simple aggregates can be decomposed and parsed by CLI as long as each member
-is parseable.
-
-The format for aggregates is
-
-`{name1 = v1, name2 = v2, v3, name4 = v4}`
-
-namex are he member names, vx are the member values. Keyword elements
-(namex = vx) and value elements (vx) can be mixed in any way if the value
-elements appear in order.
-
-Concrete Example:
-
-```cpp
-#include <cli/parse.hpp>
-
-struct S{
-  int i;
-  char c;
-  cli::View<const char> str;
-};
-
-cli::parse::Parse<S,char> parse{};
-
-cli::parse::ParseResult p = parse("{1,k,\"hello world\"}")
-assert(p);
-assert(p.value == S{1, 'k', "hello world"});
-
-p = parse("{c=k, 1, str = \"hello world\"}")
-assert(p);
-assert(p.value == S{1, 'k', "hello world"});
-
-p = parse("{str = \"hello world\", 1, k}")
-assert(p);
-assert(p.value == S{1, 'k', "hello world"});
 ```
 
 ### Custom Parsing
@@ -1827,8 +1750,293 @@ struct Parse<MyClass, CharT>{
 };
 
 }
-
 ```
+
+To overrride default parsing behaviour, for example using hex format for
+integers, you can explicitly specialize the corresponding formatter. But for
+this to work, the character type of the buffer must be explicitly specified as
+well. An example for integer formatters:
+
+```cpp
+#include <cli/format.hpp>
+
+namespace cli::parse{
+  template<concepts::Integer T>
+  struct Pare<T,
+              char /*<- your character type*/
+              >: Int<T, char, Fmt::hex>{
+  };
+}
+```
+
+## Traits
+
+`CLI` uses traits to allow for an explicit opt-in approach to concepts. Traits
+are defined in the header `cli/traits.hpp` in the namespace `cli::traits`. For
+a concept `cli::concepts::Xxx` there is a traits predicate called
+`cli::traits::is_xxx` (with the exception of chars, enums, and integers). The
+concept is only true if the traits predicate is true. To enable the concept,
+the traits predicate must be specialized.
+
+There are the following trait predicates (i.e. they either inherit from
+`std::true_type` or `std::false_type`, or have a static constexpr bool member
+`value`):
+
+- `is_char`: predicate for `cli::concepts::Char`. Should not be specialzed.
+- `is_integer`: predicate for `cli::concepts::Integer`. Should not be specialized.
+- `is_float`: predicate for `cli::concepts::Float`.
+- `is_fixpoint`: predicate for `cli::concepts::Fixpoint`.
+- `is_string`: predicate for `cli::concepts::String`.
+- `is_string_view`: predicate for `cli::concepts::StringView`.
+- `is_sequence`: predicate for `cli::concepts::Sequence`.
+- `is_fixed_size_sequence`: predicate for `cli::concepts::FixedSizeSequence`.
+- `is_struct`: predicate for `cli::concepts::Struct`. Inherits
+  `std::is_aggregate`. Should only be specialized if the type can be
+  deconstructed into a structured binding.
+- `is_enum`: inherits `std::is_enum`. Should not be specialized.
+
+There are three default specializations:
+
+- `is_string_view<cli::View<CharT>>`: `cli::View` is a string view.
+- `is_sequence<cli::FixedCapacityVector<T, Cap>>`: `cli::FixedCapacityVector`
+  is a sequence.
+- `is_fixed_size_sequence<std::array<T, Size>>`: `std::array` is a fixed size
+  sequence.
+
+Additionally, there are three "classic" traits structures, called
+`integer_traits`, `float_traits`, and `enum_traits`. The first two must not be
+specialized, but the last one must be specialized to avoid space overhead for
+formatting and parsing enum classes, and to make weak enums formattable and
+parseable. `CLI` tries to make a default guess, but that can have overhead, and
+in case of weak enums results in undefined behaviour.
+
+### enum_traits
+
+If your enum class is signed and only has values in the range \[-128, 127\] or
+your enum class is unsigned and has values in the range of \[0, 255\], then you
+don't have to write anything to get enum class formatting and parsing support.
+If that is not the case, or your enum is a weak enum, you will have to write
+your own enum traits. Do this by specializing
+[cli::traits::enum_traits](#enum_traits) and adjusting the parameters.
+
+Specializing `enum_traits` for normal enum (classes).
+
+```cpp
+#include <cli/traits.hpp>
+enum MyEnum{
+  A = 1,
+  B,
+  C,
+};
+
+namespace cli::traits{
+  template<>
+  struct enum_traits<MyEnum>{
+    // the smallest value of MyEnum
+    static constexpr std::underlying_type_t<MyEnum> min = 1;
+    // the biggest value of MyEnum
+    static constexpr std::underlying_type_t<MyEnum> max = 3;
+    // specifies that MyEnum is not a flag enum
+    static constexpr bool is_flag = false;
+  };
+}
+```
+
+Specializing `enum_traits` for flag enumerations:
+
+```cpp
+#include <cli/traits.hpp>
+enum MyFlags{
+  A = 1 << 0,
+  B = 1 << 1,
+  C = 1 << 2,
+};
+
+namespace cli::traits{
+  template<>
+  struct enum_traits<MyFlags>{
+    // the lowest bit of the flag
+    static constexpr std::underlying_type_t<MyFlags> min = 0;
+    // the highest bit of the flag
+    static constexpr std::underlying_type_t<MyFlags> max = 2;
+    // specifies that MyFlags is a flag enum
+    static constexpr bool is_flag = true;
+  };
+}
+```
+
+## Concepts
+
+There are the following concepts used by the formatting and parsing utilities
+in `CLI`. They are defined in the header `cli/concepts.hpp` n the namespace
+`cli::concepts`.
+
+### Sequence
+
+A `Sequence` represents a dynamically sized collection of values, for example
+`cli::FixedCapacityVector`. To enable the concept for your custom sequence
+type, you must override the traits predicate `cli::traits::is_sequence` and
+satisfy the following properties:
+
+- `T` must be constructible without arguments.
+- `T` must be copy constructible.
+- `T` must have an inner typedef called `value_type`.
+- `T` must be for loop iterable, i.e. `for(const T::value_type& value:
+seq){...}` must iterate over the sequence. This requires `begin` and `end`
+  methods which return an iterator for `T`.
+- have a `max_size()` method, which returns the maximum number of elements the
+  sequence can store as a `std::size_t`.
+- have a `push_back(const T&)/push_back(T&&)` method, which adds a new element at
+  the end of the sequence.
+
+Example:
+
+```cpp
+class MySeq{
+  using value_type = int;
+  class iterator;
+  class const_iterator;
+
+  MySeq();
+  MySeq(const MySeq&);
+  MySeq(MySeq&&);
+  const_iterator begin() const;
+  const_iterator end() const;
+  std::size_t max_size() const;
+  void push_back(const value_type& value);
+  void push_back(value_type&& value);
+};
+
+#include <cli/traits.hpp>
+
+namespace cli::traits{
+  template<>
+  struct is_sequence<MySeq> : std::true_type{};
+}
+
+#include <cli/concepts.hpp>
+
+static_assert(cli::concepts::Sequence<MySeq>);
+```
+
+### FixedSizeSequence
+
+A `FixedSizeSequence` represents a collection of values with a fixed number of
+elements, for example `std::array` (c-style arrays are not supported). To
+enable the concept for your custom sequence type `T`, you must specialize the
+traits predicate `cli::traits::is_fixed_size_sequence` and satisfy the
+following properties:
+
+- `T` must be constructible without arguments.
+- `T` must be copy constructible.
+- `T` must have an inner typedef called `value_type`.
+- `T` must be for loop iterable, i.e. `for(const T::value_type& value:
+seq){...}` must iterate over the sequence. This requires `begin` and `end`
+  methods which return an iterator for `T`.
+- have a `size()` method which returns the number of elements in the sequence
+  as a `std::size_t`.
+- have `operator[](std::size_t i) -> value_type&` defined, i.e. mutable element
+  access.
+
+Example:
+
+```cpp
+class MyFixedSeq{
+  using value_type = int;
+  class iterator;
+  class const_iterator;
+
+  MyFixedSeq();
+  MyFixedSeq(const MySeq&);
+  MyFixedSeq(MySeq&&);
+  const_iterator begin() const;
+  const_iterator end() const;
+  std::size_t size() const;
+  value_type& operator[](std::size_t i);
+};
+
+#include <cli/traits.hpp>
+
+namespace cli::traits{
+  template<>
+  struct is_fixed_size_sequence<MySeq> : std::true_type{};
+}
+
+#include <cli/concepts.hpp>
+
+static_assert(cli::concepts::FixedSizeSequence<MySeq>);
+```
+
+### String
+
+`String` denotes a sequence of characters. To enable the concept for your
+custom sequence type `T`, you must override the traits predicate
+`cli::traits::is_string` and satisfy the following properties:
+
+- `T` must have an inner typedef called `value_type`.
+- `T` must be constructible without arguments
+- `T` must be constructible from a `const value_type*` and a `std::size_t`,
+  i.e. pointer and size.
+- `T` must be copy constructible
+- `T` must be for loop iterable, i.e. `for const T::value_type&ch: str){...}`
+  must iterate over the characters of `T`.
+- `T` must have a `size()` method that returns a `std::size_t`, which is the
+  number of characters stored in `T`.
+- `T` must have a `push_back(value_type)` method that appends a character.
+- `T` must have `operator[](std::size_t i) const -> const value_type&` defined,
+  i.e. immutable element access.
+
+Example:
+
+```cpp
+class MyString{
+  using value_type = char;
+  class const_iterator;
+  MyString();
+  MyString(const char* s, std::size_t n);
+  const_iterator begin() const;
+  const_iterator end() const;
+  const value_type& operator[](std::size_t i) const;
+  void push_back(char c);
+};
+
+#include <cli/traits.hpp>
+
+namespace cli::traits{
+  template<>
+  struct is_string<MyString> : std::true_type{};
+}
+
+#include <cli/concepts.hpp>
+
+static_assert(cli::concepts::String<MyString>);
+```
+
+### StringView
+
+`StringView` denotes a non-owning [string](#string). To enable the concept for
+your custom sequence type `T`, you must override the traits predicate
+`cli::traits::is_string` and satisfy the following properties:
+
+- `T` must have an inner typedef called `value_type`.
+- `T` must be constructible without arguments
+- `T` must be constructible from a `value_type*` and a `std::size_t`,
+  i.e. pointer and size.
+- `T` must be copy constructible
+- `T` must be for loop iterable, i.e. `for const T::value_type&ch: str){...}`
+  must iterate over the characters of `T`.
+- `T` must have a `size()` method that returns a `std::size_t`, which is the
+  number of characters stored in `T`.
+- `T` must have `operator[](std::size_t i) const -> const value_type&` defined,
+  i.e. immutable element access.
+
+### Fixpoint
+
+### Struct
+
+A `Struct` denotes a `T` that can be used with structured bindings, and is not
+a [Sequence](#sequence) or a [FixedSizeSequence](#fixedsizesequence). All
+aggregates fulfill the `Struct` concept.
 
 ## Validation
 
@@ -1969,7 +2177,7 @@ meson compile -C build
 ```
 
 If you don't use meson, you must have asio and cpp-terminal available and
-also add CLI's include folder to your include path.
+also add CLIs include folder to your include path.
 
 Example command to build it with g++:
 

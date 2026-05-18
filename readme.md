@@ -309,22 +309,23 @@ option to enabled.
 Then you can include `cli/sim.hpp` and use your cli on the PC in a terminal:
 
 ```cpp
-// my_cli.cpp
-#include "cli/sim.hpp"
+#include <cli/sim.hpp>
 
 struct Config{...};
+
+cli::sim::Engine engine{
+  Config{},
+  commands...
+};
 
 int main(){
   if (not cli::sim::init())
     return -1;
 
-  cli::Cli my_cli = cli::sim::create_cli(Config{}, commands...);
+  engine.print();
 
-  my_cli.print();
-
-  while (cli::sim::get_input_and_process(my_cli)) {
+  while (engine.get_input_and_process()) {
   }
-
 
   return 0;
 }

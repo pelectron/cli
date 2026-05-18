@@ -169,30 +169,38 @@ namespace cli::format {
   };
 
   /**
-   * @brief The default formatter for bool
+   * A boolean formatter.
    *
    * @tparam CharT the character type
    */
   template<typename CharT>
-  struct Format<bool, CharT> {
+  struct Bool {
     constexpr FormatResult operator()(View<CharT> buf, bool b) const noexcept {
       if (b) {
         if (buf.size() < 4)
           return Error::buffer_overflow;
         std::size_t size = 0;
-        for (const auto &ch : "true")
-          buf[size++] = ch;
+        for (const char &ch : View{"true"})
+          buf[size++] = static_cast<CharT>(ch);
         return 4;
       } else {
         if (buf.size() < 5)
           return Error::buffer_overflow;
         std::size_t size = 0;
-        for (const auto &ch : "false")
-          buf[size++] = ch;
+        for (const char &ch : View{"false"})
+          buf[size++] = static_cast<CharT>(ch);
         return 5;
       }
     }
   };
+
+  /**
+   * @brief The default formatter for bool
+   *
+   * @tparam CharT the character type
+   */
+  template<typename CharT>
+  struct Format<bool, CharT> : Bool<CharT> {};
 
   /**
    * An integer formatter.

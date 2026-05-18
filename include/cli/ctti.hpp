@@ -319,9 +319,9 @@ namespace cli::ctti {
         return false;
       }
       for (std::size_t i = 1; i < sv.size(); ++i) {
-        if ((sv[0] >= 'a' and sv[0] <= 'z') or
-            (sv[0] >= 'A' and sv[0] <= 'Z') or
-            (sv[0] >= '0' and sv[0] <= '9') or sv[0] == '_')
+        if ((sv[i] >= 'a' and sv[i] <= 'z') or
+            (sv[i] >= 'A' and sv[i] <= 'Z') or
+            (sv[i] >= '0' and sv[i] <= '9') or sv[i] == '_')
           continue;
         else
           return false;

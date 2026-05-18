@@ -1111,11 +1111,11 @@ namespace cli::funcs {
             [[maybe_unused]] View<char_type> out) noexcept {
       using Ret = typename traits::return_type;
 
-      Parser parse{dtl::parse_field_from_args(this->args_)};
-
       ExecResult exec_res = preparse_args(args);
       if (not exec_res)
         return exec_res;
+
+      Parser parse{dtl::parse_field_from_args(this->args_)};
 
       parse::ParseResult res = parse(args);
 

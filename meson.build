@@ -256,7 +256,7 @@ if (get_option('docs'))
       check: true
     )
   else
-    message('mtdohtml not found. Not generating docs.html')
+    message('mdtohtml not found. Not generating docs.html')
   endif
 endif
 
