@@ -48,7 +48,7 @@ namespace cli {
 
       template<concepts::Config C, typename = void>
       struct input_size {
-        static constexpr std::size_t value = 32;
+        static constexpr std::size_t value = 16;
       };
 
       template<concepts::Config C>

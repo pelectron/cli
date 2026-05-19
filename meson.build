@@ -209,6 +209,7 @@ if (build_tests.allowed())
     'tests/line.cpp',
     'tests/param.cpp',
     'tests/ring_buffer.cpp',
+    'tests/simple_input.cpp',
     'tests/string.cpp',
     'tests/stringify.cpp',
     'tests/test_display.cpp',

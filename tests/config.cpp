@@ -90,7 +90,7 @@ TEST_CASE("config::input_delimiter_v") {
 }
 
 TEST_CASE("config::input_size_v") {
-  REQUIRE(cli::config::input_size_v<cfg> == 32);
+  REQUIRE(cli::config::input_size_v<cfg> == 16);
   REQUIRE(cli::config::input_size_v<input_size_cfg> == 256);
 }
 

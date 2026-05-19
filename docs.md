@@ -292,7 +292,7 @@ compiled with GCC, optimized for size and NDEBUG defined.
 - **input_delimiter**: of type `cli::Delimiter`. Specifies the character
   sequence for the enter key. The default is `cli::Delimiter::lf`.
 - **input_size**: of type `std::size_t`. Specifies how many elements the
-  internal Event buffer of `cli::Input` stores. The default is 32.
+  internal Event buffer of `cli::Input` stores. The default is 16.
 - **use_volatile_input_buffer**: of type `bool`. Specifies the use of a volatile
   buffer for the input. Must be set to true if the engine's `on_char` method is
   called in an ISR. Custom input types should respect this value. Defaults to

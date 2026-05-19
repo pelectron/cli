@@ -1,11 +1,7 @@
 #include "cli/input.hpp"
-#include "cli/config.hpp"
-#include "cli/enums.hpp"
-#include "cli/event.hpp"
 #include "stringify.hpp"
 
 #include <catch2/catch_all.hpp>
-#include <cstddef>
 
 constexpr std::uint8_t operator""_u8(unsigned long long int i) {
   return static_cast<std::uint8_t>(i);
@@ -45,15 +41,18 @@ struct no_autocomplete_cfg : non_volatile_cfg {
   static constexpr bool use_autocomplete = false;
 };
 
-struct cr_config : non_volatile_cfg {
+struct cr_cfg : non_volatile_cfg {
   static constexpr cli::Delimiter input_delimiter = cli::Delimiter::cr;
 };
 
-struct crlf_config : non_volatile_cfg {
+struct crlf_cfg : non_volatile_cfg {
   static constexpr cli::Delimiter input_delimiter = cli::Delimiter::crlf;
 };
 
-TEMPLATE_TEST_CASE("Input::on_char", "", non_volatile_cfg, volatile_cfg) {
+TEMPLATE_TEST_CASE("Input::on_char",
+                   "[input]",
+                   non_volatile_cfg,
+                   volatile_cfg) {
   using Input = cli::Input<TestType>;
 
   Input input{};
@@ -68,7 +67,10 @@ TEMPLATE_TEST_CASE("Input::on_char", "", non_volatile_cfg, volatile_cfg) {
   }
 }
 
-TEMPLATE_TEST_CASE("Input::on_control", "", non_volatile_cfg, volatile_cfg) {
+TEMPLATE_TEST_CASE("Input::on_control",
+                   "[input]",
+                   non_volatile_cfg,
+                   volatile_cfg) {
   using Input = cli::Input<TestType>;
   using Event = typename Input::event_type;
 
@@ -80,7 +82,10 @@ TEMPLATE_TEST_CASE("Input::on_control", "", non_volatile_cfg, volatile_cfg) {
   REQUIRE(ev.param() == 5);
 }
 
-TEMPLATE_TEST_CASE("Input::pop_event", "", non_volatile_cfg, volatile_cfg) {
+TEMPLATE_TEST_CASE("Input::pop_event",
+                   "[input]",
+                   non_volatile_cfg,
+                   volatile_cfg) {
   using Input = cli::Input<TestType>;
   using Event = typename Input::event_type;
 
@@ -127,7 +132,7 @@ TEST_CASE("Input::reset") {
 }
 
 TEMPLATE_TEST_CASE("Input escape sequences",
-                   "",
+                   "[input]",
                    non_volatile_cfg,
                    volatile_cfg,
                    no_autocomplete_cfg) {
@@ -160,7 +165,7 @@ TEMPLATE_TEST_CASE("Input escape sequences",
        : cli::Event<char>{'\t'}                         }
   };
 
-  for (const auto &[seq, ctrl] : esc_sequences) {
+  for (const auto &[seq, event] : esc_sequences) {
     for (const char &ch : seq) {
       input.on_char(ch);
     }
@@ -169,16 +174,16 @@ TEMPLATE_TEST_CASE("Input escape sequences",
 
     Event ev;
     input.pop_event(ev);
-    REQUIRE(ev.type() == ctrl.type());
-    REQUIRE(ev.param() == ctrl.param());
+    REQUIRE(ev.type() == event.type());
+    REQUIRE(ev.param() == event.param());
     REQUIRE(input.pop_event(ev));
     REQUIRE(ev.type() == cli::Control::character);
     REQUIRE(ev.as_char() == 'Z');
   }
 }
 
-TEMPLATE_TEST_CASE("Input unrecginized sequences are printed as is",
-                   "",
+TEMPLATE_TEST_CASE("Input unrecognized sequences are printed as is",
+                   "[input]",
                    non_volatile_cfg,
                    volatile_cfg) {
   using Input = cli::Input<TestType>;
@@ -216,7 +221,7 @@ TEMPLATE_TEST_CASE("Input unrecginized sequences are printed as is",
 }
 
 TEST_CASE("Input crlf config") {
-  using Input = cli::Input<crlf_config>;
+  using Input = cli::Input<crlf_cfg>;
   using Event = typename Input::event_type;
 
   Input input{};
@@ -247,7 +252,7 @@ TEST_CASE("Input crlf config") {
 
   REQUIRE_FALSE(input.pop_event(ev));
 
-  for (std::size_t i = 0; i < cli::config::input_size_v<crlf_config> - 1; ++i) {
+  for (std::size_t i = 0; i < cli::config::input_size_v<crlf_cfg> - 1; ++i) {
     input.on_char('a');
   }
   input.on_char('\r');
@@ -255,7 +260,7 @@ TEST_CASE("Input crlf config") {
 }
 
 TEST_CASE("Input cr config") {
-  using Input = cli::Input<cr_config>;
+  using Input = cli::Input<cr_cfg>;
   using Event = typename Input::event_type;
 
   Input input{};

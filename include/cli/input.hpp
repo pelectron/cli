@@ -378,7 +378,7 @@ namespace cli {
           if constexpr (config::use_autocomplete_v<Cfg>)
             return push_control(Control::autocomplete, 1);
           else
-            return push_char(0x09);
+            return Error::none;
         case 0x0A: // linefeed
           if constexpr (config::input_delimiter_v<Cfg> == Delimiter::lf)
             return push_control(Control::enter, 1);
@@ -404,7 +404,7 @@ namespace cli {
       }
     }
 
-    constexpr Error on_control(Control ctrl, std::uint8_t param) {
+    constexpr Error on_control(Control ctrl, std::uint8_t param = 1) {
       switch (ctrl) {
         case Control::autocomplete:
           if constexpr (config::use_autocomplete_v<Cfg>)
@@ -420,9 +420,9 @@ namespace cli {
             return Error::none;
         case Control::cursor_left:
           [[fallthrough]];
-        case Control::delete_char:
-          [[fallthrough]];
         case Control::cursor_right:
+          [[fallthrough]];
+        case Control::delete_char:
           [[fallthrough]];
         case Control::clear_line_to_end:
           if constexpr (config::use_cursor_v<Cfg>)
