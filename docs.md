@@ -179,6 +179,10 @@ processing.
 
 Resets the engine. This will reset the input, the display, and any internal state.
 
+#### `void print()`
+
+Prints the command tree.
+
 ### Engine Example
 
 ```cpp
@@ -534,7 +538,7 @@ A type `D` satisfies the `Display` concept if it either satisfies
 
 Displays can be further categorized in single-line and multi-line displays.
 Single-line displays only have a single line to display content. Multi-line
-displays have mutliple lines.
+displays have multiple lines.
 
 For single-line displays, a newline will only be printed when a new command is
 entered, or a command results in an output. Commands result in an output when
@@ -545,7 +549,12 @@ For multi-line displays, a newline will always be printed when a command is exec
 
 By default, displays are single-line. To specify that your display is
 multi-line, the display must have a static constexpr member called
-`is_multiline_display` of type `bool` that is set to true.
+`is_multiline` of type `bool` that is set to true.
+
+For multi-line displays, a static constexpr member of type `std::size_t` called
+`number_of_lines` should be added to it to specify how many lines the display
+has. It is used in conjunction with the [help command](#help-command) and the
+engine's [print method](#void-print).
 
 `CLI` provides a default implementation called [cli::AnsiDisplay](#ansidisplay).
 
@@ -563,12 +572,6 @@ variable `string` of type `cli::View<const CharT>`, and a variable `n` of type
 - `d.clear_screen()`: deletes all characters in the screen and moves the input
   back to the home position.
 - `d.newline()`: writes a new line.
-
-Optionally, you can also specify if a display has multiple lines. If so, a
-newline will be printed when a command is executed. Else a newline is only
-printed when there is a new command has been entered. To specify that your
-display has multiple lines, add a static constexpr member to your display
-called `is_multiline_display` of type `bool` and set it to true.
 
 #### Example Of A Display Without Cursor
 
@@ -588,7 +591,7 @@ public:
 
 class MyMutlilineDisplay{
 public:
-  static constexpr bool is_multiline_display = true;
+  static constexpr bool is_multiline = true;
   MyMutlilineDisplay();
   void write(char character);
   void write(cli::View<const char> string);
@@ -642,7 +645,7 @@ public:
 
 class MyMutlilineDisplay{
 public:
-  static constexpr bool is_multiline_display = true;
+  static constexpr bool is_multiline = true;
   MyMutlilineDisplay();
   void write(char character);
   void write(cli::View<const char> string);

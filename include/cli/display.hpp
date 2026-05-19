@@ -37,170 +37,170 @@
 
 namespace cli {
 
-  namespace dtl {
-    template<typename T>
-    struct get_output_char_type;
+  namespace display {
+    namespace dtl {
+      template<typename T>
+      struct get_output_char_type;
 
-    template<typename Char>
-    struct get_output_char_type<void (*)(Char)> {
-      using type = std::remove_const_t<Char>;
-    };
+      template<typename Char>
+      struct get_output_char_type<void (*)(Char)> {
+        using type = std::remove_const_t<Char>;
+      };
 
-    template<typename Char>
-    struct get_output_char_type<void (*)(Char) noexcept> {
-      using type = std::remove_const_t<Char>;
-    };
+      template<typename Char>
+      struct get_output_char_type<void (*)(Char) noexcept> {
+        using type = std::remove_const_t<Char>;
+      };
 
-    template<typename Char>
-    struct get_output_char_type<void (&)(Char)> {
-      using type = std::remove_const_t<Char>;
-    };
+      template<typename Char>
+      struct get_output_char_type<void (&)(Char)> {
+        using type = std::remove_const_t<Char>;
+      };
 
-    template<typename Char>
-    struct get_output_char_type<void (&)(Char) noexcept> {
-      using type = std::remove_const_t<Char>;
-    };
+      template<typename Char>
+      struct get_output_char_type<void (&)(Char) noexcept> {
+        using type = std::remove_const_t<Char>;
+      };
 
-    template<typename Char>
-    struct get_output_char_type<void (*)(View<const Char>)> {
-      using type = Char;
-    };
+      template<typename Char>
+      struct get_output_char_type<void (*)(View<const Char>)> {
+        using type = Char;
+      };
 
-    template<typename Char>
-    struct get_output_char_type<void (*)(View<const Char>) noexcept> {
-      using type = Char;
-    };
+      template<typename Char>
+      struct get_output_char_type<void (*)(View<const Char>) noexcept> {
+        using type = Char;
+      };
 
-    template<typename Char>
-    struct get_output_char_type<void (&)(View<const Char>)> {
-      using type = std::remove_const_t<Char>;
-    };
+      template<typename Char>
+      struct get_output_char_type<void (&)(View<const Char>)> {
+        using type = std::remove_const_t<Char>;
+      };
 
-    template<typename Char>
-    struct get_output_char_type<void (&)(View<const Char>) noexcept> {
-      using type = std::remove_const_t<Char>;
-    };
+      template<typename Char>
+      struct get_output_char_type<void (&)(View<const Char>) noexcept> {
+        using type = std::remove_const_t<Char>;
+      };
 
-    template<concepts::AnyCharOutput T>
-      requires(not concepts::AnyStringOutput<T>)
-    struct get_output_char_type<T> {
-      using type = std::remove_cvref_t<
-        type_list::type_at_t<0, typename function_traits<T>::arguments>>;
-    };
+      template<concepts::AnyCharOutput T>
+        requires(not concepts::AnyStringOutput<T>)
+      struct get_output_char_type<T> {
+        using type = std::remove_cvref_t<
+          type_list::type_at_t<0, typename function_traits<T>::arguments>>;
+      };
 
-    template<concepts::AnyStringOutput T>
-      requires(not concepts::AnyCharOutput<T>)
-    struct get_output_char_type<T> {
-      using type = typename std::remove_cvref_t<
-        type_list::type_at_t<0, typename function_traits<T>::arguments>>::
-        value_type;
-    };
+      template<concepts::AnyStringOutput T>
+        requires(not concepts::AnyCharOutput<T>)
+      struct get_output_char_type<T> {
+        using type = typename std::remove_cvref_t<
+          type_list::type_at_t<0, typename function_traits<T>::arguments>>::
+          value_type;
+      };
 
-    template<typename T>
-      requires(concepts::CharOutput<T, char> and
-               concepts::StringOutput<T, char>)
-    struct get_output_char_type<T> {
-      using type = char;
-    };
+      template<typename T>
+        requires(concepts::CharOutput<T, char> and
+                 concepts::StringOutput<T, char>)
+      struct get_output_char_type<T> {
+        using type = char;
+      };
 
-    template<typename T>
-      requires(concepts::CharOutput<T, signed char> and
-               concepts::StringOutput<T, signed char>)
-    struct get_output_char_type<T> {
-      using type = signed char;
-    };
+      template<typename T>
+        requires(concepts::CharOutput<T, signed char> and
+                 concepts::StringOutput<T, signed char>)
+      struct get_output_char_type<T> {
+        using type = signed char;
+      };
 
-    template<typename T>
-      requires(concepts::CharOutput<T, unsigned char> and
-               concepts::StringOutput<T, unsigned char>)
-    struct get_output_char_type<T> {
-      using type = unsigned char;
-    };
+      template<typename T>
+        requires(concepts::CharOutput<T, unsigned char> and
+                 concepts::StringOutput<T, unsigned char>)
+      struct get_output_char_type<T> {
+        using type = unsigned char;
+      };
 
-    template<typename T>
-      requires(concepts::CharOutput<T, char8_t> and
-               concepts::StringOutput<T, char8_t>)
-    struct get_output_char_type<T> {
-      using type = char8_t;
-    };
+      template<typename T>
+        requires(concepts::CharOutput<T, char8_t> and
+                 concepts::StringOutput<T, char8_t>)
+      struct get_output_char_type<T> {
+        using type = char8_t;
+      };
 
-    template<typename T>
-      requires(concepts::CharOutput<T, char16_t> and
-               concepts::StringOutput<T, char16_t>)
-    struct get_output_char_type<T> {
-      using type = char16_t;
-    };
+      template<typename T>
+        requires(concepts::CharOutput<T, char16_t> and
+                 concepts::StringOutput<T, char16_t>)
+      struct get_output_char_type<T> {
+        using type = char16_t;
+      };
 
-    template<typename T>
-      requires(concepts::CharOutput<T, char32_t> and
-               concepts::StringOutput<T, char32_t>)
-    struct get_output_char_type<T> {
-      using type = char32_t;
-    };
+      template<typename T>
+        requires(concepts::CharOutput<T, char32_t> and
+                 concepts::StringOutput<T, char32_t>)
+      struct get_output_char_type<T> {
+        using type = char32_t;
+      };
 
-    template<typename D, typename = void>
-    struct is_multiline_display : std::false_type {};
+      template<typename D, typename = void>
+      struct is_multiline : std::false_type {};
+
+      template<typename D>
+      struct is_multiline<
+        D,
+        std::enable_if_t<
+          std::convertible_to<decltype(D::is_multiline), bool>>> {
+        static constexpr bool value = D::is_multiline;
+      };
+
+      template<typename D>
+      struct number_of_lines;
+
+      template<typename D>
+        requires(not is_multiline<D>::value)
+      struct number_of_lines<D> {
+        static constexpr std::size_t value = 1;
+      };
+
+      template<typename D>
+        requires(is_multiline<D>::value) and requires() {
+          { D::number_of_lines } -> std::convertible_to<std::size_t>;
+        }
+      struct number_of_lines<D> {
+        static constexpr std::size_t value = D::number_of_lines;
+      };
+
+      template<typename D>
+        requires(is_multiline<D>::value) and (not requires() {
+                  { D::number_of_lines } -> std::convertible_to<std::size_t>;
+                })
+      struct number_of_lines<D> {
+        static constexpr std::size_t value =
+          std::numeric_limits<std::size_t>::max();
+      };
+
+    } // namespace dtl
+
+    /**
+     * evaluates to the character type used by O
+     *
+     * @tparam O the output type
+     */
+    template<concepts::Output O>
+    using get_output_char_type_t = typename dtl::get_output_char_type<O>::type;
+
+    /**
+     * is true if D is a multiline display, else false.
+     *
+     * @tparam D the display type
+     */
+    template<typename D>
+    inline constexpr bool is_multiline_v = dtl::is_multiline<D>::value;
 
     template<typename D>
-    struct is_multiline_display<
-      D,
-      std::enable_if_t<
-        std::convertible_to<decltype(D::is_multiline_display), bool>>> {
-      static constexpr bool value = D::is_multiline_display;
-    };
+    inline constexpr std::size_t number_of_lines_v =
+      dtl::number_of_lines<D>::value;
 
-    template<typename D>
-    struct number_of_lines;
-
-    template<typename D>
-      requires(not is_multiline_display<D>::value)
-    struct number_of_lines<D> {
-      static constexpr std::size_t value = 1;
-    };
-
-    template<typename D>
-      requires(is_multiline_display<D>::value) and requires() {
-        { D::number_of_lines } -> std::convertible_to<std::size_t>;
-      }
-    struct number_of_lines<D> {
-      static constexpr std::size_t value = D::number_of_lines;
-    };
-
-    template<typename D>
-      requires(is_multiline_display<D>::value) and (not requires() {
-                { D::number_of_lines } -> std::convertible_to<std::size_t>;
-              })
-    struct number_of_lines<D> {
-      static constexpr std::size_t value =
-        std::numeric_limits<std::size_t>::max();
-    };
-
-  } // namespace dtl
-
-  /**
-   * evaluates to the character type used by O
-   *
-   * @tparam O the output type
-   */
-  template<concepts::Output O>
-  using get_output_char_type_t = typename dtl::get_output_char_type<O>::type;
-
-  /**
-   * is true if D is a multiline display, else false.
-   *
-   * @tparam D the display type
-   */
-  template<typename D>
-  inline constexpr bool is_multiline_display_v =
-    dtl::is_multiline_display<D>::value;
-
-  template<typename D>
-  inline constexpr std::size_t number_of_lines_v =
-    dtl::number_of_lines<D>::value;
-
-  inline constexpr std::size_t unlimited_lines =
-    std::numeric_limits<std::size_t>::max();
-
+    inline constexpr std::size_t unlimited_lines =
+      std::numeric_limits<std::size_t>::max();
+  } // namespace display
   /**
    * @brief The AnsiDisplay represents an ANSI display. It uses an
    * Output to write characters and supports cursor movement.
@@ -212,12 +212,13 @@ namespace cli {
    * @tparam Out the type to output characters.
    * @tparam NumLines the number of lines in the displays.
    */
-  template<concepts::Output Out, std::size_t NumLines = unlimited_lines>
+  template<concepts::Output Out,
+           std::size_t NumLines = display::unlimited_lines>
   class AnsiDisplay {
   public:
-    using char_type = get_output_char_type_t<Out>;
+    using char_type = display::get_output_char_type_t<Out>;
     // this is a multiline display if NumLines is greater than one
-    static constexpr bool is_multiline_display = NumLines > 1;
+    static constexpr bool is_multiline = NumLines > 1;
     // the number of lines in the display
     static constexpr std::size_t number_of_lines = NumLines;
 
@@ -364,11 +365,46 @@ namespace cli {
   };
 
   template<typename Out>
-  AnsiDisplay(Out &&) -> AnsiDisplay<std::decay_t<Out>, unlimited_lines>;
+  AnsiDisplay(Out &&)
+    -> AnsiDisplay<std::decay_t<Out>, display::unlimited_lines>;
 
   template<typename Out, auto NumLines>
   AnsiDisplay(Out &&, constant<NumLines>)
     -> AnsiDisplay<std::decay_t<Out>, static_cast<std::size_t>(NumLines)>;
+
+  template<typename T>
+  concept LcdDriver = requires(T driver,
+                               typename T::char_type c,
+                               View<const typename T::char_type> str,
+                               std::size_t x,
+                               std::size_t y) {
+    { driver.write(c) };
+    { driver.write(str) };
+    { driver.set_cursor(x, y) };
+    { driver.clear_screen() };
+  };
+
+  template<LcdDriver Driver,
+           std::size_t BufferHeight,
+           std::size_t BufferWidth,
+           std::size_t ActualWidth = BufferWidth>
+  class BufferedLcdDisplay {
+  public:
+    using char_type = typename Driver::char_type;
+
+    void write(char_type c);
+    void write(View<const char_type> str);
+    void backspace(std::size_t n);
+    void clear_line();
+    void clear_screen();
+    void cursor_left(std::size_t n);
+    void cursor_right(std::size_t n);
+
+  private:
+    CLI_NO_UNIQUE_ADDRESS Driver driver_;
+    std::size_t cusor_x;
+    std::size_t cursor_y;
+  };
 
 } // namespace cli
 

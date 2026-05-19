@@ -13,6 +13,7 @@
 #include "cli/line.hpp"
 #include "cli/string.hpp"
 #include "cli/util.hpp"
+#include "display.hpp"
 #include "event.hpp"
 
 #include <cstdint>
@@ -73,15 +74,15 @@ namespace cli {
                   "required to input the largets command. Increase "
                   "'max_line_length' to fix this error.");
 
-    static_assert(is_multiline_display_v<Display>
-                    ? number_of_lines_v<Display> > 1
+    static_assert(display::is_multiline_v<Display>
+                    ? display::number_of_lines_v<Display> > 1
                     : true,
                   "A display can't be multiline and only have one line "
                   "available. Either set is_multiline_display to false or set "
                   "number_of_lines to a value greater than 1.");
 
-    static_assert(not is_multiline_display_v<Display>
-                    ? number_of_lines_v<Display> == 1
+    static_assert(not display::is_multiline_v<Display>
+                    ? display::number_of_lines_v<Display> == 1
                     : true,
                   "A display can't be single line and have more than one line "
                   "available. Either set is_multiline_display to true or set "
@@ -265,7 +266,7 @@ namespace cli {
         // print first lines
         print_data_.current = root();
         print_data_.indent = 0;
-        for (std::size_t i = 0; i < cli::number_of_lines_v<Display>; ++i) {
+        for (std::size_t i = 0; i < display::number_of_lines_v<Display>; ++i) {
           print_one();
         }
       } else {
@@ -337,7 +338,7 @@ namespace cli {
       CommandTree<Engine<Cfg, Display, Commands...>, Commands...>;
 
     static constexpr bool needs_incremental_print =
-      (num_cmds_v<Commands> + ...) > number_of_lines_v<Display>;
+      (num_cmds_v<Commands> + ...) > display::number_of_lines_v<Display>;
 
     CLI_NO_UNIQUE_ADDRESS CommandTree_t commands_;
     CLI_NO_UNIQUE_ADDRESS Display display_;

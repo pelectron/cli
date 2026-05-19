@@ -24,7 +24,7 @@ struct Display {
 };
 
 struct MultilineDisplay : Display {
-  static constexpr bool is_multiline_display = true;
+  static constexpr bool is_multiline = true;
 };
 
 #endif

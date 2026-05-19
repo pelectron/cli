@@ -259,20 +259,20 @@ namespace cli {
                        const CharT *data_,
                        Index size_,
                        Display &display_) noexcept {
-      if constexpr (cli::is_multiline_display_v<Display>) {
+      if constexpr (display::is_multiline_v<Display>) {
         display_.newline();
       }
 
       const auto print_success = [&exec_result, &display_]() {
         View<const CharT> result = exec_result.result();
         if (result.size() != 0) {
-          if constexpr (not cli::is_multiline_display_v<Display>) {
+          if constexpr (not display::is_multiline_v<Display>) {
             display_.newline();
           }
           // print the result
           display_.write(result);
 
-          if constexpr (cli::is_multiline_display_v<Display>) {
+          if constexpr (display::is_multiline_v<Display>) {
             display_.newline();
           }
         }
@@ -287,7 +287,7 @@ namespace cli {
           case ExecResult<CharT>::success:
             return print_success();
           case ExecResult<CharT>::parse_error: {
-            if constexpr (not cli::is_multiline_display_v<Display>) {
+            if constexpr (not display::is_multiline_v<Display>) {
               display_.newline();
             }
             display_.write(string_constant<CharT,
@@ -442,7 +442,7 @@ namespace cli {
             display_.write({buffer, fmt_res.size_written});
           } break;
           case ExecResult<CharT>::format_error: {
-            if constexpr (not cli::is_multiline_display_v<Display>) {
+            if constexpr (not display::is_multiline_v<Display>) {
               display_.newline();
             }
             display_.write(string_constant<CharT,
@@ -464,7 +464,7 @@ namespace cli {
             display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
           } break;
           case ExecResult<CharT>::validation_error: {
-            if constexpr (not cli::is_multiline_display_v<Display>) {
+            if constexpr (not display::is_multiline_v<Display>) {
               display_.newline();
             }
             display_.write(string_constant<CharT, 'a', 'r', 'g', ' '>{});
@@ -488,7 +488,7 @@ namespace cli {
                                            'd'>{});
           } break;
           case ExecResult<CharT>::set_error: {
-            if constexpr (not cli::is_multiline_display_v<Display>) {
+            if constexpr (not display::is_multiline_v<Display>) {
               display_.newline();
             }
             display_.write(string_constant<CharT,
@@ -522,7 +522,7 @@ namespace cli {
             }
           } break;
           case ExecResult<CharT>::get_error: {
-            if constexpr (not cli::is_multiline_display_v<Display>) {
+            if constexpr (not display::is_multiline_v<Display>) {
               display_.newline();
             }
             display_.write(string_constant<CharT,
@@ -546,7 +546,7 @@ namespace cli {
             display_.write(ctti::enum_name<Error, CharT>(exec_result.error()));
           } break;
           default:
-            if constexpr (not cli::is_multiline_display_v<Display>) {
+            if constexpr (not display::is_multiline_v<Display>) {
               display_.newline();
             }
             display_.write(
@@ -573,7 +573,7 @@ namespace cli {
         }
       }
 
-      if (cli::is_multiline_display_v<Display>) {
+      if (display::is_multiline_v<Display>) {
         display_.newline();
       }
       return Error::none;
@@ -597,7 +597,7 @@ namespace cli {
 
         display_.write(ctti::enum_name<Error, CharT>(Error::invalid_cmd));
 
-        if constexpr (cli::is_multiline_display_v<Display>) {
+        if constexpr (display::is_multiline_v<Display>) {
           display_.newline();
         }
 
@@ -633,7 +633,7 @@ namespace cli {
   class Line<Cfg, Display> {
     using CharT = config::char_type_t<Cfg>;
     using Index = smallest_type_for_value_t<Cfg::max_line_length>;
-    using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
+    using CmdEntered = dtl::CommandEntered<display::is_multiline_v<Display>>;
 
     CharT data_[Cfg::max_line_length]{};
     Index size_{};
@@ -739,7 +739,7 @@ namespace cli {
   class Line<Cfg, Display> {
     using CharT = config::char_type_t<Cfg>;
     using Index = smallest_type_for_value_t<Cfg::max_line_length>;
-    using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
+    using CmdEntered = dtl::CommandEntered<display::is_multiline_v<Display>>;
     static constexpr Index max_index = std::numeric_limits<Index>::max();
 
     CharT data_[Cfg::max_line_length]{};
@@ -1025,7 +1025,7 @@ namespace cli {
   class Line<Cfg, Display> {
     using CharT = config::char_type_t<Cfg>;
     using Index = smallest_type_for_value_t<Cfg::max_line_length>;
-    using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
+    using CmdEntered = dtl::CommandEntered<display::is_multiline_v<Display>>;
 
     CharT data_[Cfg::max_line_length]{};
     Index size_{};
@@ -1121,7 +1121,7 @@ namespace cli {
   class Line<Cfg, Display> {
     using CharT = config::char_type_t<Cfg>;
     using Index = smallest_type_for_value_t<Cfg::max_line_length>;
-    using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
+    using CmdEntered = dtl::CommandEntered<display::is_multiline_v<Display>>;
     CharT data_[Cfg::max_line_length]{};
     Index size_{};
     Index cursor_{};
