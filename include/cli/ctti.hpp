@@ -13,7 +13,6 @@
 #include "cli/string.hpp"
 #include "cli/traits.hpp"
 #include "cli/tuple.hpp"
-#include "cli/util.hpp"
 
 #include <array>
 #include <source_location>
