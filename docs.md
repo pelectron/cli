@@ -29,6 +29,7 @@
   - [Example](#config-example)
 - [Input](#input)
   - [Input Class Template](#input-class-template)
+  - [SimpleInput Class Template](#simpleinput-class-template)
   - [Example](#input-example)
 - [Display](#display)
   - [Displays Without Cursor](#display-without-cursor)
@@ -357,6 +358,8 @@ to true. If you want your own input type to respect that setting, you can use
 
 `CLI` provides a default implementation called [cli::Input](#input-class-template).
 
+All input classes provided by `CLI` are defined in the header `cli/input.hpp`.
+
 ### Input Concept Definition
 
 ```cpp
@@ -382,23 +385,24 @@ concept cli::concepts::Input =
     /// pop_event is called by the engine to process an event.
     { input.pop_event(event) } -> std::convertible_to<bool>;
 
-    /// reset resets the input to its empty state.
+    /// reset resets the input to its initial state.
     { input.reset() } -> std::same_as<void>;
   };
 ```
 
 ### Input Class Template
 
-The default implementation of the [Input Concept](#input). If you
-want to use a custom input, your [Config](#config) must specify an inner
-typedef called `input_type`. This `input_type` must satisfy the [Input
-Concept](#input).
+The default implementation of the [Input Concept](#input).
+It is useful when `CLI` is connected to an ANSI capable terminal, for example
+when using [cli-term](#cli-term).
+
+**Definition**:
 
 ```cpp
 template<cli::concepts::Config Cfg>
 class cli::Input{
 public:
-  using char_type = typename Cfg::char_type;
+  using char_type = cli::config::char_type_t<char_type>;
   using event_type = cli::Event<char_type>;
 
   constexpr cli::Error on_char(char_type c);
@@ -460,6 +464,29 @@ ANSI terminal. This affects the sequences `CSI n K` and `CSI 2 J`. However, if
 your display/output is connected to a fully ANSI compliant device, then you can
 use [cli::AnsiOutput](#ansidisplay), which sends the needed cursor move
 sequences to be ANSI compliant.
+
+### SimpleInput Class Template
+
+The `SimpleInput` class template is an input that does not recognize ANSI
+escape sequences. It is can be used when the character input does not come from
+an ANSI capable source, for example when the system running `CLI` has a custom
+keyboard/keypad.
+
+**Definition**:
+
+```cpp
+template<cli::concepts::Config Cfg>
+class cli::SimpleInput{
+public:
+  using char_type = cli::config::char_type_t<char_type>;
+  using event_type = cli::Event<char_type>;
+
+  constexpr cli::Error on_char(char_type c);
+  constexpr cli::Error on_control(Control ctrl, std::uint8_t param=1);
+  constexpr bool pop_event(event_type& event);
+  constexpr void reset();
+}
+```
 
 ### Input Example
 
@@ -917,7 +944,8 @@ param(name, description, t, get, set, parse, format, validate, subcommands...);
 
 The parts have the following functions:
 
-- **name**: a `cli::string_constant` that makes up the command name. Must be an [Id](#id).
+- **name**: a `cli::string_constant` that makes up the command name. Must be an
+  [Id](#id).
 - **description**: a `cli::string_constant` that describes the command.
 - **t**: the variable/object of type T that holds the value of the parameter.
 - **get**: a [Getter](#getters) for a T. It retrieves the value associated with

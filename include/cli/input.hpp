@@ -10,11 +10,11 @@
 #ifndef CLI_INPUT_HPP
 #define CLI_INPUT_HPP
 
+#include "cli/basic_format.hpp"
 #include "cli/concepts.hpp"
 #include "cli/config.hpp"
 #include "cli/enums.hpp"
 #include "cli/event.hpp"
-#include "cli/format.hpp"
 #include "cli/ring_buffer.hpp"
 #include "cli/util.hpp"
 
@@ -338,6 +338,15 @@ namespace cli {
     RingBuffer<event_t, config::input_size_v<Cfg>> buffer_{};
   };
 
+  /**
+   * A simplified Input implementation.
+   *
+   * It handles a basic set of ascii characters (DEL/BS/ESC/tabs/feeds). Unlike
+   * cli::Input, it does not recognize ANSI escape sequences.
+   *
+   * @ingroup Input
+   * @tparam Cfg the cli config.
+   */
   template<concepts::Config Cfg>
   class SimpleInput {
   public:
