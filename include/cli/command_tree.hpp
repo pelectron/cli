@@ -54,7 +54,7 @@ namespace cli {
 
     template<concepts::Command... Cmds>
       requires(not config::use_help_v<config_type>)
-    constexpr CommandTree(Engine &e, cli::Tuple<Cmds...> cmds) noexcept
+    constexpr CommandTree(Engine &, cli::Tuple<Cmds...> cmds) noexcept
       : commands_{std::move(cmds)} {
       init_commands();
     }

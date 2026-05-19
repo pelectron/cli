@@ -498,13 +498,13 @@ TEST_CASE("recursive param with callback and validate") {
   auto &var = get<0>(p);
   auto &c = get<1>(p);
   auto &subsettings = get<2>(p);
-  static_assert(subsettings.name == "subsettings"_sc);
+  REQUIRE(subsettings.name == "subsettings"_sc);
   auto &i = get<0>(subsettings);
-  static_assert(i.name == "i"_sc);
+  REQUIRE(i.name == "i"_sc);
   auto &subsubsettings = get<1>(subsettings);
-  static_assert(subsubsettings.name == "subsubsettings"_sc);
+  REQUIRE(subsubsettings.name == "subsubsettings"_sc);
   auto &a = get<0>(subsubsettings);
-  static_assert(a.name == "a"_sc);
+  REQUIRE(a.name == "a"_sc);
 
   var.execute("=1", {});
   REQUIRE(settings.var == 1);
