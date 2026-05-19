@@ -247,37 +247,43 @@ structure that sets core aspects of the engine. There is a concept called
 A configuration of type `C` must have the following static constexpr members
 and typedefs to satisfy the `Config` concept:
 
-- **char_type**: a **typedef** for the character type to use. Can be any of _char_,
-  _signed char_, _unsigned char_, _char8_t_, _char16_t_, _char32_t_.
 - **name**: convertible to `cli::View<const char_type>`. The name of the cli as
   a string. Must be an [Id](#id).
 - **description**: convertible to `cli::View<const char_type>`. The description
   of the cli.
-- **access_separator**: of type `char_type`. This specifies what kind of
-  character is used to delimit individual sub commands.
-- **use_autocomplete**: of type `bool`. If true, the engine uses autocomplete.
-- **use_cursor**: of type `bool`. If true, the engine recognizes cursor movement.
-  If true, your [display](#display) must support cursor movement.
-- **use_history**: of type `bool`. Specifies if the engine implements a command
-  history. If true, then the configuration must also specify a member
-  **history_depth** of type `std::size_t`. `history_depth` specifies how many
-  commands can be stored in the history.
 - **max_line_length**: of type `std::size_t`. Specifies how long the maximum
   command input is. Commands longer than this length cannot be processed.
 
 ### Optional Entries
 
-Optional entries of a configuration are static constexpr members that can be
-left out because `CLI` uses a default value if they are not specified. Entries
-with name `X` of a configuration type `C` can be retrieved with
+Optional entries of a configuration are static constexpr members/typedefs that
+can be left out because `CLI` uses a default value if they are not specified.
+Entries with name `X` of a configuration type `C` can be retrieved with
 `cli::config::X_v<C>` (for members) and `cli::config::X_t<C>` (for typedefs).
 
 Note that the size increases given are for a 32-bit Cortex-M processor,
 compiled with GCC, optimized for size and NDEBUG defined.
 
-- **input_type**: a typedef satisfying the [input concept](#input).
-  Defaults to [cli::Input](#input). You must leave this entry out if you want
-  to use the default.
+- **char_type**: a **typedef** for the character type to use. Can be any of
+  _char_, _signed char_, _unsigned char_, _char8_t_, _char16_t_, _char32_t_.
+  Default is _char_.
+- **access_separator**: of type `char_type`. This specifies what kind of
+  character is used to delimit individual sub commands. Default is `.`.
+- **use_autocomplete**: of type `bool`. If true, the engine uses autocomplete.
+  Default is `false`.
+- **use_cursor**: of type `bool`. If true, the engine recognizes cursor movement.
+  If true, your [display](#display) must support cursor movement.
+  Default is `false`.
+- **use_history**: of type `bool`. Specifies if the engine implements a command
+  history. Default is `false`.
+- **history_depth**: of type `std::size_t`. Specifies how many commands can be
+  stored in the command history. Default is 16.
+- **input_type**: either a typedef or class template. If it is a typedef, it
+  must satisfy the [input concept](#input). If it is a template, then the
+  template must take one template parameter, which is the Config itself. In that
+  case, Config::input_type\<Config\> must satisfy the [input concept](#input).
+  Defaults to [cli::Input](#input). You must leave this entry out if you want to
+  use the default.
 - **input_delimiter**: of type `cli::Delimiter`. Specifies the character
   sequence for the enter key. The default is `cli::Delimiter::lf`.
 - **input_size**: of type `std::size_t`. Specifies how many elements the
@@ -320,7 +326,13 @@ struct my_config{
   static constexpr std::size_t input_size = 32;
   static constexpr std::size_t output_size = 80;
   static constexpr bool use_volatile_input_buffer = false;
-  // using input_type = my_input_type;
+  // for the input type:
+  // as a typedef
+  struct input_type {...};
+  // or as a template:
+  template<concepts::Config Cfg>
+  struct input_type {...};
+
 };
 
 static_assert(cli::concepts::Config<my_config>);

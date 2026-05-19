@@ -113,7 +113,7 @@ namespace cli {
       if (size_ == Cfg::max_line_length)
         return Error::buffer_overflow;
 
-      if (size_ == 0 and c == Cfg::access_separator) {
+      if (size_ == 0 and c == config::access_separator_v<Cfg>) {
         return Error::none;
       }
 
@@ -590,7 +590,7 @@ namespace cli {
       command_entered_ = true;
       // parse the input
       SplitResult res =
-        split_line({data_, size_}, &root_, Cfg::access_separator);
+        split_line({data_, size_}, &root_, config::access_separator_v<Cfg>);
 
       if (res.command == nullptr) {
         display_.newline();
@@ -623,14 +623,15 @@ namespace cli {
    * use_autocomplete.
    * @tparam Cfg
    */
-  template<typename Cfg, concepts::Display<typename Cfg::char_type> Display>
+  template<typename Cfg, concepts::Display<config::char_type_t<Cfg>> Display>
   class Line;
 
   template<typename Cfg,
-           concepts::DisplayWithoutCursor<typename Cfg::char_type> Display>
-    requires((not Cfg::use_cursor) and (not Cfg::use_autocomplete))
+           concepts::DisplayWithoutCursor<config::char_type_t<Cfg>> Display>
+    requires((not config::use_cursor_v<Cfg>) and
+             (not config::use_autocomplete_v<Cfg>))
   class Line<Cfg, Display> {
-    using CharT = typename Cfg::char_type;
+    using CharT = config::char_type_t<Cfg>;
     using Index = smallest_type_for_value_t<Cfg::max_line_length>;
     using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
 
@@ -649,7 +650,7 @@ namespace cli {
       if (size_ == Cfg::max_line_length)
         return Error::buffer_overflow;
 
-      if (size_ == 0 and c == Cfg::access_separator) {
+      if (size_ == 0 and c == config::access_separator_v<Cfg>) {
         return Error::none;
       }
 
@@ -732,10 +733,11 @@ namespace cli {
   };
 
   template<typename Cfg,
-           concepts::DisplayWithoutCursor<typename Cfg::char_type> Display>
-    requires((not Cfg::use_cursor) and Cfg::use_autocomplete)
+           concepts::DisplayWithoutCursor<config::char_type_t<Cfg>> Display>
+    requires((not config::use_cursor_v<Cfg>) and
+             config::use_autocomplete_v<Cfg>)
   class Line<Cfg, Display> {
-    using CharT = typename Cfg::char_type;
+    using CharT = config::char_type_t<Cfg>;
     using Index = smallest_type_for_value_t<Cfg::max_line_length>;
     using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
     static constexpr Index max_index = std::numeric_limits<Index>::max();
@@ -758,7 +760,7 @@ namespace cli {
       if (size_ == Cfg::max_line_length)
         return Error::buffer_overflow;
 
-      if (size_ == 0 and c == Cfg::access_separator) {
+      if (size_ == 0 and c == config::access_separator_v<Cfg>) {
         return Error::none;
       }
 
@@ -774,7 +776,7 @@ namespace cli {
       }
 
       switch (c) {
-        case Cfg::access_separator:
+        case config::access_separator_v<Cfg>:
           if (command_->subcommand == nullptr)
             return Error::none;
 
@@ -863,13 +865,14 @@ namespace cli {
       }
 
       for (Index i = start_of_args_ - 1; i >= size_; --i) {
-        if (data_[i] == Cfg::access_separator) {
+        if (data_[i] == config::access_separator_v<Cfg>) {
           command_ = command_->parent;
         }
       }
 
       start_of_args_ = max_index;
-      last_access_separator_ = view().find_last_of(Cfg::access_separator);
+      last_access_separator_ =
+        view().find_last_of(config::access_separator_v<Cfg>);
       display_.backspace(n);
       return Error::none;
     }
@@ -894,7 +897,7 @@ namespace cli {
         command_->name.substr(size_ - last_access_separator_ - 1);
 
       if (autocomplete_string.size() == 0) {
-        return on_char(Cfg::access_separator);
+        return on_char(config::access_separator_v<Cfg>);
       }
 
       for (const CharT &ch : autocomplete_string) {
@@ -926,13 +929,13 @@ namespace cli {
 
       bool last_char_is_access_separator = false;
       if (arg_start == View<const CharT>::npos and
-          cmd_name[cmd_name.size() - 1] == Cfg::access_separator) {
+          cmd_name[cmd_name.size() - 1] == config::access_separator_v<Cfg>) {
         cmd_name = cmd_name.substr(0, cmd_name.size() - 1);
         last_char_is_access_separator = true;
       }
 
       const CommandNode<CharT> *parent = &root_;
-      std::size_t end = cmd_name.find_first_of(Cfg::access_separator);
+      std::size_t end = cmd_name.find_first_of(config::access_separator_v<Cfg>);
       while (end != View<const CharT>::npos) {
         const View child_name = cmd_name.substr(0, end);
         bool found = false;
@@ -940,7 +943,7 @@ namespace cli {
           if (child.name == child_name) {
             parent = &child;
             cmd_name = cmd_name.substr(end + 1);
-            end = cmd_name.find_last_of(Cfg::access_separator);
+            end = cmd_name.find_last_of(config::access_separator_v<Cfg>);
             found = true;
             break;
           }
@@ -963,8 +966,9 @@ namespace cli {
         return Error::invalid_cmd;
 
       start_of_args_ = static_cast<Index>(arg_start);
-      last_access_separator_ = static_cast<Index>(
-        string.substr(0, arg_start).find_last_of(Cfg::access_separator));
+      last_access_separator_ =
+        static_cast<Index>(string.substr(0, arg_start)
+                             .find_last_of(config::access_separator_v<Cfg>));
       size_ = 0;
       for (const auto &ch : string) {
         data_[size_++] = ch;
@@ -1016,10 +1020,10 @@ namespace cli {
   };
 
   template<typename Cfg,
-           concepts::DisplayWithCursor<typename Cfg::char_type> Display>
-    requires(Cfg::use_cursor and not Cfg::use_autocomplete)
+           concepts::DisplayWithCursor<config::char_type_t<Cfg>> Display>
+    requires(config::use_cursor_v<Cfg> and not config::use_autocomplete_v<Cfg>)
   class Line<Cfg, Display> {
-    using CharT = typename Cfg::char_type;
+    using CharT = config::char_type_t<Cfg>;
     using Index = smallest_type_for_value_t<Cfg::max_line_length>;
     using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
 
@@ -1112,10 +1116,10 @@ namespace cli {
   };
 
   template<typename Cfg,
-           concepts::DisplayWithCursor<typename Cfg::char_type> Display>
-    requires(Cfg::use_cursor and Cfg::use_autocomplete)
+           concepts::DisplayWithCursor<config::char_type_t<Cfg>> Display>
+    requires(config::use_cursor_v<Cfg> and config::use_autocomplete_v<Cfg>)
   class Line<Cfg, Display> {
-    using CharT = typename Cfg::char_type;
+    using CharT = config::char_type_t<Cfg>;
     using Index = smallest_type_for_value_t<Cfg::max_line_length>;
     using CmdEntered = dtl::CommandEntered<is_multiline_display_v<Display>>;
     CharT data_[Cfg::max_line_length]{};
@@ -1158,10 +1162,10 @@ namespace cli {
         return write(root_.subcommand->name);
 
       const bool char_before_cursor_is_access_separator =
-        cursor_ > 0 and data_[cursor_ - 1] == Cfg::access_separator;
+        cursor_ > 0 and data_[cursor_ - 1] == config::access_separator_v<Cfg>;
 
       const bool cursor_is_on_access_separator =
-        cursor_ < size_ and data_[cursor_] == Cfg::access_separator;
+        cursor_ < size_ and data_[cursor_] == config::access_separator_v<Cfg>;
 
       if (cursor_ == cmd_name.size() and
           not char_before_cursor_is_access_separator) {
@@ -1247,7 +1251,7 @@ namespace cli {
       // find left border
       std::size_t left = 0;
       for (std::size_t i = cursor_; i < size_; --i) {
-        if (data_[i] == Cfg::access_separator) {
+        if (data_[i] == config::access_separator_v<Cfg>) {
           left = i + 1;
           break;
         }
@@ -1257,7 +1261,8 @@ namespace cli {
 
     constexpr View<const CharT> get_full_cursor_name() noexcept {
       auto is_term_char = [](CharT c) {
-        return c == Cfg::access_separator or c == ' ' or c == '(' or c == '=';
+        return c == config::access_separator_v<Cfg> or c == ' ' or c == '(' or
+               c == '=';
       };
 
       if (cursor_ == size_ or is_term_char(data_[cursor_]))
@@ -1266,7 +1271,7 @@ namespace cli {
       // find left border
       std::size_t left = cursor_;
       for (std::size_t i = cursor_; i < size_; --i) {
-        if (data_[i] == Cfg::access_separator) {
+        if (data_[i] == config::access_separator_v<Cfg>) {
           left = i + 1;
           break;
         }
@@ -1288,7 +1293,7 @@ namespace cli {
 
     constexpr Error autocomplete_at_end(View<const CharT> cmd_name) noexcept {
       const std::size_t last_access_separator =
-        cmd_name.find_last_of(Cfg::access_separator);
+        cmd_name.find_last_of(config::access_separator_v<Cfg>);
       const View name = cmd_name.substr(0, last_access_separator);
       const View cmdlet =
         cmd_name.substr(last_access_separator == View<const CharT>::npos
@@ -1300,7 +1305,7 @@ namespace cli {
           if (cmd.name == name) {
             if (cmd.subcommand == nullptr)
               return Error::none;
-            const CharT c = Cfg::access_separator;
+            const CharT c = config::access_separator_v<Cfg>;
             return write({&c, 1});
           }
           if (cmd.name.starts_with(name)) {
@@ -1311,7 +1316,7 @@ namespace cli {
       }
 
       const CommandNode<CharT> *cmd =
-        get_command(name, &root_, Cfg::access_separator);
+        get_command(name, &root_, config::access_separator_v<Cfg>);
 
       if (cmd == nullptr)
         return Error::none;
@@ -1335,7 +1340,7 @@ namespace cli {
                              cmdlet)) // take the sibling if it matches
           return write(node->next->name.substr(cmdlet.size()));
         if (node->subcommand) {
-          const CharT c{Cfg::access_separator};
+          const CharT c{config::access_separator_v<Cfg>};
           return write({&c, 1});
         }
         return Error::none;
@@ -1349,7 +1354,7 @@ namespace cli {
       View cursor_name = get_full_cursor_name();
       View name = cmd_name.substr(0, cursor_ - 1);
       const CommandNode<CharT> *cmd =
-        get_command(name, &root_, Cfg::access_separator);
+        get_command(name, &root_, config::access_separator_v<Cfg>);
 
       if (cmd == nullptr)
         return Error::none;
@@ -1382,7 +1387,7 @@ namespace cli {
     autocomplete_on_access_separator(View<const CharT> cmd_name) noexcept {
       const CommandNode<CharT> *parent = &root_;
       std::size_t begin = 0;
-      std::size_t end = cmd_name.find_first_of(Cfg::access_separator);
+      std::size_t end = cmd_name.find_first_of(config::access_separator_v<Cfg>);
       while (end < cursor_) {
         View cmdlet = cmd_name.substr(begin, end);
         bool found = false;
@@ -1397,7 +1402,7 @@ namespace cli {
           return Error::none;
 
         std::size_t next_end =
-          cmd_name.find_first_of(Cfg::access_separator, begin);
+          cmd_name.find_first_of(config::access_separator_v<Cfg>, begin);
 
         if (next_end >= cursor_) {
           break;
@@ -1436,7 +1441,7 @@ namespace cli {
     autocomplete_in_middle(View<const CharT> cmd_name) noexcept {
       const CommandNode<CharT> *parent = &root_;
       std::size_t begin = 0;
-      std::size_t end = cmd_name.find_first_of(Cfg::access_separator);
+      std::size_t end = cmd_name.find_first_of(config::access_separator_v<Cfg>);
       while (end < cursor_) {
         View cmdlet = cmd_name.substr(begin, end);
         bool found = false;
@@ -1450,7 +1455,7 @@ namespace cli {
         if (not found)
           return Error::none;
         begin = end + 1;
-        end = cmd_name.find_first_of(Cfg::access_separator, begin);
+        end = cmd_name.find_first_of(config::access_separator_v<Cfg>, begin);
       }
 
       CLI_ASSERT(begin <= cursor_ and end >= cursor_);

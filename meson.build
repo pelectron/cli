@@ -196,6 +196,7 @@ if (build_tests.allowed())
     'tests/ansidisplay.cpp',
     'tests/command.cpp',
     'tests/command_tree.cpp',
+    'tests/config.cpp',
     'tests/ctti.cpp',
     'tests/display.cpp',
     'tests/elem.cpp',

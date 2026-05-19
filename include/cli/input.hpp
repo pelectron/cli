@@ -16,6 +16,7 @@
 #include "cli/event.hpp"
 #include "cli/format.hpp"
 #include "cli/ring_buffer.hpp"
+#include "cli/util.hpp"
 
 #include <cstdint>
 #include <type_traits>
@@ -43,7 +44,7 @@ namespace cli {
   class Input {
   public:
     /// the character type
-    using char_type = typename Cfg::char_type;
+    using char_type = config::char_type_t<Cfg>;
 
     /// the event type produced by the Input.
     using event_type = Event<char_type>;
@@ -94,9 +95,45 @@ namespace cli {
     }
 
     constexpr Error on_control(Control ctrl, std::uint8_t param = 1) noexcept {
-      return buffer_.push_back(event_type(ctrl, param))
-               ? Error::none
-               : Error::buffer_overflow;
+      switch (ctrl) {
+        case Control::autocomplete:
+          if constexpr (config::use_autocomplete_v<Cfg>)
+            return push_control(ctrl, param);
+          else
+            return Error::none;
+        case Control::cursor_up:
+          [[fallthrough]];
+        case Control::cursor_down:
+          if constexpr (config::use_history_v<Cfg>)
+            return push_control(ctrl, param);
+          else
+            return Error::none;
+        case Control::cursor_left:
+          [[fallthrough]];
+        case Control::delete_char:
+          [[fallthrough]];
+        case Control::cursor_right:
+          [[fallthrough]];
+        case Control::clear_line_to_end:
+          if constexpr (config::use_cursor_v<Cfg>)
+            return push_control(ctrl, param);
+          else
+            return Error::none;
+        case Control::character:
+          [[fallthrough]];
+        case Control::bell:
+          [[fallthrough]];
+        case Control::backspace:
+          [[fallthrough]];
+        case Control::clear_screen:
+          [[fallthrough]];
+        case Control::clear_line:
+          [[fallthrough]];
+        case Control::clear_line_to_begin:
+          [[fallthrough]];
+        default:
+          return push_control(ctrl, param);
+      }
     }
 
   private:
@@ -107,7 +144,7 @@ namespace cli {
         case 0x08: // backspace
           return push_control(Control::backspace, 1);
         case 0x09: // tab
-          if constexpr (Cfg::use_autocomplete)
+          if constexpr (config::use_autocomplete_v<Cfg>)
             return push_control(Control::autocomplete, 1);
           else
             return push_char(0x09);
@@ -299,6 +336,143 @@ namespace cli {
     State_t state_{State::normal};
     Param_t param_{0};
     RingBuffer<event_t, config::input_size_v<Cfg>> buffer_{};
+  };
+
+  template<concepts::Config Cfg>
+  class SimpleInput {
+  public:
+    /// the character type
+    using char_type = config::char_type_t<Cfg>;
+
+    /// the event type produced by the Input.
+    using event_type = Event<char_type>;
+
+    constexpr Error on_char(char_type c) {
+      if constexpr (config::input_delimiter_v<Cfg> == Delimiter::crlf) {
+        if (last_char_is_cr_) {
+          last_char_is_cr_ = false;
+          if (c == '\n') {
+            return push_control(Control::enter, 1);
+          } else {
+            push_char('\r');
+            return push_char(c);
+          }
+        }
+      }
+
+      switch (c) {
+        case 0x07: // bell
+          return push_control(Control::bell, 1);
+        case 0x08: // backspace
+          return push_control(Control::backspace, 1);
+        case 0x09: // tab
+          if constexpr (config::use_autocomplete_v<Cfg>)
+            return push_control(Control::autocomplete, 1);
+          else
+            return push_char(0x09);
+        case 0x0A: // linefeed
+          if constexpr (config::input_delimiter_v<Cfg> == Delimiter::lf)
+            return push_control(Control::enter, 1);
+          else
+            return push_char(c);
+        case 0x0D: // carriage return
+          if constexpr (config::input_delimiter_v<Cfg> == Delimiter::lf) {
+            return push_char(c);
+          } else if constexpr (config::input_delimiter_v<Cfg> ==
+                               Delimiter::cr) {
+            return push_control(Control::enter, 1);
+          } else {
+            last_char_is_cr_ = true;
+            return Error::none;
+          }
+        case 0x7F: // delete
+          if constexpr (config::use_cursor_v<Cfg>)
+            return push_control(Control::delete_char, 1);
+          else
+            return Error::none;
+        default:
+          return push_char(c);
+      }
+    }
+
+    constexpr Error on_control(Control ctrl, std::uint8_t param) {
+      switch (ctrl) {
+        case Control::autocomplete:
+          if constexpr (config::use_autocomplete_v<Cfg>)
+            return push_control(ctrl, param);
+          else
+            return Error::none;
+        case Control::cursor_up:
+          [[fallthrough]];
+        case Control::cursor_down:
+          if constexpr (config::use_history_v<Cfg>)
+            return push_control(ctrl, param);
+          else
+            return Error::none;
+        case Control::cursor_left:
+          [[fallthrough]];
+        case Control::delete_char:
+          [[fallthrough]];
+        case Control::cursor_right:
+          [[fallthrough]];
+        case Control::clear_line_to_end:
+          if constexpr (config::use_cursor_v<Cfg>)
+            return push_control(ctrl, param);
+          else
+            return Error::none;
+        case Control::character:
+          [[fallthrough]];
+        case Control::bell:
+          [[fallthrough]];
+        case Control::backspace:
+          [[fallthrough]];
+        case Control::clear_screen:
+          [[fallthrough]];
+        case Control::clear_line:
+          [[fallthrough]];
+        case Control::clear_line_to_begin:
+          [[fallthrough]];
+        default:
+          return push_control(ctrl, param);
+      }
+    }
+
+    constexpr bool pop_event(event_type &ev) { return buffer_.pop(ev); }
+
+    constexpr void reset() noexcept {
+      buffer_.clear();
+      if constexpr (config::input_delimiter_v<Cfg> == Delimiter::crlf) {
+        last_char_is_cr_ = false;
+      }
+    }
+
+  private:
+    constexpr Error push_control(Control c, uint8_t param) noexcept {
+      return buffer_.push_back(event_type(c, param)) ? Error::none
+                                                     : Error::buffer_overflow;
+    }
+
+    constexpr Error push_char(char_type c) noexcept {
+      return buffer_.push_back(event_type(c)) ? Error::none
+                                              : Error::buffer_overflow;
+    }
+
+    struct Empty {
+      constexpr Empty(bool) {}
+    };
+    using last_char_t = std::conditional_t<
+      config::input_delimiter_v<Cfg> == Delimiter::crlf,
+      std::conditional_t<config::use_volatile_input_buffer_v<Cfg>,
+                         volatile bool,
+                         bool>,
+      Empty>;
+
+    using event_t = std::conditional_t<config::use_volatile_input_buffer_v<Cfg>,
+                                       volatile event_type,
+                                       event_type>;
+
+    RingBuffer<event_t, config::input_size_v<Cfg>> buffer_{};
+    CLI_NO_UNIQUE_ADDRESS [[maybe_unused]] last_char_t last_char_is_cr_{false};
   };
 } // namespace cli
 #endif

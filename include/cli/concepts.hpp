@@ -38,6 +38,22 @@ namespace cli {
 
   namespace concepts {
 
+    namespace dtl {
+
+      template<typename T, typename = void>
+      struct get_char_type {
+        using type = char;
+      };
+
+      template<typename T>
+      struct get_char_type<T, std::void_t<typename T::char_type>> {
+        using type = typename T::char_type;
+      };
+
+      template<typename T>
+      using get_char_type_t = typename get_char_type<T>::type;
+    } // namespace dtl
+
     template<class C>
     concept Command =
       requires(std::remove_cvref_t<C> &c,
@@ -250,34 +266,14 @@ namespace cli {
      * @tparam T the type to check
      */
     template<typename T>
-    concept Config = requires(typename T::char_type) {
-      /** the character that separates commands, for example '.' */
-      {
-        T::access_separator
-      } -> std::convertible_to<typename std::remove_cvref_t<T>::char_type>;
-
-      /** if true, the cli uses autocomplete */
-      { T::use_autocomplete } -> std::convertible_to<bool>;
-
-      /** if true, the cli recognizes cursor movement. If true, your display
-       * must support this. */
-      { T::use_cursor } -> std::convertible_to<bool>;
-
-      /** if true, then a history of commands is available through the up and
-       * down cursors */
-      { T::use_history } -> std::convertible_to<bool>;
-
+    concept Config = requires {
       { T::max_line_length } -> std::convertible_to<std::size_t>;
 
-      {
-        T::name
-      } -> std::convertible_to<
-        View<const typename std::remove_cvref_t<T>::char_type>>;
+      { T::name } -> std::convertible_to<View<const dtl::get_char_type_t<T>>>;
 
       {
         T::description
-      } -> std::convertible_to<
-        View<const typename std::remove_cvref_t<T>::char_type>>;
+      } -> std::convertible_to<View<const dtl::get_char_type_t<T>>>;
     };
 
     /**

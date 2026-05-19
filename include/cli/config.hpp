@@ -72,14 +72,55 @@ namespace cli {
         static constexpr std::size_t value = C::output_size;
       };
 
-      template<concepts::Config C, typename = void>
+      template<typename C>
+      concept has_input_template = requires {
+        { typename C::template input_type<C>{} };
+      };
+
+      template<typename C>
+      concept has_input_type = requires {
+        { typename C::input_type{} };
+      };
+
+      template<concepts::Config C>
       struct input_type {
         using type = cli::Input<C>;
       };
 
       template<concepts::Config C>
-      struct input_type<C, std::void_t<typename C::input_type>> {
+        requires has_input_type<C>
+      struct input_type<C> {
         using type = typename C::input_type;
+      };
+
+      template<concepts::Config C>
+        requires has_input_template<C>
+      struct input_type<C> {
+        using type = typename C::template input_type<C>;
+      };
+
+      template<concepts::Config C, typename = void>
+      struct char_type {
+        using type = char;
+      };
+
+      template<concepts::Config C>
+      struct char_type<C, std::void_t<typename C::char_type>> {
+        using type = typename C::char_type;
+      };
+
+      template<concepts::Config C, typename = void>
+      struct access_separator {
+        static constexpr typename char_type<C>::type value = '.';
+      };
+
+      template<concepts::Config C>
+      struct access_separator<
+        C,
+        std::enable_if_t<std::is_convertible_v<decltype(C::access_separator),
+                                               typename char_type<C>::type>>> {
+        static constexpr typename char_type<C>::type value =
+          C::access_separator;
       };
 
       template<concepts::Config C, typename = void>
@@ -92,6 +133,52 @@ namespace cli {
           std::is_convertible_v<decltype(C::empty_help_prints_commands),
                                 bool>>> {
         static constexpr bool value = C::empty_help_prints_commands;
+      };
+
+      template<concepts::Config C, typename = void>
+      struct use_autocomplete : std::false_type {};
+
+      template<concepts::Config C>
+      struct use_autocomplete<
+        C,
+        std::enable_if_t<
+          std::is_convertible_v<decltype(C::use_autocomplete), bool>>> {
+        static constexpr bool value = C::use_autocomplete;
+      };
+
+      template<concepts::Config C, typename = void>
+      struct use_cursor : std::false_type {};
+
+      template<concepts::Config C>
+      struct use_cursor<
+        C,
+        std::enable_if_t<
+          std::is_convertible_v<decltype(C::use_cursor), bool>>> {
+        static constexpr bool value = C::use_cursor;
+      };
+
+      template<concepts::Config C, typename = void>
+      struct use_history : std::false_type {};
+
+      template<concepts::Config C>
+      struct use_history<
+        C,
+        std::enable_if_t<
+          std::is_convertible_v<decltype(C::use_history), bool>>> {
+        static constexpr bool value = C::use_history;
+      };
+
+      template<concepts::Config C, typename = void>
+      struct history_depth {
+        static constexpr std::size_t value = 16;
+      };
+
+      template<concepts::Config C>
+      struct history_depth<
+        C,
+        std::enable_if_t<
+          std::is_convertible_v<decltype(C::history_depth), std::size_t>>> {
+        static constexpr std::size_t value = C::history_depth;
       };
 
       template<concepts::Config C, typename = void>
@@ -175,6 +262,15 @@ namespace cli {
     using input_type_t = typename dtl::input_type<C>::type;
 
     /**
+     * evaluates to the char_type specified by C.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
+    template<concepts::Config C>
+    using char_type_t = typename dtl::char_type<C>::type;
+
+    /**
      * is true if C has a valid history_depth entry.
      *
      * @ingroup config
@@ -193,11 +289,52 @@ namespace cli {
      * @tparam C the configuration
      */
     template<concepts::Config C>
+    inline constexpr char_type_t<C> access_separator_v =
+      dtl::access_separator<C>::value;
+
+    /**
+     * is true if C specifies that an empty help string prints the whole
+     * command structure.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
+    template<concepts::Config C>
     inline constexpr bool empty_help_prints_commands_v =
       dtl::empty_help_prints_commands<C>::value;
 
     /**
-     * is true if C specifies that help functionality shoudl be used.
+     * is true if C specifies that autocomplete should be used.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
+    template<concepts::Config C>
+    inline constexpr bool use_autocomplete_v = dtl::use_autocomplete<C>::value;
+
+    /**
+     * is true if C specifies that cursor movement should be used.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
+    template<concepts::Config C>
+    inline constexpr bool use_cursor_v = dtl::use_cursor<C>::value;
+
+    /**
+     * is true if C specifies that history should be used.
+     *
+     * @ingroup config
+     * @tparam C the configuration
+     */
+    template<concepts::Config C>
+    inline constexpr bool use_history_v = dtl::use_history<C>::value;
+
+    template<concepts::Config C>
+    inline constexpr std::size_t history_depth_v = dtl::history_depth<C>::value;
+
+    /**
+     * is true if C specifies that help functionality should be used.
      *
      * @ingroup config
      * @tparam C the configuration
@@ -240,7 +377,6 @@ namespace cli {
     static constexpr bool empty_help_prints_commands = true;
   };
 
-  static_assert(concepts::Config<default_config>);
 } // namespace cli
 
 #endif

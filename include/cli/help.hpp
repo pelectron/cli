@@ -3,11 +3,8 @@
 
 #include "cli/command.hpp"
 #include "cli/config.hpp"
-#include "cli/display.hpp"
 #include "cli/function.hpp"
 #include "cli/string.hpp"
-
-#include <utility>
 
 namespace cli {
 
@@ -17,7 +14,7 @@ namespace cli {
   template<typename Engine>
   struct Help {
     using config_type = typename Engine::config_type;
-    using char_type = typename config_type::char_type;
+    using char_type = config::char_type_t<config_type>;
 
     static constexpr View<const char_type> cmd_not_found{
       string_constant<char_type,
@@ -88,8 +85,8 @@ namespace cli {
           return write(cmd_not_found);
       }
 
-      const CommandNode<char_type> *cmd_node =
-        get_command(cmd, engine->root(), config_type::access_separator);
+      const CommandNode<char_type> *cmd_node = get_command(
+        cmd, engine->root(), config::access_separator_v<config_type>);
 
       if (cmd_node == nullptr)
         return write(cmd_not_found);

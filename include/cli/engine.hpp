@@ -47,12 +47,12 @@ namespace cli {
    * @param Commands the commands
    */
   template<concepts::Config Cfg,
-           concepts::Display<typename Cfg::char_type> Display,
+           concepts::Display<config::char_type_t<Cfg>> Display,
            concepts::Command... Commands>
   class Engine {
   public:
     using config_type = Cfg;
-    using char_type = typename config_type::char_type;
+    using char_type = config::char_type_t<Cfg>;
     using input_type = config::input_type_t<config_type>;
     using event_type = Event<char_type>;
     using display_type = Display;
@@ -97,7 +97,7 @@ namespace cli {
       "false.");
 
     template<concepts::Config C,
-             concepts::Display<typename C::char_type> D,
+             concepts::Display<config::char_type_t<Cfg>> D,
              concepts::Command... Cmds>
     constexpr Engine(C config, D &&display, Cmds &&...commands) noexcept
       : commands_{*this, std::forward<Cmds>(commands)...},
@@ -234,7 +234,7 @@ namespace cli {
     }
 
     constexpr Error on_cursor_down(uint32_t n) {
-      if constexpr (Cfg::use_history) {
+      if constexpr (config::use_history_v<Cfg>) {
         View str = history_.cursor_down(n);
         // if (line_.view().size() == 0)
         //   display_.newline();
@@ -244,7 +244,7 @@ namespace cli {
     }
 
     constexpr Error on_cursor_up(uint32_t n) {
-      if constexpr (Cfg::use_history) {
+      if constexpr (config::use_history_v<Cfg>) {
         View str = history_.cursor_up(n);
         // if (line_.view().size() == 0)
         //   display_.newline();
