@@ -4,10 +4,8 @@
 
 - [cli::Engine](#engine): the interface of `CLI`
 - [cli::concepts::Config](#config): configuration for the `cli::Engine`
-- [cli::concepts::Input](#input) and [cli::Input](#input-class-template):
-  used to receive characters
-- [cli::concepts::Display](#display) and
-  [cli::AnsiDisplay](#ansidisplay): used to display characters
+- [cli::concepts::Input](#input): used to receive characters
+- [cli::concepts::Display](#display): used to display characters
 - [cli::concepts::Command](#commands): the commands, which are either
   [Parameters](#parameters) or [Functions](#functions)
 - [cli::string_constant](#string-constant): a compile time string
@@ -28,9 +26,13 @@
   - [Optional Entries](#optional-entries)
   - [Example](#config-example)
 - [Input](#input)
-  - [Input Class Template](#input-class-template)
+  - [AnsiInput Class Template](#ansiinput-class-template)
   - [SimpleInput Class Template](#simpleinput-class-template)
   - [Example](#input-example)
+- [Control](#control)
+- [Event](#event)
+  - [Event Constructors](#event-constructors)
+  - [Event Methods](#event-methods)
 - [Display](#display)
   - [Displays Without Cursor](#display-without-cursor)
     - [Example Of A Display Without Cursor](#example-of-a-display-with-cursor)
@@ -253,11 +255,12 @@ A configuration of type `C` must have the following static constexpr members
 and typedefs to satisfy the `Config` concept:
 
 - **name**: convertible to `cli::View<const char_type>`. The name of the cli as
-  a string. Must be an [Id](#id).
+a string. Must be an [Id](#id). `char_type` is the associated character type of
+the configuration.
 - **description**: convertible to `cli::View<const char_type>`. The description
-  of the cli.
+of the cli. `char_type` is the associated character type of the configuration.
 - **max_line_length**: of type `std::size_t`. Specifies how long the maximum
-  command input is. Commands longer than this length cannot be processed.
+command input is. Commands longer than this length cannot be processed.
 
 ### Optional Entries
 
@@ -286,13 +289,12 @@ compiled with GCC, optimized for size and NDEBUG defined.
 - **input_type**: either a typedef or class template. If it is a typedef, it
   must satisfy the [input concept](#input). If it is a template, then the
   template must take one template parameter, which is the Config itself. In that
-  case, Config::input_type\<Config\> must satisfy the [input concept](#input).
-  Defaults to [cli::Input](#input). You must leave this entry out if you want to
-  use the default.
+  case, `Config::input_type<Config>` must satisfy the [input concept](#input).
+  Defaults to [cli::AnsiInput](#input).
 - **input_delimiter**: of type `cli::Delimiter`. Specifies the character
   sequence for the enter key. The default is `cli::Delimiter::lf`.
 - **input_size**: of type `std::size_t`. Specifies how many elements the
-  internal Event buffer of `cli::Input` stores. The default is 16.
+  internal Event buffer of [input](#input) can store. The default is 16.
 - **use_volatile_input_buffer**: of type `bool`. Specifies the use of a volatile
   buffer for the input. Must be set to true if the engine's `on_char` method is
   called in an ISR. Custom input types should respect this value. Defaults to
@@ -307,7 +309,7 @@ compiled with GCC, optimized for size and NDEBUG defined.
   executable's size.
 - **use_detailed_error_messages**: of type `bool`. If true, then `CLI` will
   print a detailed description when an invalid command is entered. Else it will
-  just print display "error". Defaults to false. Enabling this will add 1kB.
+  just display "error". Defaults to false. Enabling this will add 1kB.
 
 ### Config Example
 
@@ -348,11 +350,11 @@ static_assert(cli::concepts::Config<my_config>);
 The input concept formalizes the interface that the [Engine](#engine) uses
 for preprocessing character input.
 
-An Input preprocesses the character and control input received with `on_char` and
-`on_control` into a sequence of `cli::Event`. This sequence is then accessed in
-a FIFO order via `pop_event` by the [engine](#engine). This way, `on_char` and
-`on_control` could be called in an interrupt service routine because
-preprocessing the input is not a very expensive operation.
+An Input preprocesses the character and control input received with `on_char`
+and `on_control` into a sequence of [cli::Event](#event). This sequence is then
+accessed in a FIFO order via `pop_event` by the [engine](#engine). This way,
+`on_char` and `on_control` could be called in an interrupt service routine
+because preprocessing the input is not a very expensive operation.
 
 **Note**: f you want to call the engine's `on_char` and `on_control` methods in
 an ISR, you must add a static constexpr member called
@@ -360,7 +362,8 @@ an ISR, you must add a static constexpr member called
 to true. If you want your own input type to respect that setting, you can use
 `cli::config::use_volatile_input_buffer_v` to query this configuration value.
 
-`CLI` provides a default implementation called [cli::Input](#input-class-template).
+`CLI` provides a default implementation called
+[cli::AnsiInput](#input-class-template).
 
 All input classes provided by `CLI` are defined in the header `cli/input.hpp`.
 
@@ -394,7 +397,7 @@ concept cli::concepts::Input =
   };
 ```
 
-### Input Class Template
+### AnsiInput Class Template
 
 The default implementation of the [Input Concept](#input).
 It is useful when `CLI` is connected to an ANSI capable terminal, for example
@@ -404,7 +407,7 @@ when using [cli-term](#cli-term).
 
 ```cpp
 template<cli::concepts::Config Cfg>
-class cli::Input{
+class cli::AnsiInput{
 public:
   using char_type = cli::config::char_type_t<char_type>;
   using event_type = cli::Event<char_type>;
@@ -416,14 +419,12 @@ public:
 }
 ```
 
-`cli::Input` recognizes the following ANSI escape sequences:
+`cli::AnsiInput` recognizes the following ANSI escape sequences:
 
 In the following paragraph, _CSI_ stands for [Control Sequence
 Introducer](https://en.wikipedia.org/wiki/ANSI_escape_code#Control_Sequence_Introducer_commands),
 which is the character sequence `0x1B 0x5B`, also commonly written as
 `ESC[`.
-
-These special characters and escape sequences are recognized by `cli::Input`:
 
 - **BEL** (0x07) -> Control::bell
 - **backspace** (0x08, \\b) -> Control::backspace. This means deleting the
@@ -502,12 +503,96 @@ Below is an example definition for an [Input](#input) for the character type `ch
 class MyInput{
 public:
   constexpr cli::Error on_char(char c);
+  constexpr cli::Error on_control(cli::Control ctrl, std::uint8_t param);
   constexpr bool pop_event(cli::Event<char>& event);
   constexpr void reset();
 };
 
 static_assert(cli::concepts::Input<MyInput, char>);
 ```
+
+## Control
+
+Control is an enumeration of all control types the engine can handle.
+
+### Control Definition 
+
+```cpp
+enum class cli::Control : std::uint8_t {
+  character,
+  bell,
+  backspace,
+  autocomplete,
+  cursor_up,
+  cursor_down,
+  cursor_left,
+  cursor_right,
+  delete_char,
+  clear_screen,
+  clear_line,
+  clear_line_to_end,
+  clear_line_to_begin,
+  enter
+};
+```
+
+## Event 
+
+The `cli::Event<CharT>` class template represent an event. A sequence of events
+is generated by the engine's input and then consumed by the engine.
+
+An `Event` is either a:
+
+- **character**: `type()` returns ``cli::Control:character``. The character can be retrieved with `as_char()`.
+- **control sequence**: `type()` returns the corresponding [control
+type](#control). The `param()` method returns how many times the control should
+be executed.
+
+**Note**: `Event` can also be used with the `volatile` qualifier.
+
+### Event constructors 
+
+#### Event()
+
+Constructs a character event with the character value 0.
+
+#### Event(CharT c)
+
+**parameters**:
+  - `c`: the character
+
+Constructs a character event
+
+#### Event(cli::Control type)
+
+**parameters**:
+- `type`: the control type
+
+Constructs an event with the type `type` and param value 0.
+
+#### Event(cli::Control type, std::uint8_t param)
+
+**parameters**:
+- `type` the control type
+- `param`: how many times to execute the control
+
+Constructs an event with the type `type` and param value `param`.
+
+### Event Methods 
+
+#### cli::Control Event::type() const
+
+Returns the event's control type
+
+#### CharT Event::as_char() const
+
+Returns the events character. Should only be used when the control type is
+`cli::Control::character`.
+
+#### std::uint8_t Event::param() const
+
+Returns the control sequence parameter. Should only be used when the control
+type is not `cli::Control::character`.
 
 ## Display
 

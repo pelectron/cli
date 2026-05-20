@@ -101,7 +101,7 @@ TEST_CASE("config::output_size_v") {
 
 TEST_CASE("config::input_type_t") {
   REQUIRE(std::same_as<cli::config::input_type_t<cli::default_config>,
-                       cli::Input<cli::default_config>>);
+                       cli::AnsiInput<cli::default_config>>);
 
   REQUIRE(std::same_as<cli::config::input_type_t<input_type1_cfg>,
                        input_type1_cfg::input_type>);

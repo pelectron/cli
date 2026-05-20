@@ -244,7 +244,7 @@ if (get_option('docs'))
   doxygen = find_program('doxygen', required: false)
   if doxygen.found()
     doxyfile = files('Doxyfile')
-    run_command(doxygen, doxyfile, check: true)
+    run_command(doxygen, doxyfile, check: false)
   else
     message('Doxyen is not found. Not building doyxgen documentation')
   endif

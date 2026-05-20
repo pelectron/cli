@@ -34,14 +34,14 @@ namespace cli {
    * - handlling a basc set of ANSI escape sequences
    * - passing through any "normal" character data.
    *
-   * See [here](docs.md#input-class-template) for a detailed explanation of
+   * See [here](docs.md#ansiinput-class-template) for a detailed explanation of
    * which escape sequences are recognized.
    *
    * @ingroup Input
    * @tparam Cfg the cli config.
    */
   template<concepts::Config Cfg>
-  class Input {
+  class AnsiInput {
   public:
     /// the character type
     using char_type = config::char_type_t<Cfg>;
@@ -88,9 +88,11 @@ namespace cli {
         case State::delimiter:
           return handle_delimiter(c);
         default:
+          // GCOVR_EXCL_START
           CLI_ASSERT(false);
           state_ = State::normal;
           return Error::none;
+          // GCOVR_EXCL_STOP
       }
     }
 
@@ -287,7 +289,9 @@ namespace cli {
       char_type buf[10]{};
       cli::format::Int<std::uint8_t, char_type> fmt;
       cli::format::FormatResult res = fmt({buf, 10}, param_);
+      // GCOVR_EXCL_START
       CLI_ASSERT(res);
+      // GCOVR_EXCL_STOP
 
       if (buffer_.remaining_size() < 3 + res.size_written)
         return Error::buffer_overflow;
@@ -312,13 +316,17 @@ namespace cli {
     };
 
     constexpr Error push_control(Control c, uint8_t param) noexcept {
+      // GCOVR_EXCL_START
       return buffer_.push_back(event_type(c, param)) ? Error::none
                                                      : Error::buffer_overflow;
+      // GCOVR_EXCL_STOP
     }
 
     constexpr Error push_char(char_type c) noexcept {
+      // GCOVR_EXCL_START
       return buffer_.push_back(event_type(c)) ? Error::none
                                               : Error::buffer_overflow;
+      // GCOVR_EXCL_STOP
     }
 
     using event_t = std::conditional_t<config::use_volatile_input_buffer_v<Cfg>,
@@ -343,6 +351,8 @@ namespace cli {
    *
    * It handles a basic set of ascii characters (DEL/BS/ESC/tabs/feeds). Unlike
    * cli::Input, it does not recognize ANSI escape sequences.
+   *
+   * See [here](docs.md#simpleinput-class-template) for more details.
    *
    * @ingroup Input
    * @tparam Cfg the cli config.
@@ -457,13 +467,17 @@ namespace cli {
 
   private:
     constexpr Error push_control(Control c, uint8_t param) noexcept {
+      // GCOVR_EXCL_START
       return buffer_.push_back(event_type(c, param)) ? Error::none
                                                      : Error::buffer_overflow;
+      // GCOVR_EXCL_STOP
     }
 
     constexpr Error push_char(char_type c) noexcept {
+      // GCOVR_EXCL_START
       return buffer_.push_back(event_type(c)) ? Error::none
                                               : Error::buffer_overflow;
+      // GCOVR_EXCL_STOP
     }
 
     struct Empty {

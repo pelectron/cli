@@ -47,6 +47,21 @@ TEMPLATE_TEST_CASE("SimpleInput::on_char", "[input]", base_cfg, volatile_cfg) {
     }
     REQUIRE(input.on_char('A') == cli::Error::buffer_overflow);
   }
+  SECTION("backspace") {
+    input.on_char('\b');
+    cli::Event<char> ev;
+    REQUIRE(input.pop_event(ev));
+    REQUIRE(ev.type() == cli::Control::backspace);
+    REQUIRE(ev.param() == 1);
+  }
+
+  SECTION("bell") {
+    input.on_char(0x07);
+    cli::Event<char> ev;
+    REQUIRE(input.pop_event(ev));
+    REQUIRE(ev.type() == cli::Control::bell);
+    REQUIRE(ev.param() == 1);
+  }
 }
 
 TEMPLATE_TEST_CASE("SimpleInput::on_control",

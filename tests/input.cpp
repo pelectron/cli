@@ -53,7 +53,7 @@ TEMPLATE_TEST_CASE("Input::on_char",
                    "[input]",
                    non_volatile_cfg,
                    volatile_cfg) {
-  using Input = cli::Input<TestType>;
+  using Input = cli::AnsiInput<TestType>;
 
   Input input{};
 
@@ -71,7 +71,7 @@ TEMPLATE_TEST_CASE("Input::on_control",
                    "[input]",
                    non_volatile_cfg,
                    volatile_cfg) {
-  using Input = cli::Input<TestType>;
+  using Input = cli::AnsiInput<TestType>;
   using Event = typename Input::event_type;
 
   Input input;
@@ -86,7 +86,7 @@ TEMPLATE_TEST_CASE("Input::pop_event",
                    "[input]",
                    non_volatile_cfg,
                    volatile_cfg) {
-  using Input = cli::Input<TestType>;
+  using Input = cli::AnsiInput<TestType>;
   using Event = typename Input::event_type;
 
   Input input{};
@@ -112,7 +112,7 @@ TEMPLATE_TEST_CASE("Input::pop_event",
 }
 
 TEST_CASE("Input::reset") {
-  cli::Input<non_volatile_cfg> input;
+  cli::AnsiInput<non_volatile_cfg> input;
   input.on_char('c');
   input.on_char('c');
   input.on_char('\x1B');
@@ -136,7 +136,7 @@ TEMPLATE_TEST_CASE("Input escape sequences",
                    non_volatile_cfg,
                    volatile_cfg,
                    no_autocomplete_cfg) {
-  using Input = cli::Input<TestType>;
+  using Input = cli::AnsiInput<TestType>;
   using Event = typename Input::event_type;
 
   Input input{};
@@ -186,7 +186,7 @@ TEMPLATE_TEST_CASE("Input unrecognized sequences are printed as is",
                    "[input]",
                    non_volatile_cfg,
                    volatile_cfg) {
-  using Input = cli::Input<TestType>;
+  using Input = cli::AnsiInput<TestType>;
   using Event = typename Input::event_type;
 
   Input input{};
@@ -221,7 +221,7 @@ TEMPLATE_TEST_CASE("Input unrecognized sequences are printed as is",
 }
 
 TEST_CASE("Input crlf config") {
-  using Input = cli::Input<crlf_cfg>;
+  using Input = cli::AnsiInput<crlf_cfg>;
   using Event = typename Input::event_type;
 
   Input input{};
@@ -260,7 +260,7 @@ TEST_CASE("Input crlf config") {
 }
 
 TEST_CASE("Input cr config") {
-  using Input = cli::Input<cr_cfg>;
+  using Input = cli::AnsiInput<cr_cfg>;
   using Event = typename Input::event_type;
 
   Input input{};
@@ -286,7 +286,7 @@ TEST_CASE("Input cr config") {
 }
 
 TEST_CASE("Input invalid escape sequence doesn't have space") {
-  using Input = cli::Input<non_volatile_cfg>;
+  using Input = cli::AnsiInput<non_volatile_cfg>;
 
   Input input{};
   for (std::size_t i = 0; i < cli::config::input_size_v<non_volatile_cfg> - 3;
