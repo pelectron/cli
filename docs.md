@@ -289,8 +289,9 @@ compiled with GCC, optimized for size and NDEBUG defined.
 - **input_type**: either a typedef or class template. If it is a typedef, it
   must satisfy the [input concept](#input). If it is a template, then the
   template must take one template parameter, which is the Config itself. In that
-  case, `Config::input_type<Config>` must satisfy the [input concept](#input).
-  Defaults to [cli::AnsiInput](#input).
+  case, Config::input_type\<Config\> must satisfy the [input concept](#input).
+  Defaults to [cli::AnsiInput](#input). You must leave this entry out if you want to
+  use the default.
 - **input_delimiter**: of type `cli::Delimiter`. Specifies the character
   sequence for the enter key. The default is `cli::Delimiter::lf`.
 - **input_size**: of type `std::size_t`. Specifies how many elements the
