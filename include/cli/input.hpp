@@ -41,7 +41,7 @@ namespace cli {
    * @tparam Cfg the cli config.
    */
   template<concepts::Config Cfg>
-  class Input {
+  class AnsiInput {
   public:
     /// the character type
     using char_type = config::char_type_t<Cfg>;
@@ -88,9 +88,11 @@ namespace cli {
         case State::delimiter:
           return handle_delimiter(c);
         default:
+          // GCOVR_EXCL_START
           CLI_ASSERT(false);
           state_ = State::normal;
           return Error::none;
+          // GCOVR_EXCL_STOP
       }
     }
 
@@ -287,7 +289,9 @@ namespace cli {
       char_type buf[10]{};
       cli::format::Int<std::uint8_t, char_type> fmt;
       cli::format::FormatResult res = fmt({buf, 10}, param_);
+      // GCOVR_EXCL_START
       CLI_ASSERT(res);
+      // GCOVR_EXCL_STOP
 
       if (buffer_.remaining_size() < 3 + res.size_written)
         return Error::buffer_overflow;
@@ -312,13 +316,17 @@ namespace cli {
     };
 
     constexpr Error push_control(Control c, uint8_t param) noexcept {
+      // GCOVR_EXCL_START
       return buffer_.push_back(event_type(c, param)) ? Error::none
                                                      : Error::buffer_overflow;
+      // GCOVR_EXCL_STOP
     }
 
     constexpr Error push_char(char_type c) noexcept {
+      // GCOVR_EXCL_START
       return buffer_.push_back(event_type(c)) ? Error::none
                                               : Error::buffer_overflow;
+      // GCOVR_EXCL_STOP
     }
 
     using event_t = std::conditional_t<config::use_volatile_input_buffer_v<Cfg>,
@@ -457,13 +465,17 @@ namespace cli {
 
   private:
     constexpr Error push_control(Control c, uint8_t param) noexcept {
+      // GCOVR_EXCL_START
       return buffer_.push_back(event_type(c, param)) ? Error::none
                                                      : Error::buffer_overflow;
+      // GCOVR_EXCL_STOP
     }
 
     constexpr Error push_char(char_type c) noexcept {
+      // GCOVR_EXCL_START
       return buffer_.push_back(event_type(c)) ? Error::none
                                               : Error::buffer_overflow;
+      // GCOVR_EXCL_STOP
     }
 
     struct Empty {

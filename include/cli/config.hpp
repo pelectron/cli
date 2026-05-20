@@ -18,7 +18,7 @@
 namespace cli {
 
   template<concepts::Config Cfg>
-  class Input;
+  class AnsiInput;
 
   namespace config {
     namespace dtl {
@@ -84,7 +84,7 @@ namespace cli {
 
       template<concepts::Config C>
       struct input_type {
-        using type = cli::Input<C>;
+        using type = cli::AnsiInput<C>;
       };
 
       template<concepts::Config C>
