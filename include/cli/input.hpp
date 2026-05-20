@@ -187,8 +187,8 @@ namespace cli {
       if (buffer_.remaining_size() < 2)
         return Error::buffer_overflow;
 
-      buffer_.push_back(static_cast<char_type>(0x1B));
-      buffer_.push_back(c);
+      buffer_.push_back(Event<char_type>(static_cast<char_type>(0x1B)));
+      buffer_.push_back(Event<char_type>(c));
       return Error::none;
     }
 
@@ -269,8 +269,8 @@ namespace cli {
       if (buffer_.remaining_size() < 2)
         return Error::buffer_overflow;
 
-      buffer_.push_back('\r');
-      buffer_.push_back(c);
+      buffer_.push_back(Event<char_type>('\r'));
+      buffer_.push_back(Event<char_type>(c));
 
       return Error::none;
     }
@@ -279,9 +279,9 @@ namespace cli {
       if (buffer_.remaining_size() < 3)
         return Error::buffer_overflow;
 
-      buffer_.push_back(static_cast<char_type>(0x1B));
-      buffer_.push_back(static_cast<char_type>('['));
-      buffer_.push_back(c);
+      buffer_.push_back(Event<char_type>(static_cast<char_type>(0x1B)));
+      buffer_.push_back(Event<char_type>(static_cast<char_type>('[')));
+      buffer_.push_back(Event<char_type>(c));
       return Error::none;
     }
 
@@ -296,14 +296,14 @@ namespace cli {
       if (buffer_.remaining_size() < 3 + res.size_written)
         return Error::buffer_overflow;
 
-      buffer_.push_back(static_cast<char_type>(0x1B));
-      buffer_.push_back(static_cast<char_type>('['));
+      buffer_.push_back(Event<char_type>(static_cast<char_type>(0x1B)));
+      buffer_.push_back(Event<char_type>(static_cast<char_type>('[')));
 
       for (std::size_t i = 0; i < res.size_written; ++i) {
-        buffer_.push_back(buf[i]);
+        buffer_.push_back(Event<char_type>(buf[i]));
       }
 
-      buffer_.push_back(end);
+      buffer_.push_back(Event<char_type>(end));
       return Error::none;
     }
 

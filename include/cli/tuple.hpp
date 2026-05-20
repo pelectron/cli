@@ -20,15 +20,20 @@ namespace cli {
   template<typename... Ts>
   class Tuple;
 
+  template<std::size_t, typename... Ts>
+  constexpr auto &get(Tuple<Ts...> &tuple);
+
+  template<std::size_t, typename... Ts>
+  constexpr const auto &get(const Tuple<Ts...> &tuple);
+
   namespace dtl {
     template<typename Indices, typename... Ts>
     class TupleImpl;
 
     template<std::size_t I, typename T>
-    class TupleElem {
+    struct TupleElem {
       T value_;
 
-    public:
       constexpr TupleElem()
         requires std::is_constructible_v<T>
         : value_{} {}
@@ -68,12 +73,6 @@ namespace cli {
         value_ = std::move(o.value_);
         return *this;
       }
-
-      template<std::size_t, typename... Ts>
-      friend constexpr auto &get(Tuple<Ts...> &tuple);
-
-      template<std::size_t, typename... Ts>
-      friend constexpr const auto &get(const Tuple<Ts...> &tuple);
     };
 
 #if defined(CLI_GCC) or defined(CLI_ARM_GCC)
@@ -146,7 +145,7 @@ namespace cli {
    */
   template<typename... Ts>
   class Tuple
-    : public dtl::TupleImpl<std::make_index_sequence<sizeof...(Ts)>, Ts...> {
+    : private dtl::TupleImpl<std::make_index_sequence<sizeof...(Ts)>, Ts...> {
     using Impl = dtl::TupleImpl<std::make_index_sequence<sizeof...(Ts)>, Ts...>;
 
   public:
@@ -188,6 +187,12 @@ namespace cli {
       static_cast<Impl &>(*this) = static_cast<Impl &&>(o);
       return *this;
     }
+
+    template<std::size_t I, typename... T>
+    friend constexpr auto &get(Tuple<T...> &tuple);
+
+    template<std::size_t I, typename... T>
+    friend constexpr const auto &get(const Tuple<T...> &tuple);
   };
 
   template<typename... T>
