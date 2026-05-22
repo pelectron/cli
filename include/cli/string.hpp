@@ -243,6 +243,8 @@ namespace cli {
     constexpr View(CharType *begin, CharType *end) noexcept
       : str_(begin), size_(end - begin) {}
 
+    constexpr View(CharType *begin, std::nullptr_t) = delete;
+
     constexpr View &operator=(const View &o) noexcept {
       str_ = o.str_;
       size_ = o.size_;

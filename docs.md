@@ -29,7 +29,11 @@
   - [AnsiInput Class Template](#ansiinput-class-template)
   - [SimpleInput Class Template](#simpleinput-class-template)
   - [Example](#input-example)
-- [Control](#control)
+- [Enumerations](#enumerations)
+  - [cli::Error](#clierror)
+  - [cli::Delimiter](#clidelimiter)
+  - [cli::Fmt](#clifmt)
+  - [cli::Control](#clicontrol)
 - [Event](#event)
   - [Event Constructors](#event-constructors)
   - [Event Methods](#event-methods)
@@ -63,6 +67,10 @@
       - [Deduced Arguments](#deduced-arguments)
 - [Help Command](#help-command)
 - [String Constant](#string-constant)
+  - [Id concept](#id)
+- [View](#cliview)
+  - [Constructors](#view-constructors)
+  - [Methods](#view-methods)
 - [Formatting](#formatting)
   - [Custom Formatting](#custom-formatting)
 - [Parsing](#parsing)
@@ -140,7 +148,7 @@ To create an `Engine`, provide a [config](#config), a [display](#display), and
 This method must be called when a character is received. No heavy processing is
 performed because the `Engine` simply forwards `c` to its [input](#input).
 
-If the default [input](#input-class-template) is used and the [config](#config)
+If the default [input](#ansiinput-class-template) is used and the [config](#config)
 specifies the use of a volatile input buffer, then this method can be called in
 an ISR.
 
@@ -251,16 +259,16 @@ The [Engine](#engine) uses a configuration. A configuration is a traits-like
 structure that sets core aspects of the engine. There is a concept called
 `cli::concepts::Config` that formalizes the configuration.
 
-A configuration of type `C` must have the following static constexpr members
-and typedefs to satisfy the `Config` concept:
+### Basic Requirements
 
-- **name**: convertible to `cli::View<const char_type>`. The name of the cli as
-a string. Must be an [Id](#id). `char_type` is the associated character type of
-the configuration.
-- **description**: convertible to `cli::View<const char_type>`. The description
-of the cli. `char_type` is the associated character type of the configuration.
-- **max_line_length**: of type `std::size_t`. Specifies how long the maximum
-command input is. Commands longer than this length cannot be processed.
+A configuration of type `C` must have the following static constexpr members to
+satisfy the `Config` concept:
+
+| Name                | Type                                                 | Description                                                                                            |
+| ------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **name**            | convertible to [cli::View<const char_type](#cliview) | The name of the cli                                                                                    |
+| **description**     | convertible to [cli::View<const char_type](#cliview) | The description of the cli                                                                             |
+| **max_line_length** | std::size_t                                          | Specifies how long the maximum command input is. Commands longer than this length cannot be processed. |
 
 ### Optional Entries
 
@@ -269,48 +277,22 @@ can be left out because `CLI` uses a default value if they are not specified.
 Entries with name `X` of a configuration type `C` can be retrieved with
 `cli::config::X_v<C>` (for members) and `cli::config::X_t<C>` (for typedefs).
 
-Note that the size increases given are for a 32-bit Cortex-M processor,
-compiled with GCC, optimized for size and NDEBUG defined.
-
-- **char_type**: a **typedef** for the character type to use. Can be any of
-  _char_, _signed char_, _unsigned char_, _char8_t_, _char16_t_, _char32_t_.
-  Default is _char_.
-- **access_separator**: of type `char_type`. This specifies what kind of
-  character is used to delimit individual sub commands. Default is `.`.
-- **use_autocomplete**: of type `bool`. If true, the engine uses autocomplete.
-  Default is `false`.
-- **use_cursor**: of type `bool`. If true, the engine recognizes cursor movement.
-  If true, your [display](#display) must support cursor movement.
-  Default is `false`.
-- **use_history**: of type `bool`. Specifies if the engine implements a command
-  history. Default is `false`.
-- **history_depth**: of type `std::size_t`. Specifies how many commands can be
-  stored in the command history. Default is 16.
-- **input_type**: either a typedef or class template. If it is a typedef, it
-  must satisfy the [input concept](#input). If it is a template, then the
-  template must take one template parameter, which is the Config itself. In that
-  case, Config::input_type\<Config\> must satisfy the [input concept](#input).
-  Defaults to [cli::AnsiInput](#input). You must leave this entry out if you want to
-  use the default.
-- **input_delimiter**: of type `cli::Delimiter`. Specifies the character
-  sequence for the enter key. The default is `cli::Delimiter::lf`.
-- **input_size**: of type `std::size_t`. Specifies how many elements the
-  internal Event buffer of [input](#input) can store. The default is 16.
-- **use_volatile_input_buffer**: of type `bool`. Specifies the use of a volatile
-  buffer for the input. Must be set to true if the engine's `on_char` method is
-  called in an ISR. Custom input types should respect this value. Defaults to
-  false.
-- **output_size**: of type `std::size_t`. Specifies how big the buffer for
-  outputting characters is. The default is `max_line_length`.
-- **use_help**: of type `bool`. If true, a [help command](#help-command) is
-  available. Default is false. This will add 2Kb to the executable's size.
-- **empty_help_prints_commands**: of type `bool`. If true, then the help
-  command will print all commands when it is given no argument. Else it will
-  print "no such command". Defaults to false. This will add roughly 200B to the
-  executable's size.
-- **use_detailed_error_messages**: of type `bool`. If true, then `CLI` will
-  print a detailed description when an invalid command is entered. Else it will
-  just display "error". Defaults to false. Enabling this will add 1kB.
+| Name                            | Kind/Type           | Default                                    | Description                                                                                                                                                                                                                                               |
+| ------------------------------- | ------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **char_type**                   | typedef             | _char_                                     | a **typedef** for the character type to use. Can be any of _char_, _signed char_,_unsigned char_, _char8_t_, _char16_t_, _char32_t_                                                                                                                       |
+| **access_separator**            | char_type           | '.'                                        | This specifies what kind of character is used to delimit individual sub commands.                                                                                                                                                                         |
+| **use_autocomplete**            | bool                | false                                      | If true, the engine uses autocomplete                                                                                                                                                                                                                     |
+| **use_cursor**                  | bool                | false                                      | If true, the engine recognizes cursor movement (the display must uspport cursor movement in this case)                                                                                                                                                    |
+| **use_history**                 | bool                | false                                      | If true, a command history will be available                                                                                                                                                                                                              |
+| **history_depth**               | std::size_t         | 16                                         | Specifies how many commands the history can store                                                                                                                                                                                                         |
+| **input_type**                  | typedef or template | [cli:AnsiInput](#ansiinput-class-template) | If it is a typedef, it must satisfy the [input concept](#input). If it is a template, then the template must take one template parameter, which is the Config itself. In that case, `Config::input_type<Config>` must satisfy the [input concept](#input) |
+| **input_delimiter**             | cli::Delimiter      | cli::Delimiter::lf                         | Specifies the character sequence for the enter key                                                                                                                                                                                                        |
+| **input_size**                  | std::size_t         | 16                                         | Specifies how many elements the internal Event buffer of [input](#input) can store                                                                                                                                                                        |
+| **use_volatile_input_buffer**   | bool                | false                                      | Specifies the use of a volatile buffer for the input. Must be set to true if the engine's `on_char` method is called in an ISR. Custom input types should respect this value                                                                              |
+| **output_size**                 | std::size_t         | **max_line_length**                        | Specifies how big the buffer for outputting characters is                                                                                                                                                                                                 |
+| **use_help**                    | bool                | false                                      | if true, a help command will be provided                                                                                                                                                                                                                  |
+| **empty_help_prints_commands**  | bool                | false                                      | if true, a help command without arguments will print the whole command tree                                                                                                                                                                               |
+| **use_detailed_error_messages** | bool                | false                                      | if true, `CLI` will print detailed error messages for malformed input                                                                                                                                                                                     |
 
 ### Config Example
 
@@ -318,20 +300,20 @@ compiled with GCC, optimized for size and NDEBUG defined.
 #include <cli.hpp>
 
 struct my_config{
-  using char_type = char;
+  // required entries
   static constexpr cli::View<const char> name = "cli";
   static constexpr cli::View<const char> description = "a command line interface";
+  static constexpr std::size_t max_line_length = 80;
+
+  // optional entries
+  using char_type = char;
   static constexpr char_type access_separator = '.';
   static constexpr bool use_autocomplete = false;
   static constexpr bool use_cursor = false;
-  static constexpr bool use_history = true;
-  // history_depth can be left out if use_history is false
+  static constexpr bool use_history = false;
   static constexpr std::size_t history_depth = 16;
-  static constexpr std::size_t max_line_length = 80;
-
-  // the entries below can be left out if the default is acceptable.
   static constexpr cli::Delimiter input_delimiter = cli::Delimiter::lf;
-  static constexpr std::size_t input_size = 32;
+  static constexpr std::size_t input_size = 16;
   static constexpr std::size_t output_size = 80;
   static constexpr bool use_volatile_input_buffer = false;
   // for the input type:
@@ -364,7 +346,7 @@ to true. If you want your own input type to respect that setting, you can use
 `cli::config::use_volatile_input_buffer_v` to query this configuration value.
 
 `CLI` provides a default implementation called
-[cli::AnsiInput](#input-class-template).
+[cli::AnsiInput](#ansiinput-class-template).
 
 All input classes provided by `CLI` are defined in the header `cli/input.hpp`.
 
@@ -512,46 +494,123 @@ public:
 static_assert(cli::concepts::Input<MyInput, char>);
 ```
 
-## Control
+## Enumerations
 
-Control is an enumeration of all control types the engine can handle.
-
-### Control Definition 
+### cli::Error
 
 ```cpp
-enum class cli::Control : std::uint8_t {
-  character,
-  bell,
-  backspace,
-  autocomplete,
-  cursor_up,
-  cursor_down,
-  cursor_left,
-  cursor_right,
-  delete_char,
-  clear_screen,
-  clear_line,
-  clear_line_to_end,
-  clear_line_to_begin,
-  enter
-};
+enum class Error : std::uint32_t;
 ```
 
-## Event 
+Enumerates all errors originating from `CLI`. Defined in `cli/enums.hpp`.
+
+| Enumerator                                | Description                                                           |
+| ----------------------------------------- | --------------------------------------------------------------------- |
+| none                                      | no error                                                              |
+| unimplemented                             | functionality not implemented                                         |
+| implementation_error                      | error in the implementation, i.e. some invalid state has been reached |
+| cant_set_param                            | can't set a parameter                                                 |
+| cant_read_param                           | can't read a parameter                                                |
+| invalid_cmd                               | an invalid command has been entered                                   |
+| buffer_overflow                           | a buffer woudl overflow                                               |
+| invalid_argument                          | invalid function argument                                             |
+| too_few_characters                        | expected more characters                                              |
+| unexpected_characters                     | unexpected or too many characters                                     |
+| invalid_character                         | encountered invalid character                                         |
+| too_many_sequence_values                  | encountered too many sequence values                                  |
+| too_few_sequence_values                   | not enough values in sequence                                         |
+| invalid_sequence_value                    | encountered invalid value in sequence                                 |
+| expected_group_opening                    | expected group opening character                                      |
+| expected_group_closing                    | expected group closing character                                      |
+| expected_assignment                       | expected `=` character                                                |
+| expected_delimiter                        | expected delimiter after sequence value (`,`)                         |
+| expected_endquote                         | expected `"`                                                          |
+| expected_rparen                           | expected `)`                                                          |
+| expected_lparen                           | expected `(`                                                          |
+| expected_lbrace                           | expected `{`                                                          |
+| expected_rbrace                           | expected `}`                                                          |
+| expected_lbracket                         | expected `[`                                                          |
+| expected_rbracket                         | expected `]`                                                          |
+| expected_another_field                    | expected anothe field value                                           |
+| expected_another_arg                      | expected another function argument                                    |
+| expected_value                            | expected a value                                                      |
+| expected_field                            | expected a field                                                      |
+| expected_args                             | expected argument(s)                                                  |
+| unexpected_characters_after_closing_paren | unexpected characters after `)`                                       |
+| invalid_value                             | invalid value encountered                                             |
+| unknown                                   | unknown error                                                         |
+
+### cli::Delimiter
+
+Enumerates the possible command delimiters. Defined in `cli/enums.hpp`.
+
+```cpp
+enum class cli::Delimiter;
+```
+
+| Enumerator | Description                         |
+| ---------- | ----------------------------------- |
+| lf         | linefeed (`\n`)                     |
+| cr         | carriage return (`\n`)              |
+| crlf       | carraige return + linefeed (`\r\n`) |
+
+### cli::Fmt
+
+Enumerates the possible number and character formats. Defined in `cli/enums.hpp`.
+
+`cli::Fmt` is a flag enum, i.e. it can be or'ed and and'ed.
+
+```cpp
+enum class cli::Fmt;
+```
+
+| Enumerator | Description    |
+| ---------- | -------------- |
+| normal     | default format |
+| hex        | hex format     |
+| binary     | binary format  |
+
+### cli::Control
+
+Control is an enumeration of all control types the engine can handle. Defined
+in `cli/event.hpp`.
+
+```cpp
+enum class cli::Control : std::uint8_t;
+```
+
+| Enumerator          | Description                                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| character           | a character event                                                                                                   |
+| bell                | bell event                                                                                                          |
+| backspace           | a backspace event. Deletes the character before the cursor.                                                         |
+| autocomplete        | autocomplete event. Autocompletes the current command if enabled.                                                   |
+| cursor_up           | cursor/arrow up event. Cycles backwards through history if enabled.                                                 |
+| cursor_down         | cursor/arrow down event. Cycles forwards through history if enabled.                                                |
+| cursor_left         | cursor/arrow left event. Moves the cursor left if enabled.                                                          |
+| cursor_right        | cursor/arrow right event. Moves the cursor to the right if enabled.                                                 |
+| delete_char         | delete char event. Deletes the character under the cursor.                                                          |
+| clear_screen        | clear screen event. Clears the screen.                                                                              |
+| clear_line          | clear line event. Clears the current line.                                                                          |
+| clear_line_to_end   | clears the line from the cursor to the end of the line.                                                             |
+| clear_line_to_begin | clears the line form the cursor to the beginning. Moves the remaining contents and cursor to the start of the line. |
+
+## Event
 
 The `cli::Event<CharT>` class template represent an event. A sequence of events
 is generated by the engine's input and then consumed by the engine.
 
 An `Event` is either a:
 
-- **character**: `type()` returns ``cli::Control:character``. The character can be retrieved with `as_char()`.
+- **character**: `type()` returns `cli::Control:character`. The character can
+  be retrieved with `as_char()`.
 - **control sequence**: `type()` returns the corresponding [control
-type](#control). The `param()` method returns how many times the control should
-be executed.
+  type](#clicontrol). The `param()` method returns how many times the control
+  should be executed.
 
 **Note**: `Event` can also be used with the `volatile` qualifier.
 
-### Event constructors 
+### Event constructors
 
 #### Event()
 
@@ -560,13 +619,15 @@ Constructs a character event with the character value 0.
 #### Event(CharT c)
 
 **parameters**:
-  - `c`: the character
+
+- `c`: the character
 
 Constructs a character event
 
 #### Event(cli::Control type)
 
 **parameters**:
+
 - `type`: the control type
 
 Constructs an event with the type `type` and param value 0.
@@ -574,12 +635,13 @@ Constructs an event with the type `type` and param value 0.
 #### Event(cli::Control type, std::uint8_t param)
 
 **parameters**:
+
 - `type` the control type
 - `param`: how many times to execute the control
 
 Constructs an event with the type `type` and param value `param`.
 
-### Event Methods 
+### Event Methods
 
 #### cli::Control Event::type() const
 
@@ -937,11 +999,13 @@ param(name, subcommands...);
 
 where
 
-- name is a `cli::string_constant` that makes up the command name.
-- description is a `cli::string_constant` that describes the command.
-- subcommands are subcommands of the parameter, either
-  [parameters](#parameters) or [functions](#functions). You must have at least
-  one subcommand.
+- **name** is a [cli::string_constant](#string-constant) that makes up the
+  command name. Must be an [id](#id).
+- **description** is a [cli::string_constant](#string-constant) that describes
+  the command.
+- **subcommands** are subcommands of the parameter, either
+  [parameters](#parameters) or [functions](#functions). At least one subcommand
+  must be provided.
 
 #### Parameters Without Object Declarations
 
@@ -959,95 +1023,18 @@ param<T>(name, description, get, set, parse, format, validate, subcommands...);
 The parts have the following functions:
 
 - **T**: the parameter's type
-- **name**: a `cli::string_constant` that makes up the command name. Must be an
-  [Id](#id).
-- **description**: a `cli::string_constant` that describes the command.
+- **name**: a [cli::string_constant](#string-constant) that makes up the
+  command name. Must be an [Id](#id).
+- **description**: a [cli::string_constant](#string-constant) that describes
+  the command.
 - **get**: a [Getter](#getters) for a T. It retrieves the value associated with
-  the parameter. See also `cli::param::Setter` and `cli::param::SetterOf`.
+  the parameter.
 - **set**: a [Setter](#setters) for a T. It sets the value associated with the
-  parameter. See also `cli::param::Getter` and `cli::param::GetterOf`.
-- **parse**: a [Parser](#parsing) for a T. It parses a T from a string. See
-  also `cli::parse::Parser` and `cli::parse::ParserOf`.
+  parameter.
+- **parse**: a [Parser](#parsing) for a T. It parses a T from a string.
 - **format**: a [Formatter](#formatting) for a T. It formats a T to a string.
-  See also `cli::format::Formatter` and `cli::format::FormatterOf`.
 - **validate**: a [Validator](#validation) for a T. It validates parsed values
-  before they are set. See also `cli::validate::Validator` and
-  `cli::validate::ValidatorOf`.
-- **subcommands**: any amount of subcommands, either further parameters or
-  functions.
-
-There are a multitude of overloads so that certain parts can be left out, if
-you wish to use the defaults provided by cli.
-
-**Note**:
-
-- leaving out the setter creates a read-only parameter. A parser is then not
-  necessary.
-- leaving out the getter creates a write-only parameter. A formatter is then
-  not necessary.
-
-The available overloads are:
-
-```cpp
-// the basic/full form
-param<T>(name, description, get, set, parse, format, validate);
-
-// a parameter with default validator
-param<T>(name, description, get, set, parse, format);
-
-// a parameter with default parser and formatter
-param<T>(name, description, get, set, validate);
-
-// a write-only parameter with custom parser and validator
-param<T>(name, description, set, parse, validate);
-
-// default parser, formatter and validator are used
-param<T>(name, description, get, set);
-
-// a write-only parameter with custom parser
-param<T>(name, description, set, parse);
-
-// a read-only parameter with custom formatter
-param<T>(name, description, get, format);
-
-// a write-only parameter with custom validator
-param<T>(name, description, set, validate);
-
-// a read-only parameter
-param<T>(name, description, get);
-
-// a write-only parameter
-param<T>(name, description, set);
-```
-
-#### Parameters With Object/Variable Declarations
-
-The following functions can be used to setup parameters with object/variable
-declarations.
-
-The basic form is:
-
-```cpp
-param(name, description, t, get, set, parse, format, validate, subcommands...);
-```
-
-The parts have the following functions:
-
-- **name**: a `cli::string_constant` that makes up the command name. Must be an
-  [Id](#id).
-- **description**: a `cli::string_constant` that describes the command.
-- **t**: the variable/object of type T that holds the value of the parameter.
-- **get**: a [Getter](#getters) for a T. It retrieves the value associated with
-  the parameter. See also `cli::param::Setter` and `cli::param::SetterOf`.
-- **set**: a [Setter](#setters) for a T. It sets the value associated with the
-  parameter. See also `cli::param::Getter` and `cli::param::GetterOf`.
-- **parse**: a [Parser](#parsing) for a T. It parses a T from a string. See
-  also `cli::parse::Parser` and `cli::parse::ParserOf`.
-- **format**: a [Formatter](#formatting) for a T. It formats a T to a string.
-  See also `cli::format::Formatter` and `cli::format::FormatterOf`.
-- **validate**: a [Validator](#validation) for a T. It validates parsed values
-  before they are set. See also `cli::validate::Validator` and
-  `cli::validate::ValidatorOf`.
+  before they are set.
 - **subcommands**: any amount of subcommands, either further parameters or
   functions.
 
@@ -1056,25 +1043,289 @@ you wish to use the defaults provided by cli.
 
 The parts that can be left out are:
 
-- get: in that case, `cli::param::DefaultGet` is used.
-- set: in that case, `cli::param::DefaultSet` is used.
-- validate: in that case, `cli::validate::DefaultValidate` is used.
-- parse and format: in that case, `cli::parse::DefaultParse` and
-  `cli::format::DefaultFormat` are used.
+- **description**
+- **get**: in that case, **set** must be provided and **format** must be left
+  out. This creates a write only parameter.
+- **set**: in that case **get** must the provided and **parse** must be left
+  out. This creates a read only parameter.
+- **parse** and/or **format**: in that case, the default parser and/or
+  formatter are used.
+- **validate**: the default validator is used.
+
+All other overloads have the arguments in the same order, but parts above can
+be left out as described above.
+
+The full list of available overloads is:
+
+```cpp
+// the basic/full form
+param<T>(name, description, get, set, parse, format, validate);
+param<T>(name,              get, set, parse, format, validate);
+
+// a parameter with default parser and formatter
+param<T>(name, description, get, set,                validate);
+param<T>(name,              get, set,                validate);
+
+// a parameter with default validator
+param<T>(name, description, get, set, parse, format);
+param<T>(name,              get, set, parse, format);
+
+// default parser, formatter and validator are used
+param<T>(name, description, get, set);
+param<T>(name,              get, set);
+
+// a write-only parameter with custom parser and validator
+param<T>(name, description,      set, parse,         validate);
+param<T>(name,                   set, parse,         validate);
+
+// a write-only parameter with custom parser
+param<T>(name, description,      set, parse);
+param<T>(name,                   set, parse);
+
+// a write-only parameter with custom validator
+param<T>(name, description,      set,                validate);
+param<T>(name,                   set,                validate);
+
+// a write-only parameter
+param<T>(name, description,      set);
+param<T>(name,                   set);
+
+// a read-only parameter with custom formatter
+param<T>(name, description, get,             format);
+param<T>(name,              get,             format);
+
+// a read-only parameter
+param<T>(name, description, get);
+param<T>(name,              get);
+
+```
+
+#### Parameters With Object/Variable Declarations
+
+The following functions can be used to setup parameters with object/variable
+declarations.
+
+There are two basic forms:
+
+```cpp
+param(name, description, t, get, set, parse, format, validate, subcommands...);
+param<t>(   description,    get, set, parse, format, validate, subcommands...);
+```
+
+The arguments have the following functions:
+
+- **name**: a [cli::string_constant](#string-constant) that makes up the
+  command name. Must be an [Id](#id).
+- **description**: a [cli::string_constant](#string-constant) that describes
+  the command.
+- **t**: the variable/object of type T that holds the value of the parameter.
+- **get**: a [Getter](#getters) for a T. It retrieves the value associated with
+  the parameter.
+- **set**: a [Setter](#setters) for a T. It sets the value associated with the
+  parameter.
+- **parse**: a [Parser](#parsing) for a T. It parses a T from a string.
+- **format**: a [Formatter](#formatting) for a T. It formats a T to a string.
+- **validate**: a [Validator](#validation) for a T. It validates parsed values
+  before they are set.
+- **subcommands**: any amount of subcommands, either further parameters or
+  functions.
+
+There are a multitude of overloads so that certain parts can be left out, if
+you wish to use the defaults provided by cli.
+
+The parts that can be left out are:
+
+- **name**: can only be left out for the overloads that take **t** as a
+  template parameter. The parameter's name will then be the name of **t**.
+- **description**
+- **get**: in that case, `cli::param::DefaultGet` is used.
+- **set**: in that case, `cli::param::DefaultSet` is used.
+- **validate**: in that case, `cli::validate::DefaultValidate` is used.
+- **parse** and **format**: in that case, `cli::parse::Parse` and
+  `cli::format::Format` are used.
+
+The full list:
+
+```cpp
+// the basic/full form, where t is passed as an argument
+param(name, description, t, get, set, parse, format, validate);
+param(name,              t, get, set, parse, format, validate);
+
+// a parameter with default parser and formatter
+param(name, description, t, get, set,                validate);
+param(name,              t, get, set,                validate);
+
+// a parameter with default validator
+param(name, description, t, get, set, parse, format);
+param(name,              t, get, set, parse, format);
+
+// default parser, formatter and validator are used
+param(name, description, t, get, set);
+param(name,              t, get, set);
+
+// default getter is used
+param(name, description, t,      set, parse, format, validate);
+param(name,              t,      set, parse, format, validate);
+
+// default getter, parser and formatter are used
+param(name, description, t,      set,                validate);
+param(name,              t,      set,                validate);
+
+// default getter and validator are used
+param(name, description, t,      set, parse, format);
+param(name,              t,      set, parse, format);
+
+// default getter, parser, formatter and validator are used
+param(name, description, t,      set);
+param(name,              t,      set);
+
+// default setter is used
+param(name, description, t, get,      parse, format, validate);
+param(name,              t, get,      parse, format, validate);
+
+// default setter, parser, and formatter are used
+param(name, description, t, get,                     validate);
+param(name,              t, get,                     validate);
+
+// default setter and validator are used
+param(name, description, t, get,      parse, format);
+param(name,              t, get,      parse, format);
+
+// default setter, parser, formatter and validator are used
+param(name, description, t, get);
+param(name,              t, get);
+
+// default getter and setter are used
+param(name, description, t,           parse, format, validate);
+param(name,              t,           parse, format, validate);
+
+// default getter, setter, parser, and formatter are used
+param(name, description, t,                          validate);
+param(name,              t,                          validate);
+
+// default getter, setter and validator are used
+param(name, description, t,           parse, format);
+param(name,              t,           parse, format);
+
+// default setter, getter, parser, formatter and validator are used
+param(name, description, t);
+param(name,              t);
+
+
+// the basic/full form, where t is passed as a template parameter.
+param<t>(description, get, set, parse, format, validate);
+param<t>(             get, set, parse, format, validate);
+
+// a parameter with default parser and formatter
+param<t>(description, get, set,                validate);
+param<t>(             get, set,                validate);
+
+// a parameter with default validator
+param<t>(description, get, set, parse, format);
+param<t>(             get, set, parse, format);
+
+// default parser, formatter and validator are used
+param<t>(description, get, set);
+param<t>(             get, set);
+
+// default getter is used
+param<t>(description,      set, parse, format, validate);
+param<t>(                  set, parse, format, validate);
+
+// default getter, parser and formatter are used
+param<t>(description,      set,                validate);
+param<t>(                  set,                validate);
+
+// default getter and validator are used
+param<t>(description,      set, parse, format);
+param<t>(                  set, parse, format);
+
+// default getter, parser, formatter and validator are used
+param<t>(description,      set);
+param<t>(                  set);
+
+// default setter is used
+param<t>(description, get,      parse, format, validate);
+param<t>(             get,      parse, format, validate);
+
+// default setter, parser, and formatter are used
+param<t>(description, get,                     validate);
+param<t>(             get,                     validate);
+
+// default setter and validator are used
+param<t>(description, get,      parse, format);
+param<t>(             get,      parse, format);
+```
 
 #### Parameters With const Object/Variable Declarations
 
 Read-only parameters for const objects can be defined with the following
-functions.
+functions:
 
-The base form is:
+There are two basic forms:
 
 ```cpp
-param(name, description, t, get, format)
+param(name, description, t, get, format, subcommands...);
+param<t>(   description,    get, format, subcommands...);
 ```
 
-In total there are four overloads, where get, or format, or both, can be left
-out. In that case, a default getter and/or default formatter are used.
+The arguments have the following functions:
+
+- **name**: a [cli::string_constant](#string-constant) that makes up the
+  command name. Must be an [Id](#id).
+- **description**: a [cli::string_constant](#string-constant) that describes
+  the command.
+- **t**: the variable/object of type T that holds the value of the parameter.
+- **get**: a [Getter](#getters) for a T. It retrieves the value associated with
+  the parameter.
+- **format**: a [Formatter](#formatting) for a T. It formats a T to a string.
+- **subcommands**: any amount of subcommands, either further parameters or
+  functions.
+
+The parts that can be left out are:
+
+- **name**: can only be left out for the overloads that take **t** as a
+  template parameter. The parameter's name will then be the name of **t**.
+- **description**
+- **get**: in that case, `cli::param::DefaultGet` is used.
+- **format**: in that case, `cli::format::Format` is used.
+
+```cpp
+// base form, where t is passed as an argument
+param<t>(name, description, t, get, format);
+param<t>(name,              t, get, format);
+
+// default getter is used
+param<t>(name, description, t,      format);
+param<t>(name,              t,      format);
+
+// default formatter is used
+param<t>(name, description, t, get);
+param<t>(name,              t, get);
+
+// default formatter and getter are used
+param<t>(name, description, t);
+param<t>(name,              t);
+
+// base form, where t is passed as a template parameter
+param<t>(description, get, format);
+param<t>(             get, format);
+
+// default getter is used
+param<t>(description,      format);
+param<t>(                  format);
+
+// default formatter is used
+param<t>(description, get);
+param<t>(             get);
+
+// default formatter and getter are used
+param<t>(description);
+param<t>();
+
+```
+
+**Note**: use `cli::as_const` to use the const overloads with non-const ts.
 
 #### Member Data Parameters
 
@@ -1094,7 +1345,7 @@ static Settings settings;
 ```
 
 To make the settings and its members foo and baz available to cli, you can use
-the following param call to easily setup this structure.
+the following param calls to easily setup this structure.
 
 ```cpp
 param("settings"_sc,
@@ -1134,24 +1385,76 @@ settings.baz
 'k'
 ```
 
+There are two base forms:
+
+```cpp
+param(name, description, ptr_to_member, parse, format, validate, subcommands...);
+param<ptr_to_member>(description, parse, format, validate, subcommands...);
+```
+
+The arguments have the following functions:
+
+- **name**: a [cli::string_constant](#string-constant) that makes up the
+  command name. Must be an [Id](#id).
+- **description**: a [cli::string_constant](#string-constant) that describes
+  the command.
+- **ptr_to_member**: a member data pointer, i.e. of type `T Struct::*`.
+- **parse**: a [Parser](#parsing) for a T. It parses a T from a string.
+- **format**: a [Formatter](#formatting) for a T. It formats a T to a string.
+- **validate**: a [Validator](#validation) for a T. It validates parsed values
+  before they are set.
+- **subcommands**: any amount of subcommands, either further parameters or
+  functions.
+
 The full list of member data parameter functions is:
 
 ```cpp
 param(name, description, ptr_to_member, parse, format, validate);
+param(name,              ptr_to_member, parse, format, validate);
+param(name, description, ptr_to_member,                validate);
+param(name,              ptr_to_member,                validate);
 param(name, description, ptr_to_member, parse, format);
-param(name, description, ptr_to_member, validate);
+param(name,              ptr_to_member, parse, format);
 param(name, description, ptr_to_member);
+param(name,              ptr_to_member);
+
+param<ptr_to_member>(description, parse, format, validate);
+param<ptr_to_member>(             parse, format, validate);
+param<ptr_to_member>(description,                validate);
+param<ptr_to_member>(                            validate);
+param<ptr_to_member>(description, parse, format);
+param<ptr_to_member>(             parse, format);
+param<ptr_to_member>(description);
+param<ptr_to_member>(           );
 ```
 
-In this case, parse, format, and validate are parsers, formatters and
-validators for the type pointed to by ptr_to_member.
+The parts that can be left out are:
 
-There are also overloads available for const member data.
+- **name**: in that case, the overload that takes **ptr_to_member** as a
+  template parameter must be taken. The name of the parameter will be the name of
+  the member that is pointed to.
+- **description**
+- **parse** and **format**: if left out, `cli::parse::Parse` and
+  `cli::format::Format` will be used.
+- **validate**: if left out, `cli::validate::DefaultValidate` will be used.
+
+There are also overloads available for const member data, where
+**ptr_to_member** points to const data, i.e. it's type is `const T Struct::*`.
 
 ```cpp
 param(name, description, ptr_to_member, format);
+param(name,              ptr_to_member, format);
 param(name, description, ptr_to_member);
+param(name,              ptr_to_member);
+
+param<ptr_to_member>(description, format);
+param<ptr_to_member>(             format);
+param<ptr_to_member>(description);
+param<ptr_to_member>(           );
 ```
+
+**Note**: use `cli::as_const` to use the const overloads with pointers to
+mutable members, i.e. if the type of **ptr_to_member** is `T Struct::*`.
 
 #### Recursive Parameters
 
@@ -1159,23 +1462,23 @@ Recursive parameters are created by any of the following param overloads:
 
 ```cpp
  cli::param(name, description, t, set_callback, validate, cli::recursive)
- cli::param(name, description, t, validate, cli::recursive)
- cli::param(name, description, t, set_callback, cli::recursive)
- cli::param(name, description, t, cli::recursive)
- cli::param(name, t, set_callback, validate, cli::recursive)
- cli::param(name, t, validate, cli::recursive)
- cli::param(name, t, set_callback, cli::recursive)
- cli::param(name, t, cli::recursive)
+ cli::param(name,              t, set_callback, validate, cli::recursive)
+ cli::param(name, description, t,               validate, cli::recursive)
+ cli::param(name,              t,               validate, cli::recursive)
+ cli::param(name, description, t, set_callback,           cli::recursive)
+ cli::param(name,              t, set_callback,           cli::recursive)
+ cli::param(name, description, t,                         cli::recursive)
+ cli::param(name,              t,                         cli::recursive)
 ```
 
 where:
 
-- **name** and **description** are `cli::string_constants`. **name** must be
-  an [Id](#id).
+- **name** and **description** are [cli::string_constants](#string-constant).
+  **name** must be an [Id](#id).
 - **t** is the object of the parameter of type `T`.
 - **set_callback** is a callable the takes a `T` and returns `void`. Is is
   called when **t** or any of its subparameters are set.
-- **validate**: is a validator for a `T`.
+- **validate**: is a [validator](#validation) for a `T`.
 
 A call to these overloads will recursively build up subcommands of all the
 members of **t**.
@@ -1211,6 +1514,16 @@ will generate the following command structure:
   - c \[char\]
   - subsettings \[SubSettings\]
     - i \[int\]
+
+There are also overloads available for const objects, which create a read only
+parameters:
+
+```cpp
+ cli::param(name, description, t, cli::recursive)
+ cli::param(name,              t, cli::recursive)
+```
+
+**Note**: use `cli::as_const` to use the const overloads with non-const ts.
 
 #### Getters
 
@@ -1296,7 +1609,7 @@ To create a function, you can use the `cli::func` template overload set.
 A function is fully defined by:
 
 - **name**: the function's name. Must be an [Id](#id).
-- **description**: the function's description. Must be a `cli::string_constant`.
+- **description**: the function's description. Must be a [cli::string_constant](#string-constant).
 - **f**: the C++ callable that actually performs the action. This
   may be a free function, a functor/lambda, or a member function.
 - **arguments**: Elements that describe the callable's arguments.
@@ -1437,10 +1750,10 @@ There are two kinds of function arguments:
 
 Arguments are fully specified by their:
 
-- **name**: the human readable name in form of a `cli::string_constant`. Must
-  be an [Id](#id).
+- **name**: the human readable name in form of a
+  [cli::string_constant](#string-constant). Must be an [Id](#id).
 - **description**: a string that is used by the help functionality. A
-  `cli::string_constant`.
+  [cli::string_constant](#string-constant).
 - **T**: the value type of the argument
 - **parser**: a [Parser](#parsing) to parse the arguments value.
 - **validator**: a [Validator](#validation) used to validate the parsed value
@@ -1611,7 +1924,7 @@ which will print the argument's info in the form:
 
 ## String Constant
 
-`cli::string_constant` is a compile time string used by `CLI`.
+[cli::string_constant](#string-constant) is a compile time string used by `CLI`.
 
 ```cpp
 template<typename CharT, CharT...Chars>
@@ -1633,10 +1946,170 @@ auto s16 = u"hello"_sc; // CharT is char16_t
 auto s32 = U"hello"_sc; // CharT is char32_t
 ```
 
+string_constant can be converted to [cli::View\<const CharT\>](#cliview).
+
 ### Id
 
-The concept `cli::Id` denotes a `cli::string_constant` which does
+The concept `cli::Id` denotes a [cli::string_constant](#string-constant) which does
 not contain whitespace or any of these characters: `(){},='"`.
+
+## cli::View
+
+The `cli::View<CharT>` class template is a `std::span` like structure used for
+referencing strings.
+
+It has many of the methods found in `std::string_view`.
+
+Defined in `cli/stirng.hpp`.
+
+### View Constructors
+
+#### View()
+
+Constructs an empty view.
+
+#### View(View\<OtherCharT\>)
+
+Converting constructor for converting non-const views to const views.
+
+#### View(CharT\* str, std::size_t size)
+
+Constructs a view from a pointer and size.
+
+#### View(CharT\* str)
+
+Constructs a view from a null-terminated c-string.
+
+#### View(CharT\* begin, CharT\* end)
+
+**parameters**:
+
+- **begin**: start of the string
+- **end**: one past the end pointer of the string
+
+Constructs a view from a range.
+
+#### View(const View&)
+
+Copy constructor.
+
+### View Methods
+
+#### (const) CharT\* View::data()
+
+Returns pointer to the beginning. Const and non-const overloads available.
+
+#### std::size_t View::size() const
+
+Returns the size of the string.
+
+#### (const) CharT& operator[](std::size_t i)
+
+Returns the i-th element of the string. Const and non-const overloads available.
+
+#### (const) CharT& back()
+
+Returns the reference to the last element of this. Const and non-const overload
+are available.
+
+**Note**: undefined behaviour if the size is 0.
+
+#### View::operator=(const View&)
+
+Copy assignment operator.
+
+#### operator ==, \<, \>
+
+Equality, less-than, and greater-than operators. Less-than and greater-tahn
+perform a lexicographical comparison.
+
+#### View View::substr(std::size_t offset, std::size_t size = npos) const
+
+Returns a substring offset from the beginning with the specified size. The
+returned Views size will be min(size() - offset, size).
+
+#### bool View::starts:with(const CharT\* s) const
+
+Returns true if this starts with the null-terminated c-string `s`.
+
+#### bool View::starts:with(View\<const CharT\> s) const
+
+Returns true if this starts with s.
+
+#### std::size_t View::find(CharT c, std::size_t pos = 0) const
+
+Returns the position of the first occurence of c in this, starting at pos.
+Returns View::npos if c could not be found.
+
+#### std::size_t View::find(const CharT\* s, std::size_t pos = 0) const
+
+Returns the position of the first occurence of substring s in this, starting at
+pos. Returns View::npos if s could not be found.
+
+#### std::size_t View::find(View\<const CharT\> s, std::size_t pos = 0) const
+
+Returns the position of the first occurence of substring s in this, starting at
+pos. Returns View::npos if s could not be found.
+
+#### std::size_t View::find_first_of(CharT c, std::size_t pos = 0) const
+
+Searches for the first occurence of c starting at pos and returns the position.
+Returns View::npos if not found.
+
+#### std::size_t View::find_first_of(const CharT\* s, std::size_t pos = 0) const
+
+Searches for the first occurence of any of the characters in s, starting from
+pos and returns that position. Returns View::npos if not found.
+
+#### std::size_t View::find_first_of(View\<const CharT\> s, std::size_t pos = 0) const
+
+Searches for the first occurence of any of the characters in s, starting from
+pos and returns that position. Returns View::npos if not found.
+
+#### std::size_t View::find_first_not_of(CharT c, std::size_t pos = 0) const
+
+Searches for the first character that is not c starting at pos and returns the
+position. Returns View::npos if not found.
+
+#### std::size_t View::find_first_not_of(const CharT\* s, std::size_t pos = 0) const
+
+Searches for the first character that is not any of the characters in s,
+starting from pos and returns that position. Returns View::npos if not found.
+
+#### std::size_t View::find_first_not_of(View\<const CharT\> s, std::size_t pos = 0) const
+
+Searches for the first character that is not any of the characters in s,
+starting from pos and returns that position. Returns View::npos if not found.
+
+#### std::size_t View::find_last_of(CharT c, std::size_t pos = 0) const
+
+Searches for the last occurence of c starting at pos and returns the position.
+Returns View::npos if not found.
+
+#### std::size_t View::find_last_of(const CharT\* s, std::size_t pos = 0) const
+
+Searches for the last occurence of any of the characters in s, starting from
+pos and returns that position. Returns View::npos if not found.
+
+#### std::size_t View::find_last_of(View\<const CharT\> s, std::size_t pos = 0) const
+
+Searches for the last occurence of any of the characters in s, starting from
+pos and returns that position. Returns View::npos if not found.
+
+#### std::size_t View::find_last_not_of(CharT c, std::size_t pos = 0) const
+
+Searches for the last character that is not c starting at pos and returns the
+position. Returns View::npos if not found.
+
+#### std::size_t View::find_last_not_of(const CharT\* s, std::size_t pos = 0) const
+
+Searches for the last character that is not any of the characters in s,
+starting from pos and returns that position. Returns View::npos if not found.
+
+#### std::size_t View::find_last_not_of(View\<const CharT\> s, std::size_t pos = 0) const
+
+Searches for the last character that is not any of the characters in s,
+starting from pos and returns that position. Returns View::npos if not found.
 
 ## Formatting
 
@@ -1649,7 +2122,17 @@ concepts `cli::format::FormatterOf` and `cli::format::Formatter` formalize the
 interface. All formatting utilities can be found in the headers
 `cli/basic_format.hpp` and `cli/format.hpp`.
 
-An example of formatters:
+**Concept declarations**:
+
+```cpp
+template<typename F>
+concept cli::format::Formatter;
+
+template<typename F, typename T, typename CharT>
+concept cli::format::FormatterOf;
+```
+
+**Example**:
 
 ```cpp
 auto format_char(cli::View<char> output, char c)
@@ -1736,6 +2219,14 @@ these [concepts](#concepts):
 If so, you will just need to specialize the trait predicate as described in
 [traits](#traits).
 
+If the custom type does not fit into any of these concepts, there are two options:
+
+- if the type only need to be formattable at the top level, i.e. it is not part
+  of a nested structure, simply implement a Formatter and pass in the formatter
+  to the [cli::param](#parameters) and [cli::arg](#arguments) calls.
+- if the type is used in a struct, then `cli::format::Format` needs to be
+  specialized. See [custom formatting](#custom-formatting) for an example.
+
 ### FormatResult
 
 `cli::format::FormatResult` is the type returned by formatters. It either
@@ -1744,9 +2235,8 @@ format into is too small), or the number of characters written into the buffer.
 
 ### Custom Formatting
 
-To enable your type to be formattable when it is a member of a struct, then
-you must specialize `cli::format::Format` and implement its call
-operator.
+To enable your type to be formattable when it is a member of a struct, then you
+must specialize `cli::format::Format` and implement its call operator.
 
 ```cpp
 #include <cli/format.hpp>
@@ -1757,13 +2247,13 @@ class MyClass{
 
 namespace cli::format{
   template<typename CharT>
-  struct Format{
+  struct Format<MyClass, CharT>{
     FormatResult operator()(View<CharT> output, const MyClass& c) const;
   };
 }
 ```
 
-To overrride default formatting behaviour, for example using hex format for
+To override default formatting behaviour, for example using hex format for
 integers, you can explicitly specialize the corresponding formatter. But for
 this to work, the character type of the buffer must be explicitly specified as
 well. An example for integer formatters:
@@ -1793,7 +2283,17 @@ argument and returns a `cli::parse::ParseResult<T, CharT>`.
 
 All parsing utilities can be found in the header `cli/parse.hpp`.
 
-Example:
+**Concept declarations**:
+
+```cpp
+template<typename P>
+concept cli::parse::Parser;
+
+template<typename P, typename T, typename CharT>
+concept cli::parse::ParserOf;
+```
+
+**Example**:
 
 ```cpp
 #include <cli/parse.hpp>
@@ -1858,11 +2358,16 @@ ParseResult<T, CharT>(cli::parse::from_value, val, rest);
 
 ### Custom Parsing
 
-Custom parsers just have to conform to the Parser concept.
-To enable CLI to select your implementation by default, which is needed
-if you want your types parseable when they are members of a struct, then
-explicitly specialize `cli::parse::Parse` and implement it's
-call operator.
+Custom parsers have to conform to the Parser concept.
+
+To enable `CLI` to select your implementation by default, which is needed if
+you want your types parseable when they are members of a struct or as [deduced
+arguments](#deduced-arguments), then explicitly specialize `cli::parse::Parse`
+and implement it's call operator.
+
+If your types are not part of a struct or not used by [deduced
+arguments](#deduced-arguments),then you can simply pass your custom parser to
+the [cli::param](#parameters) and [cli::arg](#arguments) calls.
 
 ```cpp
 #include <cli/parse.hpp>
@@ -1881,7 +2386,7 @@ struct Parse<MyClass, CharT>{
 }
 ```
 
-To overrride default parsing behaviour, for example using hex format for
+To override default parsing behaviour, for example using hex format for
 integers, you can explicitly specialize the corresponding formatter. But for
 this to work, the character type of the buffer must be explicitly specified as
 well. An example for integer formatters:
@@ -1903,13 +2408,12 @@ namespace cli::parse{
 `CLI` uses traits to allow for an explicit opt-in approach to concepts. Traits
 are defined in the header `cli/traits.hpp` in the namespace `cli::traits`. For
 a concept `cli::concepts::Xxx` there is a traits predicate called
-`cli::traits::is_xxx` (with the exception of chars, enums, and integers). The
-concept is only true if the traits predicate is true. To enable the concept,
-the traits predicate must be specialized.
+`cli::traits::is_xxx`. The concept is only true if the traits predicate is
+true. To enable the concept, the traits predicate must be specialized.
 
 There are the following trait predicates (i.e. they either inherit from
 `std::true_type` or `std::false_type`, or have a static constexpr bool member
-`value`):
+called `value`):
 
 - `is_char`: predicate for `cli::concepts::Char`. Should not be specialzed.
 - `is_integer`: predicate for `cli::concepts::Integer`. Should not be specialized.
@@ -1952,6 +2456,7 @@ Specializing `enum_traits` for normal enum (classes).
 
 ```cpp
 #include <cli/traits.hpp>
+
 enum MyEnum{
   A = 1,
   B,
@@ -1997,7 +2502,7 @@ namespace cli::traits{
 ## Concepts
 
 There are the following concepts used by the formatting and parsing utilities
-in `CLI`. They are defined in the header `cli/concepts.hpp` n the namespace
+in `CLI`. They are defined in the header `cli/concepts.hpp` in the namespace
 `cli::concepts`.
 
 ### Sequence
@@ -2161,6 +2666,8 @@ your custom sequence type `T`, you must override the traits predicate
 
 ### Fixpoint
 
+TBD!
+
 ### Struct
 
 A `Struct` denotes a `T` that can be used with structured bindings, and is not
@@ -2193,6 +2700,8 @@ bool validate_foo(int foo){
   return foo >= 0 and foo <= 100;
 }
 ```
+
+The validation utilities are defined in the header `cli/validator.hpp`.
 
 ## Simulation
 

@@ -106,6 +106,8 @@ namespace cli::parse {
    */
   template<class T, typename CharT>
   struct ParseResult {
+    using value_type = T;
+    using char_type = CharT;
 
     /// constructs a failed parse with the error reason
     /// @param e the error
@@ -186,9 +188,10 @@ namespace cli::parse {
    * @tparam CharT the character type
    */
   template<class P, class T, typename CharT>
-  concept ParserOf = requires(std::decay_t<P> parse, View<const CharT> str) {
-    { parse(str) } -> std::same_as<ParseResult<T, CharT>>;
-  };
+  concept ParserOf =
+    Callable<P> && requires(std::decay_t<P> parse, View<const CharT> str) {
+      { parse(str) } -> std::same_as<ParseResult<T, CharT>>;
+    };
 
   /**
    * A parser turns a string into a T. It is a callable that takes a

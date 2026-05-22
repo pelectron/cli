@@ -124,14 +124,12 @@ namespace cli {
                                  F &&f,
                                  Tuple &&t,
                                  Args &&...args) {
-      using std::get;
       (f(get<Is>(std::forward<Tuple>(t)), std::forward<Args>(args)...), ...);
     }
 
     template<class Tuple, class F, std::size_t... Is>
     constexpr decltype(auto)
     apply_impl(Tuple &&t, F &&f, std::index_sequence<Is...>) {
-      using std::get;
       return std::forward<F>(f)(get<Is>(std::forward<Tuple>(t))...);
     }
 
@@ -670,13 +668,16 @@ namespace cli {
   struct is_callable : std::false_type {};
 
   template<class F>
-  struct is_callable<F, std::void_t<function_traits<F>>> : std::true_type {};
+  struct is_callable<F, std::void_t<extract_signature_t<F>>> : std::true_type {
+  };
 
   template<class F>
   inline constexpr bool is_callable_v = is_callable<F>::value;
 
   template<class F>
-  concept Callable = is_callable_v<F>;
+  concept Callable = is_callable_v<std::decay_t<F>>;
+
+  static_assert(not Callable<struct X>);
 
   template<class T, class MemFunPtr>
   struct MemFunBinder;
@@ -751,5 +752,26 @@ namespace cli {
     -> MemFunBinder<std::remove_cvref_t<T>, MemFunPtr>;
 
   struct dummy {};
+
+  template<typename T>
+  constexpr const T &as_const(T &val) noexcept {
+    return val;
+  }
+
+  template<typename T>
+  constexpr const T &as_const(const T &val) noexcept {
+    return val;
+  }
+
+  template<typename T, typename DataType>
+  constexpr const DataType T::*as_const(DataType T::*data_ptr) {
+    return data_ptr;
+  }
+
+  template<typename T, typename DataType>
+  constexpr const DataType T::*as_const(const DataType T::*data_ptr) {
+    return data_ptr;
+  }
+
 } // namespace cli
 #endif

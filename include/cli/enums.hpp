@@ -18,41 +18,44 @@ namespace cli {
    * @ingroup enumerations
    */
   enum class Error : std::uint32_t {
-    none,                 //< no error
+    none, //< no error
+
+    // implementation errors
     unimplemented,        //< functionality is not implemented
-    implementation_error, //< error in the implementation
-    io_error,             //< error during IO
-    invalid_argument,     //< invalid argument
-    cant_set_param,       //< cant set a parameter
-    cant_read_param,      //< cant read a parameter
-    invalid_cmd,          //< an invalid command has been entered
-    buffer_overflow,      //< a buffer would overflow
-    too_few_arguments,    //< too few arguments have been provided
-    expected_value,       //< expected a value but none has been given
+    implementation_error, //< error in the implementation, i.e. some invalid
+                          // state is reached
+
+    // generic parameter set and get errors
+    cant_set_param,  //< cant set a parameter
+    cant_read_param, //< cant read a parameter
+    invalid_cmd,     //< an invalid command has been entered
+    buffer_overflow, //< a buffer would overflow
 
     // parse errors
-    too_few_characters,    //< expected more characters
-    unexpected_characters, //< unexpected or too many characters
-    invalid_character,     //< encountered invalid character
-    too_many_sequence_values,
-    too_few_sequence_values,
-    invalid_sequence_value,
+    invalid_argument,         //< invalid function argument
+    too_few_characters,       //< expected more characters
+    unexpected_characters,    //< unexpected or too many characters
+    invalid_character,        //< encountered invalid character
+    too_many_sequence_values, //< to many sequence values encountered
+    too_few_sequence_values,  //< to few sequence values encountered
+    invalid_sequence_value,   //< invlid sequence value encountered
     expected_group_opening,
     expected_group_closing,
-    expected_assignment,
-    expected_delimiter,
-    expected_endquote,
-    expected_rparen, //< expected closing parentheses
-    expected_lparen,
-    expected_lbrace,
-    expected_rbrace,
-    expected_lbracket,
-    expected_rbracket,
-    expected_another_field,
-    expected_another_arg,
-    expected_field,
-    expected_args,
-    unexpected_characters_after_closing_paren,
+    expected_assignment,    //< expected =
+    expected_delimiter,     //< expected delimiter after sequence value
+    expected_endquote,      //< expected "
+    expected_rparen,        //< expected )
+    expected_lparen,        //< expected (
+    expected_lbrace,        //< expected {
+    expected_rbrace,        //< expected }
+    expected_lbracket,      //< expected [
+    expected_rbracket,      //< expected ]
+    expected_another_field, //< expected another field value
+    expected_another_arg,   //< expected another argument
+    expected_value,         //< expected a value but none has been given
+    expected_field,         //< expected a field value
+    expected_args,          //< expected argument(s)
+    unexpected_characters_after_closing_paren, //< characters after )
 
     // validation errors
     invalid_value, //< encountered an invalid value

@@ -7,11 +7,11 @@
 #ifndef CLI_PARAM_HPP
 #define CLI_PARAM_HPP
 
+#include "cli/basic_format.hpp"
 #include "cli/command.hpp"
 #include "cli/concepts.hpp"
 #include "cli/ctti.hpp"
 #include "cli/enums.hpp"
-#include "cli/format.hpp"
 #include "cli/function.hpp"
 #include "cli/parse.hpp"
 #include "cli/string.hpp"
@@ -71,9 +71,10 @@ namespace cli::params {
    * @tparam V the value type
    */
   template<class G, class V>
-  concept GetterOf = requires(G &&getter, std::remove_cvref_t<V> &value) {
-    { getter(value) } -> std::same_as<Error>;
-  } and is_non_const_lvalue_ref<first_arg_t<G>>;
+  concept GetterOf =
+    Callable<G> && requires(G &&getter, std::remove_cvref_t<V> &value) {
+      { getter(value) } -> std::same_as<Error>;
+    } && is_non_const_lvalue_ref<first_arg_t<G>>;
 
   /**
    * concept for a Setter with value type V.
@@ -85,9 +86,9 @@ namespace cli::params {
    * @tparam V the value type
    */
   template<typename S, typename V>
-  concept SetterOf = requires(S &&setter, const V &value) {
+  concept SetterOf = Callable<S> && requires(S &&setter, const V &value) {
     { setter(value) } -> std::same_as<Error>;
-  } and not is_non_const_lvalue_ref<V>;
+  } && not is_non_const_lvalue_ref<V>;
 
   /**
    * A Getter G retrieves the value of a parameter. An instance of G must
@@ -101,9 +102,10 @@ namespace cli::params {
    * @tparam G the type to test
    */
   template<class G>
-  concept Getter = requires(G &&getter, getter_value_type_t<G> &value) {
-    { getter(value) } -> std::same_as<Error>;
-  };
+  concept Getter =
+    Callable<G> and requires(G &&getter, getter_value_type_t<G> &value) {
+      { getter(value) } -> std::same_as<Error>;
+    };
 
   /**
    * A Setter S sets the value of a parameter. An instance of S must be
@@ -115,9 +117,10 @@ namespace cli::params {
    * @tparam S the type to test
    */
   template<class S>
-  concept Setter = requires(S &&setter, const setter_value_type_t<S> &value) {
-    { setter(value) } -> std::same_as<Error>;
-  };
+  concept Setter =
+    Callable<S> and requires(S &&setter, const setter_value_type_t<S> &value) {
+      { setter(value) } -> std::same_as<Error>;
+    };
 
   template<SC Str>
   using get_char_t = typename Str::char_type;
@@ -632,6 +635,24 @@ namespace cli::params {
       constexpr Error operator()(const T &t) noexcept {
         CLI_ASSERT(value_);
         *value_ = t;
+        return Error::none;
+      }
+    };
+
+    template<auto &Object>
+    struct ObjectSet {
+      constexpr Error operator()(
+        const std::remove_reference_t<decltype(Object)> &t) const noexcept {
+        Object = t;
+        return Error::none;
+      }
+    };
+
+    template<const auto &Object>
+    struct ObjectGet {
+      constexpr Error
+      operator()(std::remove_cvref_t<decltype(Object)> &t) const noexcept {
+        t = Object;
         return Error::none;
       }
     };
@@ -1252,7 +1273,6 @@ namespace cli::params {
            SC Description,
            GetterOf<T> Get,
            format::FormatterOf<T, get_char_t<Name>> Format,
-           validate::ValidatorOf<T> Validate,
            concepts::Command... SubCommands>
     requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
   [[nodiscard]] constexpr concepts::Command auto
@@ -1260,7 +1280,6 @@ namespace cli::params {
         Description description,
         Get &&get,
         Format &&format,
-        Validate &&validate,
         SubCommands &&...cmds) noexcept {
     (void)name;
     (void)description;
@@ -1270,7 +1289,7 @@ namespace cli::params {
                     dtl::InvalidSet<T>{},
                     parse::NoParse<T, get_char_t<Name>>{},
                     std::forward<Format>(format),
-                    std::forward<Validate>(validate),
+                    validate::DefaultValidate<T>{},
                     std::forward<SubCommands>(cmds)...);
   }
 
@@ -1368,55 +1387,6 @@ namespace cli::params {
                     std::forward<Set>(set),
                     std::forward<Parse>(parse),
                     format::NoFormat<T, get_char_t<Name>>{},
-                    validate::DefaultValidate<T>{},
-                    std::forward<SubCommands>(cmds)...);
-  }
-
-  /**
-   * creates a read-only parameter command with custom formatter.
-   *
-   * Usage:
-   * ```
-   * cli::Error get_i(int& ret){...}
-   * cli::FormatResult format_i(int i, cli::View<char>& out){}
-   *
-   * auto par = cli::params::param<int>("i"_sc,
-   *                                    "a description"_sc,
-   *                                    get_i,
-   *                                    format_i);
-   * ```
-   * @tparam T the parameter's type
-   * @param name the name of the parameter. Must be a cli::string_constant.
-   * @param description the parameter description, used by the help
-   * functionality. Must be a cli::string_constant.
-   * @param get the getter of the parameter. See cli::params::Getter for
-   * additional info.
-   * @param format the Formatter. Used to format a T. See also
-   * cli::format::Formatter.
-   * @param cmds additional optional subcommands
-   * @return a Command
-   */
-  template<typename T,
-           Id Name,
-           SC Description,
-           GetterOf<T> Get,
-           format::FormatterOf<T, get_char_t<Name>> Format,
-           concepts::Command... SubCommands>
-    requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
-  [[nodiscard]] constexpr concepts::Command auto
-  param(Name name,
-        Description description,
-        Get &&get,
-        Format &&format,
-        SubCommands &&...cmds) noexcept {
-    (void)name;
-    (void)description;
-    return param<T>(Name{},
-                    Description{},
-                    std::forward<Get>(get),
-                    dtl::InvalidSet<T>{},
-                    parse::NoParse<T, get_char_t<Name>>{},
-                    std::forward<Format>(format),
                     validate::DefaultValidate<T>{},
                     std::forward<SubCommands>(cmds)...);
   }
@@ -3759,6 +3729,1242 @@ namespace cli::params {
                  validate::DefaultValidate<T>{},
                  std::forward<SubCommands>(cmds)...);
   }
+
+  template<auto &Object>
+  using object_type = std::remove_reference_t<decltype(Object)>;
+
+  template<auto &Object>
+  using const_object_type = std::remove_cvref_t<decltype(Object)>;
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<
+    auto &Object,
+    SC Description,
+    GetterOf<object_type<Object>> Get,
+    SetterOf<object_type<Object>> Set,
+    parse::ParserOf<object_type<Object>, get_char_t<Description>> Parse,
+    format::FormatterOf<object_type<Object>, get_char_t<Description>> Format,
+    validate::ValidatorOf<object_type<Object>> Validate,
+    CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Get &&get,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return dtl::Param{
+      ctti::object_name<Object, get_char_t<Description>>(),
+      Description{},
+      ctti::name<std::remove_const_t<object_type<Object>>,
+                 get_char_t<Description>>(),
+      std::forward<Get>(get),
+      std::forward<Set>(set),
+      std::forward<Parse>(parse),
+      std::forward<Format>(format),
+      std::forward<Validate>(validate),
+      dtl::transform(Object, std::forward<SubCommands>(cmds))...};
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<
+    auto &Object,
+    SC Description,
+    GetterOf<object_type<Object>> Get,
+    SetterOf<object_type<Object>> Set,
+    parse::ParserOf<object_type<Object>, get_char_t<Description>> Parse,
+    format::FormatterOf<object_type<Object>, get_char_t<Description>> Format,
+    CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Get &&get,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(Description{},
+                         std::forward<Get>(get),
+                         std::forward<Set>(set),
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts. The default parser
+   * and formatter are used.
+   *
+   * @tparam Object the parameter value
+   * @param description the parameter description, used by the help
+   * functionality. Must be a cli::string_constant.
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param validate the validator used to validate a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SC Description,
+           GetterOf<object_type<Object>> Get,
+           SetterOf<object_type<Object>> Set,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Get &&get,
+        Set &&set,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      std::forward<Get>(get),
+      std::forward<Set>(set),
+      parse::Parse<object_type<Object>, get_char_t<Description>>{},
+      format::Format<object_type<Object>, get_char_t<Description>>{},
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts. The default getter
+   * is used.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<
+    auto &Object,
+    SC Description,
+    SetterOf<object_type<Object>> Set,
+    parse::ParserOf<object_type<Object>, get_char_t<Description>> Parse,
+    format::FormatterOf<object_type<Object>, get_char_t<Description>> Format,
+    validate::ValidatorOf<object_type<Object>> Validate,
+    CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(Description{},
+                         dtl::ObjectGet<Object>{},
+                         std::forward<Set>(set),
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts. The default setter
+   * is used.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<
+    auto &Object,
+    SC Description,
+    GetterOf<object_type<Object>> Get,
+    parse::ParserOf<object_type<Object>, get_char_t<Description>> Parse,
+    format::FormatterOf<object_type<Object>, get_char_t<Description>> Format,
+    validate::ValidatorOf<object_type<Object>> Validate,
+    CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Get &&get,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(Description{},
+                         std::forward<Get>(get),
+                         dtl::ObjectSet<Object>{},
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SC Description,
+           GetterOf<object_type<Object>> Get,
+           SetterOf<object_type<Object>> Set,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Get &&get,
+        Set &&set,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      std::forward<Get>(get),
+      std::forward<Set>(set),
+      parse::Parse<object_type<Object>, get_char_t<Description>>{},
+      format::Format<object_type<Object>, get_char_t<Description>>{},
+      validate::DefaultValidate<object_type<Object>>{},
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<
+    auto &Object,
+    SC Description,
+    SetterOf<object_type<Object>> Set,
+    parse::ParserOf<object_type<Object>, get_char_t<Description>> Parse,
+    format::FormatterOf<object_type<Object>, get_char_t<Description>> Format,
+    CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(Description{},
+                         dtl::ObjectGet<Object>{},
+                         std::forward<Set>(set),
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<
+    auto &Object,
+    SC Description,
+    GetterOf<object_type<Object>> Get,
+    parse::ParserOf<object_type<Object>, get_char_t<Description>> Parse,
+    format::FormatterOf<object_type<Object>, get_char_t<Description>> Format,
+    CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Get &&get,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(Description{},
+                         std::forward<Get>(get),
+                         dtl::ObjectSet<Object>{},
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command with custom setter and validator.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SC Description,
+           SetterOf<object_type<Object>> Set,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Set &&set,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      dtl::ObjectGet<Object>{},
+      std::forward<Set>(set),
+      parse::Parse<object_type<Object>, get_char_t<Description>>{},
+      format::Format<object_type<Object>, get_char_t<Description>>{},
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SC Description,
+           GetterOf<object_type<Object>> Get,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Get &&get,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      std::forward<Get>(get),
+      dtl::ObjectSet<Object>{},
+      parse::Parse<object_type<Object>, get_char_t<Description>>{},
+      format::Format<object_type<Object>, get_char_t<Description>>{},
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<
+    auto &Object,
+    SC Description,
+    parse::ParserOf<object_type<Object>, get_char_t<Description>> Parse,
+    format::FormatterOf<object_type<Object>, get_char_t<Description>> Format,
+    validate::ValidatorOf<object_type<Object>> Validate,
+    CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(Description{},
+                         dtl::ObjectGet<Object>{},
+                         dtl::ObjectSet<Object>{},
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SC Description,
+           GetterOf<object_type<Object>> Get,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires((not std::is_member_pointer_v<
+               std::remove_cvref_t<object_type<Object>>>) and
+             not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description, Get &&get, SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      std::forward<Get>(get),
+      dtl::ObjectSet<Object>{},
+      parse::Parse<object_type<Object>, get_char_t<Description>>{},
+      format::Format<object_type<Object>, get_char_t<Description>>{},
+      validate::DefaultValidate<object_type<Object>>{},
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SC Description,
+           SetterOf<object_type<Object>> Set,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description, Set &&set, SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      dtl::ObjectGet<Object>{},
+      std::forward<Set>(set),
+      parse::Parse<object_type<Object>, get_char_t<Description>>{},
+      format::Format<object_type<Object>, get_char_t<Description>>{},
+      validate::DefaultValidate<object_type<Object>>{},
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command with custom parser and formatter.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<
+    auto &Object,
+    SC Description,
+    parse::ParserOf<object_type<Object>, get_char_t<Description>> Parse,
+    format::FormatterOf<object_type<Object>, get_char_t<Description>> Format,
+    CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(Description{},
+                         dtl::ObjectGet<Object>{},
+                         dtl::ObjectSet<Object>{},
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command with custom validator.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SC Description,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      dtl::ObjectGet<Object>{},
+      dtl::ObjectSet<Object>{},
+      parse::Parse<object_type<Object>, get_char_t<Description>>{},
+      format::Format<object_type<Object>, get_char_t<Description>>{},
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object, SC Description, CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description, SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      dtl::ObjectGet<Object>{},
+      dtl::ObjectSet<Object>{},
+      parse::Parse<object_type<Object>, get_char_t<Description>>{},
+      format::Format<object_type<Object>, get_char_t<Description>>{},
+      validate::DefaultValidate<object_type<Object>>{},
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           GetterOf<object_type<Object>> Get,
+           SetterOf<object_type<Object>> Set,
+           parse::Parser Parse,
+           format::Formatter Format,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Get &&get,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using ObjectType = object_type<Object>;
+
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, ObjectType>,
+      "format must be able to format the Object");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, ObjectType>,
+      "parse must be able to parse values of the Object's type");
+
+    return param<Object>(NoDescription<parse_char_type>{},
+                         std::forward<Get>(get),
+                         std::forward<Set>(set),
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           GetterOf<object_type<Object>> Get,
+           SetterOf<object_type<Object>> Set,
+           parse::Parser Parse,
+           format::Formatter Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Get &&get,
+        Set &&set,
+        Parse &&parse,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using ObjectType = object_type<Object>;
+
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, ObjectType>,
+      "format must be able to format the Object");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, ObjectType>,
+      "parse must be able to parse values of the Object's type");
+
+    return param<Object>(NoDescription<parse_char_type>{},
+                         std::forward<Get>(get),
+                         std::forward<Set>(set),
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         validate::DefaultValidate<ObjectType>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts. The default parser
+   * and formatter are used.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param validate the validator used to validate a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           GetterOf<object_type<Object>> Get,
+           SetterOf<object_type<Object>> Set,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto param(
+    Get &&get, Set &&set, Validate &&validate, SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         std::forward<Get>(get),
+                         std::forward<Set>(set),
+                         parse::Parse<object_type<Object>, char>{},
+                         format::Format<object_type<Object>, char>{},
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts. The default getter
+   * is used.
+   *
+   * @tparam Object the parameter value
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SetterOf<object_type<Object>> Set,
+           parse::Parser Parse,
+           format::Formatter Format,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Set &&set,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using ObjectType = object_type<Object>;
+
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, ObjectType>,
+      "format must be able to format the Object");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, ObjectType>,
+      "parse must be able to parse values of the Object's type");
+
+    return param<Object>(NoDescription<parse_char_type>{},
+                         dtl::DefaultGet<ObjectType>{Object},
+                         std::forward<Set>(set),
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts. The default setter
+   * is used.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           GetterOf<object_type<Object>> Get,
+           parse::Parser Parse,
+           format::Formatter Format,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Get &&get,
+        Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using ObjectType = object_type<Object>;
+
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, ObjectType>,
+      "format must be able to format the Object");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, ObjectType>,
+      "parse must be able to parse values of the Object's type");
+
+    return param<Object>(NoDescription<parse_char_type>{},
+                         std::forward<Get>(get),
+                         dtl::ObjectSet<Object>{},
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   * ```
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           GetterOf<object_type<Object>> Get,
+           SetterOf<object_type<Object>> Set,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Get &&get, Set &&set, SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         std::forward<Get>(get),
+                         std::forward<Set>(set),
+                         parse::Parse<object_type<Object>, char>{},
+                         format::Format<object_type<Object>, char>{},
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SetterOf<object_type<Object>> Set,
+           parse::Parser Parse,
+           format::Formatter Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto param(
+    Set &&set, Parse &&parse, Format &&format, SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using ObjectType = object_type<Object>;
+
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, ObjectType>,
+      "format must be able to format the Object");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, ObjectType>,
+      "parse must be able to parse values of the Object's type");
+
+    return param<Object>(NoDescription<parse_char_type>{},
+                         dtl::ObjectGet<Object>{},
+                         std::forward<Set>(set),
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           GetterOf<object_type<Object>> Get,
+           parse::Parser Parse,
+           format::Formatter Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto param(
+    Get &&get, Parse &&parse, Format &&format, SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using ObjectType = object_type<Object>;
+
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, ObjectType>,
+      "format must be able to format the Object");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, ObjectType>,
+      "parse must be able to parse values of the Object's type");
+
+    return param<Object>(NoDescription<parse_char_type>{},
+                         std::forward<Get>(get),
+                         dtl::ObjectSet<Object>{},
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command with custom setter and validator.
+   *
+   * @tparam Object the parameter value
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SetterOf<object_type<Object>> Set,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Set &&set, Validate &&validate, SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         dtl::ObjectGet<Object>{},
+                         std::forward<Set>(set),
+                         parse::Parse<object_type<Object>, char>{},
+                         format::Format<object_type<Object>, char>{},
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           GetterOf<object_type<Object>> Get,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Get &&get, Validate &&validate, SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         std::forward<Get>(get),
+                         dtl::ObjectSet<Object>{},
+                         parse::Parse<object_type<Object>, char>{},
+                         format::Format<object_type<Object>, char>{},
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           parse::Parser Parse,
+           format::Formatter Format,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Parse &&parse,
+        Format &&format,
+        Validate &&validate,
+        SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using ObjectType = object_type<Object>;
+
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, ObjectType>,
+      "format must be able to format the Object");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, ObjectType>,
+      "parse must be able to parse values of the Object's type");
+
+    return param<Object>(NoDescription<parse_char_type>{},
+                         dtl::ObjectGet<Object>{},
+                         dtl::ObjectSet<Object>{},
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           GetterOf<object_type<Object>> Get,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Get &&get, SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         std::forward<Get>(get),
+                         dtl::ObjectSet<Object>{},
+                         parse::Parse<object_type<Object>, char>{},
+                         format::Format<object_type<Object>, char>{},
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param set the setter of the parameter. See cli::params::Setter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           SetterOf<object_type<Object>> Set,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Set &&set, SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         dtl::ObjectGet<Object>{},
+                         std::forward<Set>(set),
+                         parse::Parse<object_type<Object>, char>{},
+                         format::Format<object_type<Object>, char>{},
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command with custom parser and formatter.
+   *
+   * @tparam Object the parameter value
+   * @param parse the parser used to parse a T
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           parse::Parser Parse,
+           format::Formatter Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Parse &&parse, Format &&format, SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using ObjectType = object_type<Object>;
+
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, ObjectType>,
+      "format must be able to format the Object");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, ObjectType>,
+      "parse must be able to parse values of the Object's type");
+
+    return param<Object>(NoDescription<parse_char_type>{},
+                         dtl::ObjectGet<Object>{},
+                         dtl::ObjectSet<Object>{},
+                         std::forward<Parse>(parse),
+                         std::forward<Format>(format),
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command with custom validator.
+   *
+   * @tparam Object the parameter value
+   * @param validate the validator used when parsing a T. See @ref Validation.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object,
+           validate::ValidatorOf<object_type<Object>> Validate,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Validate &&validate, SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         dtl::ObjectGet<Object>{},
+                         dtl::ObjectSet<Object>{},
+                         parse::Parse<object_type<Object>, char>{},
+                         format::Format<object_type<Object>, char>{},
+                         std::forward<Validate>(validate),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a parameter command from its individual parts.
+   *
+   * @tparam Object the parameter value
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<auto &Object, CmdOrMemDataOrMemFun... SubCommands>
+    requires(
+      not std::is_member_pointer_v<std::remove_cvref_t<object_type<Object>>> and
+      not std::is_const_v<object_type<Object>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         dtl::ObjectGet<Object>{},
+                         dtl::ObjectSet<Object>{},
+                         parse::Parse<object_type<Object>, char>{},
+                         format::Format<object_type<Object>, char>{},
+                         validate::DefaultValidate<object_type<Object>>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
   /// @}
 
   // clang-format off
@@ -3955,6 +5161,402 @@ namespace cli::params {
                  dtl::DefaultGet<T>{t},
                  format::Format<T, get_char_t<Name>>{},
                  std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a read-only parameter command with a custom getter and formatter.
+   *
+   * Usage:
+   * ```
+   * cli::Error get_i(int& ret){...}
+   * cli::FormatResult format_i(int i, cli::View<char>& out){}
+   *
+   * static const int i = 5;
+   * auto par = cli::params::param("i"_sc,
+   *                               i,
+   *                               get_i,
+   *                               format_i);
+   * ```
+   * @param name the name of the parameter. Must be a cli::string_constant.
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<Id Name,
+           typename T,
+           GetterOf<T> Get,
+           format::FormatterOf<T, get_char_t<Name>> Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name,
+        const T &t,
+        Get &&get,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
+    (void)name;
+    return dtl::Param{Name{},
+                      NoDescription<get_char_t<Name>>{},
+                      ctti::name<T, get_char_t<Name>>(),
+                      std::forward<Get>(get),
+                      dtl::InvalidSet<T>{},
+                      parse::NoParse<T, get_char_t<Name>>{},
+                      std::forward<Format>(format),
+                      validate::DefaultValidate<T>{},
+                      dtl::transform(t, std::forward<SubCommands>(cmds))...};
+  }
+
+  /**
+   * creates a read-only parameter command with default formatter.
+   *
+   * Usage:
+   * ```
+   * cli::Error get_i(int& ret){...}
+   *
+   * static const int i = 5;
+   * auto par = cli::params::param("i"_sc,
+   *                               i,
+   *                               get_i);
+   * ```
+   * @param name the name of the parameter. Must be a cli::string_constant.
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<Id Name,
+           typename T,
+           GetterOf<T> Get,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name, const T &t, Get &&get, SubCommands &&...cmds) noexcept {
+    (void)name;
+    return param(Name{},
+                 NoDescription<get_char_t<Name>>{},
+                 t,
+                 std::forward<Get>(get),
+                 format::Format<T, get_char_t<Name>>{},
+                 std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a read-only parameter command with custom formatter.
+   *
+   * Usage:
+   * ```
+   * cli::FormatResult format_i(int i, cli::View<char>& out){}
+   *
+   * static const int i = 5;
+   * auto par = cli::params::param("i"_sc,
+   *                               i,
+   *                               format_i);
+   * ```
+   * @param name the name of the parameter. Must be a cli::string_constant.
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<Id Name,
+           typename T,
+           format::FormatterOf<T, get_char_t<Name>> Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
+  [[nodiscard]] constexpr concepts::Command auto param(
+    Name name, const T &t, Format &&format, SubCommands &&...cmds) noexcept {
+    (void)name;
+    return param(Name{},
+                 NoDescription<get_char_t<Name>>{},
+                 t,
+                 dtl::DefaultGet<T>{t},
+                 std::forward<Format>(format),
+                 std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a read-only parameter command with default formatter and getter.
+   *
+   * Usage:
+   * ```
+   * static const int i = 5;
+   * auto par = cli::params::param("i"_sc,
+   *                               "a description"_sc,
+   *                               i);
+   * ```
+   * @param name the name of the parameter. Must be a cli::string_constant.
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<Id Name, typename T, CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Name name, const T &t, SubCommands &&...cmds) noexcept {
+    (void)name;
+    return param(Name{},
+                 NoDescription<get_char_t<Name>>{},
+                 t,
+                 dtl::DefaultGet<T>{t},
+                 format::Format<T, get_char_t<Name>>{},
+                 std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a read-only parameter command with a custom getter and formatter.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<const auto &Object,
+           SC Description,
+           GetterOf<const_object_type<Object>> Get,
+           format::FormatterOf<const_object_type<Object>,
+                               get_char_t<Description>> Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<
+             std::remove_cvref_t<const_object_type<Object>>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description,
+        Get &&get,
+        Format &&format,
+        SubCommands &&...cmds) noexcept {
+    (void)description;
+    return dtl::Param{
+      ctti::object_name<Object, get_char_t<Description>>(),
+      Description{},
+      ctti::name<const_object_type<Object>, get_char_t<Description>>(),
+      std::forward<Get>(get),
+      dtl::InvalidSet<const_object_type<Object>>{},
+      parse::NoParse<const_object_type<Object>, get_char_t<Description>>{},
+      std::forward<Format>(format),
+      validate::DefaultValidate<const_object_type<Object>>{},
+      dtl::transform(Object, std::forward<SubCommands>(cmds))...};
+  }
+
+  /**
+   * creates a read-only parameter command with default formatter.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<const auto &Object,
+           SC Description,
+           GetterOf<const_object_type<Object>> Get,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<
+             std::remove_cvref_t<const_object_type<Object>>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description, Get &&get, SubCommands &&...cmds) noexcept {
+    (void)description;
+    return dtl::Param{
+      ctti::object_name<Object, get_char_t<Description>>(),
+      Description{},
+      ctti::name<const_object_type<Object>, get_char_t<Description>>(),
+      std::forward<Get>(get),
+      dtl::InvalidSet<const_object_type<Object>>{},
+      parse::NoParse<const_object_type<Object>, get_char_t<Description>>{},
+      format::Format<const_object_type<Object>, get_char_t<Description>>{},
+      validate::DefaultValidate<const_object_type<Object>>{},
+      dtl::transform(Object, std::forward<SubCommands>(cmds))...};
+  }
+
+  /**
+   * creates a read-only parameter command with custom formatter.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<const auto &Object,
+           SC Description,
+           format::FormatterOf<const_object_type<Object>,
+                               get_char_t<Description>> Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<
+             std::remove_cvref_t<const_object_type<Object>>>)
+  [[nodiscard]] constexpr concepts::Command auto param(
+    Description description, Format &&format, SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(Description{},
+                         dtl::DefaultGet<const_object_type<Object>>{Object},
+                         std::forward<Format>(format),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a read-only parameter command with default formatter and getter.
+   *
+   * @tparam Object the parameter value
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<const auto &Object,
+           SC Description,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<
+             std::remove_cvref_t<const_object_type<Object>>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Description description, SubCommands &&...cmds) noexcept {
+    (void)description;
+    return param<Object>(
+      Description{},
+      dtl::DefaultGet<const_object_type<Object>>{Object},
+      format::Format<const_object_type<Object>, get_char_t<Description>>{},
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a read-only parameter command with a custom getter and formatter.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<const auto &Object,
+           GetterOf<const_object_type<Object>> Get,
+           format::Formatter Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<
+             std::remove_cvref_t<const_object_type<Object>>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Get &&get, Format &&format, SubCommands &&...cmds) noexcept {
+    using value_type = format::formatter_value_type_t<Format>;
+    using char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+
+    static_assert(std::is_same_v<value_type, const_object_type<Object>>,
+                  "format must be able to format the Object");
+
+    return dtl::Param{
+      ctti::object_name<Object, char_type>(),
+      NoDescription<char_type>{},
+      ctti::name<const_object_type<Object>, char_type>(),
+      std::forward<Get>(get),
+      dtl::InvalidSet<const_object_type<Object>>{},
+      parse::NoParse<const_object_type<Object>, char_type>{},
+      std::forward<Format>(format),
+      validate::DefaultValidate<const_object_type<Object>>{},
+      dtl::transform(Object, std::forward<SubCommands>(cmds))...};
+  }
+
+  /**
+   * creates a read-only parameter command with default formatter.
+   *
+   * @tparam Object the parameter value
+   * @param get the getter of the parameter. See cli::params::Getter for
+   * additional info.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<const auto &Object,
+           GetterOf<const_object_type<Object>> Get,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<
+             std::remove_cvref_t<const_object_type<Object>>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Get &&get, SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         std::forward<Get>(get),
+                         format::Format<const_object_type<Object>, char>{},
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a read-only parameter command with custom formatter.
+   *
+   * @tparam Object the parameter value
+   * @param format the Formatter. Used to format a T. See also
+   * cli::format::Formatter.
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<const auto &Object,
+           format::Formatter Format,
+           CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<
+             std::remove_cvref_t<const_object_type<Object>>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(Format &&format, SubCommands &&...cmds) noexcept {
+    using value_type = format::formatter_value_type_t<Format>;
+    using char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+
+    static_assert(std::is_same_v<value_type, const_object_type<Object>>,
+                  "format must be able to format the Object");
+
+    return param<Object>(NoDescription<char_type>{},
+                         dtl::DefaultGet<const_object_type<Object>>{Object},
+                         std::forward<Format>(format),
+                         std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * creates a read-only parameter command with default formatter and getter.
+   *
+   * Usage:
+   * ```
+   * static const int i = 5;
+   * auto par = cli::params::param("i"_sc,
+   *                               "a description"_sc,
+   *                               i);
+   * ```
+   * @param name the name of the parameter. Must be a cli::string_constant.
+   * @param description the description of the parameter. Must be a
+   * cli::string_constant.
+   * @param t the parameter value
+   * @param cmds additional optional subcommands
+   * @return a Command
+   */
+  template<const auto &Object, CmdOrMemDataOrMemFun... SubCommands>
+    requires(not std::is_member_pointer_v<
+             std::remove_cvref_t<const_object_type<Object>>>)
+  [[nodiscard]] constexpr concepts::Command auto
+  param(SubCommands &&...cmds) noexcept {
+    return param<Object>(NoDescription<char>{},
+                         dtl::DefaultGet<const_object_type<Object>>{Object},
+                         format::Format<const_object_type<Object>, char>{},
+                         std::forward<SubCommands>(cmds)...);
   }
   /// @}
 
@@ -4591,12 +6193,13 @@ namespace cli::params {
    *
    * ```
    *  param("settings"_sc, "core settings", settings,
-   *          param("foo"_sc, "foo mode"_sc, &Settings::foo),
+   *             param("foo"_sc, "foo mode"_sc, &Settings::foo),
    *          param("baz"_sc, "baz setting"_sc, &Settings::baz));
    * ```
    *
    * Then ``settings``, ``settings.foo`` and ``settings.baz`` can be used as
    * parameter commands.
+   *
    *
    * The full list of member data parameter functions is:
    * ```
@@ -4629,7 +6232,8 @@ namespace cli::params {
     format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
     validate::ValidatorOf<mem_data_type<MemberPointer>> Validate,
     concepts::Command... SubCommands>
-    requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
+    requires(std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
+             not std::is_const_v<mem_data_type<MemberPointer>>)
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
                                      MemberPointer member,
@@ -4670,7 +6274,8 @@ namespace cli::params {
     parse::ParserOf<mem_data_type<MemberPointer>, get_char_t<Name>> Parse,
     format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
     concepts::Command... SubCommands>
-    requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
+    requires(std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
+             not std::is_const_v<mem_data_type<MemberPointer>>)
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
                                      MemberPointer member,
@@ -4705,8 +6310,8 @@ namespace cli::params {
            class MemberPointer,
            validate::ValidatorOf<mem_data_type<MemberPointer>> Validate,
            concepts::Command... SubCommands>
-    requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
-             validate::ValidatorOf<Validate, mem_data_type<MemberPointer>>
+    requires(std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
+             not std::is_const_v<mem_data_type<MemberPointer>>)
   [[nodiscard]] constexpr auto param(Name name,
                                      Description description,
                                      MemberPointer member,
@@ -4718,6 +6323,115 @@ namespace cli::params {
     return param(
       Name{},
       Description{},
+      member,
+      cli::parse::Parse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
+      cli::format::Format<mem_data_type<MemberPointer>, get_char_t<Name>>{},
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param validate the validator used for validating the member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<
+    Id Name,
+    class MemberPointer,
+    parse::ParserOf<mem_data_type<MemberPointer>, get_char_t<Name>> Parse,
+    format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
+    validate::ValidatorOf<mem_data_type<MemberPointer>> Validate,
+    concepts::Command... SubCommands>
+    requires(std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
+             not std::is_const_v<mem_data_type<MemberPointer>>)
+  [[nodiscard]] constexpr auto param(Name name,
+                                     MemberPointer member,
+                                     Parse &&parse,
+                                     Format &&format,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) noexcept {
+    (void)name;
+    using namespace dtl;
+    return MemberData{
+      Name{},
+      NoDescription<get_char_t<Name>>{},
+      cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
+      member,
+      std::forward<Parse>(parse),
+      std::forward<Format>(format),
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...};
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<
+    Id Name,
+    class MemberPointer,
+    parse::ParserOf<mem_data_type<MemberPointer>, get_char_t<Name>> Parse,
+    format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
+    concepts::Command... SubCommands>
+    requires(std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
+             not std::is_const_v<mem_data_type<MemberPointer>>)
+  [[nodiscard]] constexpr auto param(Name name,
+                                     MemberPointer member,
+                                     Parse &&parse,
+                                     Format &&format,
+                                     SubCommands &&...cmds) noexcept {
+    (void)name;
+    using namespace dtl;
+    return param(Name{},
+                 NoDescription<get_char_t<Name>>{},
+                 member,
+                 std::forward<Parse>(parse),
+                 std::forward<Format>(format),
+                 validate::DefaultValidate<mem_data_type<MemberPointer>>{},
+                 std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param member pointer to the member variable
+   * @param validate the validator used for validating the member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<Id Name,
+           class MemberPointer,
+           validate::ValidatorOf<mem_data_type<MemberPointer>> Validate,
+           concepts::Command... SubCommands>
+    requires(std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
+             not std::is_const_v<mem_data_type<MemberPointer>>)
+  [[nodiscard]] constexpr auto param(Name name,
+                                     MemberPointer member,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) noexcept {
+    (void)name;
+    using namespace dtl;
+    return param(
+      Name{},
+      NoDescription<get_char_t<Name>>{},
       member,
       cli::parse::Parse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
       cli::format::Format<mem_data_type<MemberPointer>, get_char_t<Name>>{},
@@ -4813,18 +6527,296 @@ namespace cli::params {
   }
 
   /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<
+    Id Name,
+    SC Description,
+    class MemberPointer,
+    parse::ParserOf<mem_data_type<MemberPointer>, get_char_t<Name>> Parse,
+    format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
+    concepts::Command... SubCommands>
+    requires(std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>> and
+             std::is_const_v<mem_data_type<MemberPointer>>)
+  [[nodiscard]] constexpr auto param(Name name,
+                                     Description description,
+                                     MemberPointer member,
+                                     Format &&format,
+                                     SubCommands &&...cmds) noexcept {
+    (void)name;
+    (void)description;
+    using namespace dtl;
+    return param(
+      Name{},
+      Description{},
+      member,
+      parse::NoParse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
+      std::forward<Format>(format),
+      validate::DefaultValidate<mem_data_type<MemberPointer>>{},
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param validate the validator used for validating the member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<
+    auto MemberPointer,
+    SC Description,
+    parse::ParserOf<mem_data_type<decltype(MemberPointer)>,
+                    get_char_t<Description>> Parse,
+    format::FormatterOf<mem_data_type<decltype(MemberPointer)>,
+                        get_char_t<Description>> Format,
+    validate::ValidatorOf<mem_data_type<decltype(MemberPointer)>> Validate,
+    concepts::Command... SubCommands>
+    requires(
+      std::is_member_pointer_v<std::remove_cvref_t<decltype(MemberPointer)>> and
+      not std::is_const_v<mem_data_type<decltype(MemberPointer)>>)
+  [[nodiscard]] constexpr auto param(Description description,
+                                     Parse &&parse,
+                                     Format &&format,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) noexcept {
+    (void)description;
+    using namespace dtl;
+    return MemberData{
+      ctti::value_name<MemberPointer, get_char_t<Description>>(),
+      Description{},
+      cli::ctti::name<mem_data_type<decltype(MemberPointer)>,
+                      get_char_t<Description>>(),
+      MemberPointer,
+      std::forward<Parse>(parse),
+      std::forward<Format>(format),
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...};
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<auto MemberPointer,
+           SC Description,
+           parse::ParserOf<mem_data_type<decltype(MemberPointer)>,
+                           get_char_t<Description>> Parse,
+           format::FormatterOf<mem_data_type<decltype(MemberPointer)>,
+                               get_char_t<Description>> Format,
+           concepts::Command... SubCommands>
+    requires(
+      std::is_member_pointer_v<std::remove_cvref_t<decltype(MemberPointer)>> and
+      not std::is_const_v<mem_data_type<decltype(MemberPointer)>>)
+  [[nodiscard]] constexpr auto param(Description description,
+                                     Parse &&parse,
+                                     Format &&format,
+                                     SubCommands &&...cmds) noexcept {
+    (void)description;
+    using namespace dtl;
+    return param<MemberPointer>(
+      Description{},
+      std::forward<Parse>(parse),
+      std::forward<Format>(format),
+      validate::DefaultValidate<mem_data_type<decltype(MemberPointer)>>{},
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param validate the validator used for validating the member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<
+    auto MemberPointer,
+    SC Description,
+    validate::ValidatorOf<mem_data_type<decltype(MemberPointer)>> Validate,
+    concepts::Command... SubCommands>
+    requires(
+      std::is_member_pointer_v<std::remove_cvref_t<decltype(MemberPointer)>> and
+      not std::is_const_v<mem_data_type<decltype(MemberPointer)>>)
+  [[nodiscard]] constexpr auto param(Description description,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) noexcept {
+    (void)description;
+    using namespace dtl;
+    return param<MemberPointer>(
+      Description{},
+      cli::parse::Parse<mem_data_type<decltype(MemberPointer)>,
+                        get_char_t<Description>>{},
+      cli::format::Format<mem_data_type<decltype(MemberPointer)>,
+                          get_char_t<Description>>{},
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param validate the validator used for validating the member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<
+    auto MemberPointer,
+    parse::Parser Parse,
+    format::Formatter Format,
+    validate::ValidatorOf<mem_data_type<decltype(MemberPointer)>> Validate,
+    concepts::Command... SubCommands>
+    requires(
+      std::is_member_pointer_v<std::remove_cvref_t<decltype(MemberPointer)>> and
+      not std::is_const_v<mem_data_type<decltype(MemberPointer)>>)
+  [[nodiscard]] constexpr auto param(Parse &&parse,
+                                     Format &&format,
+                                     Validate &&validate,
+                                     SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using value_type = mem_data_type<decltype(MemberPointer)>;
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, value_type>,
+      "format must be able to format the type that MemberPointer points to");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, value_type>,
+      "parse must be able to parse the type that MemberPointer points to");
+    using namespace dtl;
+    return MemberData{ctti::value_name<MemberPointer, parse_char_type>(),
+                      NoDescription<parse_char_type>{},
+                      cli::ctti::name<mem_data_type<decltype(MemberPointer)>,
+                                      parse_char_type>(),
+                      MemberPointer,
+                      std::forward<Parse>(parse),
+                      std::forward<Format>(format),
+                      std::forward<Validate>(validate),
+                      std::forward<SubCommands>(cmds)...};
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<auto MemberPointer,
+           parse::Parser Parse,
+           format::Formatter Format,
+           concepts::Command... SubCommands>
+    requires(
+      std::is_member_pointer_v<std::remove_cvref_t<decltype(MemberPointer)>> and
+      not std::is_const_v<mem_data_type<decltype(MemberPointer)>>)
+  [[nodiscard]] constexpr auto
+  param(Parse &&parse, Format &&format, SubCommands &&...cmds) noexcept {
+    using parse_char_type = typename parse::result_type_t<Parse>::char_type;
+    using format_char_type =
+      typename format::formatter_buffer_type_t<Format>::value_type;
+    using value_type = mem_data_type<decltype(MemberPointer)>;
+    static_assert(std::is_same_v<parse_char_type, format_char_type>,
+                  "parse and format must use the same char type");
+    static_assert(
+      std::is_same_v<format::formatter_value_type_t<Format>, value_type>,
+      "format must be able to format the type that MemberPointer points to");
+
+    static_assert(
+      std::is_same_v<parse::value_type_t<parse_char_type, Parse>, value_type>,
+      "parse must be able to parse the type that MemberPointer points to");
+    using namespace dtl;
+    return param<MemberPointer>(
+      NoDescription<parse_char_type>{},
+      std::forward<Parse>(parse),
+      std::forward<Format>(format),
+      validate::DefaultValidate<mem_data_type<decltype(MemberPointer)>>{},
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param member pointer to the member variable
+   * @param validate the validator used for validating the member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<
+    auto MemberPointer,
+    validate::ValidatorOf<mem_data_type<decltype(MemberPointer)>> Validate,
+    concepts::Command... SubCommands>
+    requires(
+      std::is_member_pointer_v<std::remove_cvref_t<decltype(MemberPointer)>> and
+      not std::is_const_v<mem_data_type<decltype(MemberPointer)>>)
+  [[nodiscard]] constexpr auto param(Validate &&validate,
+                                     SubCommands &&...cmds) noexcept {
+    using namespace dtl;
+    return param<MemberPointer>(
+      NoDescription<char>{},
+      cli::parse::Parse<mem_data_type<decltype(MemberPointer)>, char>{},
+      cli::format::Format<mem_data_type<decltype(MemberPointer)>, char>{},
+      std::forward<Validate>(validate),
+      std::forward<SubCommands>(cmds)...);
+  }
+
+  /**
    * creates a member data subcommand. Must be used together with a parent
-   * command. The name is deduced by cli.
+   * command.
    *
    * Example:
-   * ```
+   * ```{cpp}
    *  struct S{
    *    int a;
    *  };
    *  static S s;
-   *  auto cmd = param("s"_sc, s, mem_data<&S::a>("a number"_sc));
+   *  auto cmd = param("s"_sc,
+   *                   s,
+   *                   mem_data("a"_sc,
+   *                            "a description"_sc,
+   *                             &S::a));
    * ```
-   * @tparam MemberPointer member data pointer
+   *
+   * @param name the name of f. Must be a cli::string_constant.
+   * @param member member data pointer
    * @param description the description of MemberPointer. Must be a
    * cli::string_constant.
    * @param cmds the subcommands
@@ -4836,16 +6828,32 @@ namespace cli::params {
                                      SubCommands &&...cmds) noexcept {
     (void)description;
     using namespace dtl;
-    return param(
-      ctti::value_name<MemberPointer, typename Description::char_type>(),
-      Description{},
-      MemberPointer,
-      std::forward<SubCommands>(cmds)...);
+    using T = mem_data_type<decltype(MemberPointer)>;
+    if constexpr (std::is_const_v<T>) {
+      return MemberData{
+        ctti::value_name<MemberPointer, get_char_t<Description>>(),
+        Description{},
+        cli::ctti::name<std::remove_const_t<T>, get_char_t<Description>>(),
+        MemberPointer,
+        parse::NoParse<std::remove_const_t<T>, get_char_t<Description>>{},
+        format::Format<std::remove_const_t<T>, get_char_t<Description>>{},
+        validate::DefaultValidate<std::remove_const_t<T>>{},
+        std::forward<SubCommands>(cmds)...};
+    } else
+      return MemberData{
+        ctti::value_name<MemberPointer, get_char_t<Description>>(),
+        Description{},
+        cli::ctti::name<T, get_char_t<Description>>(),
+        MemberPointer,
+        parse::Parse<T, get_char_t<Description>>{},
+        format::Format<T, get_char_t<Description>>{},
+        validate::DefaultValidate<T>{},
+        std::forward<SubCommands>(cmds)...};
   }
 
   /**
    * creates a member data subcommand. Must be used together with a parent
-   * command. The name is deduced by cli.
+   * command.
    *
    * Example:
    * ```
@@ -4853,9 +6861,11 @@ namespace cli::params {
    *    int a;
    *  };
    *  static S s;
-   *  auto cmd = param("s"_sc, s, mem_data<&S::a>());
+   *  auto cmd = param("s"_sc, s, mem_data("a"_sc, &S::a));
    * ```
-   * @tparam MemberPointer member data pointer
+   *
+   * @param name the name of f. Must be a cli::string_constant.
+   * @param member member data pointer
    * @param cmds the subcommands
    */
   template<auto MemberPointer, concepts::Command... SubCommands>
@@ -4866,6 +6876,117 @@ namespace cli::params {
     return param<MemberPointer>(NoDescription<char>{},
                                 std::forward<SubCommands>(cmds)...);
   }
+
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<auto MemberPointer,
+           SC Description,
+           format::FormatterOf<
+             std::remove_const_t<mem_data_type<decltype(MemberPointer)>>,
+             get_char_t<Description>> Format,
+           concepts::Command... SubCommands>
+    requires(
+      std::is_member_pointer_v<std::remove_cvref_t<decltype(MemberPointer)>>)
+  [[nodiscard]] constexpr auto param(Description description,
+                                     Format &&format,
+                                     SubCommands &&...cmds) noexcept {
+    (void)description;
+    using namespace dtl;
+    return MemberData{
+      ctti::value_name<MemberPointer, get_char_t<Description>>(),
+      Description{},
+      cli::ctti::name<
+        std::remove_const_t<mem_data_type<decltype(MemberPointer)>>,
+        get_char_t<Description>>(),
+      MemberPointer,
+      parse::NoParse<
+        std::remove_const_t<mem_data_type<decltype(MemberPointer)>>,
+        get_char_t<Description>>{},
+      std::forward<Format>(format),
+      validate::DefaultValidate<
+        std::remove_const_t<mem_data_type<decltype(MemberPointer)>>>{},
+      std::forward<SubCommands>(cmds)...};
+  }
+  /**
+   * @brief creates a member data parameter. Must be used together with a parent
+   * command.
+   *
+   * @param name the name, must be a string_constant.
+   * @param description the description. Must be a string_constant.
+   * @param member pointer to the member variable
+   * @param parse a parser of the type pointed to by member
+   * @param format a formatter for the type pointed to by member
+   * @param cmds additional subcommands
+   * @return a partial command
+   */
+  template<auto MemberPointer,
+           format::FormatterOf<
+             std::remove_const_t<mem_data_type<decltype(MemberPointer)>>,
+             char> Format,
+           concepts::Command... SubCommands>
+    requires(
+      std::is_member_pointer_v<std::remove_cvref_t<decltype(MemberPointer)>>)
+  [[nodiscard]] constexpr auto param(Format &&format,
+                                     SubCommands &&...cmds) noexcept {
+    using namespace dtl;
+    return MemberData{
+      ctti::value_name<MemberPointer, char>(),
+      NoDescription<char>{},
+      cli::ctti::name<
+        std::remove_const_t<mem_data_type<decltype(MemberPointer)>>,
+        char>(),
+      MemberPointer,
+      parse::NoParse<
+        std::remove_const_t<mem_data_type<decltype(MemberPointer)>>,
+        char>{},
+      std::forward<Format>(format),
+      validate::DefaultValidate<
+        std::remove_const_t<mem_data_type<decltype(MemberPointer)>>>{},
+      std::forward<SubCommands>(cmds)...};
+  }
+
+  //   /** creates a member data subcommand. Must be used together with a parent
+  //    * command. The name is deduced by cli.
+  //    *
+  //    * Example: ``` struct S{ int a; }; static S s; auto cmd = param("s"_sc,
+  //    s,
+  //    * mem_data<&S::a>("a number"_sc)); ``` @tparam MemberPointer member data
+  //    * pointer @param description the description of MemberPointer. Must be a
+  //    * cli::string_constant. @param cmds the subcommands
+  //    */
+  // template<auto MemberPointer, SC Description, concepts::Command...
+  // SubCommands> requires std::is_member_pointer_v<
+  // std::remove_cvref_t<decltype(MemberPointer)>> [[nodiscard]] constexpr auto
+  // param(Description description, SubCommands &&...cmds) noexcept {
+  //   (void)description; using namespace dtl; return param(
+  //     ctti::value_name<MemberPointer, typename Description::char_type>(),
+  //     Description{}, MemberPointer, std::forward<SubCommands>(cmds)...); }
+  //
+  // /** creates a member data subcommand. Must be used together with a parent
+  //  * command. The name is deduced by cli.
+  //    *
+  //    * Example: ``` struct S{ int a; }; static S s; auto cmd = param("s"_sc,
+  //    s,
+  //    * mem_data<&S::a>()); ``` @tparam MemberPointer member data pointer
+  //    @param
+  //    * cmds the subcommands
+  //    */
+  // template<auto MemberPointer, concepts::Command... SubCommands> requires
+  // std::is_member_pointer_v< std::remove_cvref_t<decltype(MemberPointer)>>
+  // [[nodiscard]] constexpr auto param(SubCommands &&...cmds) noexcept { using
+  //   namespace dtl; return param<MemberPointer>(NoDescription<char>{},
+  //                                              std::forward<SubCommands>(cmds)...);
+  // }
 
   /**
    * @}
@@ -4946,6 +7067,38 @@ namespace cli::params {
   }
 
   /**
+   * @brief cretes a member data parameter. Must be used as a subcommand.
+   *
+   * @param name the paramter name. Must be a string_constant.
+   * @param member the member data pointer
+   * @param format a foramtter for te type pointed to by member.
+   * @param cmds any additional subocmmands.
+   * @return a partial command.
+   */
+  template<
+    Id Name,
+    class MemberPointer,
+    format::FormatterOf<mem_data_type<MemberPointer>, get_char_t<Name>> Format,
+    concepts::Command... SubCommands>
+    requires std::is_member_pointer_v<std::remove_cvref_t<MemberPointer>>
+  [[nodiscard]] constexpr auto param(Name name,
+                                     MemberPointer member,
+                                     Format &&format,
+                                     SubCommands &&...cmds) noexcept {
+    (void)name;
+    using namespace dtl;
+    return MemberData{
+      Name{},
+      NoDescription<get_char_t<Name>>{},
+      cli::ctti::name<mem_data_type<MemberPointer>, get_char_t<Name>>(),
+      member,
+      parse::NoParse<mem_data_type<MemberPointer>, get_char_t<Name>>{},
+      std::forward<Format>(format),
+      validate::DefaultValidate<mem_data_type<MemberPointer>>{},
+      std::forward<SubCommands>(cmds)...};
+  }
+
+  /**
    * @}
    */
 
@@ -4965,13 +7118,13 @@ namespace cli::params {
    *
    * ```
    *  cli::param(name, description, t, set_callback, validate, cli::recursive)
-   *  cli::param(name, description, t, validate, cli::recursive)
-   *  cli::param(name, description, t, set_callback, cli::recursive)
-   *  cli::param(name, description, t, cli::recursive)
-   *  cli::param(name, t, set_callback, validate, cli::recursive)
-   *  cli::param(name, t, validate, cli::recursive)
-   *  cli::param(name, t, set_callback, cli::recursive)
-   *  cli::param(name, t, cli::recursive)
+   *  cli::param(name, t,              set_callback, validate, cli::recursive)
+   *  cli::param(name, description, t,               validate, cli::recursive)
+   *  cli::param(name,              t,               validate, cli::recursive)
+   *  cli::param(name, description, t, set_callback,           cli::recursive)
+   *  cli::param(name,              t, set_callback,           cli::recursive)
+   *  cli::param(name, description, t,                         cli::recursive)
+   *  cli::param(name,              t,                         cli::recursive)
    * ```
    *
    * where:
@@ -5011,6 +7164,14 @@ namespace cli::params {
    *    - c [char]
    *    - subsettings [SubSettings]
    *      - i [int]
+   *
+   *
+   * There are also overloads for a const **t** available:
+   *
+   * ```
+   *  cli::param(name, description, t, cli::recursive)
+   *  cli::param(name,              t, cli::recursive)
+   * ```
    * @{
    */
 

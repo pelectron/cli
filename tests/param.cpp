@@ -1,255 +1,231 @@
 #include "cli/param.hpp"
-#include "catch2/catch_test_macros.hpp"
 #include "cli.hpp"
-#include "cli/basic_format.hpp"
-#include "cli/enums.hpp"
-#include "cli/exec_result.hpp"
-#include "cli/format.hpp"
-#include "cli/parse.hpp"
-#include "cli/validator.hpp"
+#include "cli/util.hpp"
 
 #include <catch2/catch_all.hpp>
-#include <tuple>
 
 using cli::operator""_sc;
+using cli::params::param;
+
 constexpr auto name = "name"_sc;
 constexpr auto description = "description"_sc;
-constexpr auto getter = [](int &) -> cli::Error { return cli::Error::none; };
-constexpr auto setter = [](const int &) -> cli::Error {
-  return cli::Error::none;
-};
+constexpr auto get = [](int &) -> cli::Error { return cli::Error::none; };
+constexpr auto set = [](const int &) -> cli::Error { return cli::Error::none; };
 
-constexpr auto parser =
+constexpr auto parse =
   [](cli::View<const char>) -> cli::parse::ParseResult<int, char> { return 0; };
 
-constexpr auto formatter = [](cli::View<char>,
-                              int) -> cli::format::FormatResult { return 0; };
+constexpr auto format = [](cli::View<char>, int) -> cli::format::FormatResult {
+  return 0;
+};
 
-constexpr auto validator = [](int) -> bool { return true; };
+constexpr auto validate = [](int) -> bool { return true; };
 
-static_assert(cli::format::Formatter<decltype(formatter)>);
-static_assert(cli::parse::Parser<decltype(parser)>);
+static_assert(cli::format::Formatter<decltype(format)>);
+static_assert(cli::parse::Parser<decltype(parse)>);
+
+using T = int;
+
 TEST_CASE("params without object", "[param]") {
-  // base form
-  {
-    static constinit auto p = cli::param<int>(
-      name, description, getter, setter, parser, formatter, validator);
-    (void)p;
-  }
+  // clang-format off
+  // the basic/full form
+  (void)param<T>(name, description, get, set, parse, format, validate);
+  (void)param<T>(name,              get, set, parse, format, validate);
 
-  // missing one parameter{
-  // no validate
-  {
-    static constinit auto p =
-      cli::param<int>(name, description, getter, setter, parser, formatter);
-    (void)p;
-  }
-  // no format and parse
-  {
-    static constinit auto p =
-      cli::param<int>(name, description, getter, setter, validator);
-    (void)p;
-  }
-  // no get -> format not used
-  {
-    static constinit auto p =
-      cli::param<int>(name, description, setter, parser, validator);
-    (void)p;
-  }
-  // no set -> parse not used
-  {
-    static constinit auto p =
-      cli::param<int>(name, description, getter, formatter, validator);
-    (void)p;
-  }
-  //}
+  // a parameter with default parser and formatter
+  (void)param<T>(name, description, get, set,                validate);
+  (void)param<T>(name,              get, set,                validate);
 
-  // missing two parameters{
-  // no validate and format and parse
-  {
-    static constinit auto p =
-      cli::param<int>(name, description, getter, setter);
-    (void)p;
-  }
-  // no validate and get -> format not used
-  {
-    static constinit auto p =
-      cli::param<int>(name, description, setter, parser);
-    (void)p;
-  }
-  // no validate and set -> parse not used
-  {
-    static constinit auto p =
-      cli::param<int>(name, description, getter, formatter);
-    (void)p;
-  }
+  // a parameter with default validator
+  (void)param<T>(name, description, get, set, parse, format);
+  (void)param<T>(name,              get, set, parse, format);
 
-  // no format/parse and get
-  {
-    static constinit auto p =
-      cli::param<int>(name, description, setter, validator);
-    (void)p;
-  }
-  // }
+  // default parser, formatter and validator are used
+  (void)param<T>(name, description, get, set);
+  (void)param<T>(name,              get, set);
 
-  // missing three parameters {
-  // no validate, format/parse and set
-  {
-    static constinit auto p = cli::param<int>(name, description, getter);
-    (void)p;
-  }
-  // no validate, format/parse and get
-  {
-    static constinit auto p = cli::param<int>(name, description, setter);
-    (void)p;
-  }
-  // }
+  // a write-only parameter with custom parser and validator
+  (void)param<T>(name, description,      set, parse,         validate);
+  (void)param<T>(name,                   set, parse,         validate);
+
+  // a write-only parameter with custom parser
+  (void)param<T>(name, description,      set, parse);
+  (void)param<T>(name,                   set, parse);
+
+  // a write-only parameter with custom validator
+  (void)param<T>(name, description,      set,                validate);
+  (void)param<T>(name,                   set,                validate);
+
+  // a write-only parameter
+  (void)param<T>(name, description,      set);
+  (void)param<T>(name,                   set);
+
+  // a read-only parameter with custom formatter
+  (void)param<T>(name, description, get,             format);
+  (void)param<T>(name,              get,             format);
+
+  // a read-only parameter
+  (void)param<T>(name, description, get);
+  (void)param<T>(name,              get);
+  // clang-format on
 }
 
-static constinit int global_i = 0;
+static constinit int t = 0;
+static constexpr int ct = 0;
 
 TEST_CASE("params with object", "[param]") {
-  // base form
-  {
-    static constinit auto p = cli::param(name,
-                                         description,
-                                         global_i,
-                                         getter,
-                                         setter,
-                                         parser,
-                                         formatter,
-                                         validator);
-    (void)p;
-  }
+  // clang-format off
+  // the basic/full form
+  (void)param(name, description, t, get, set, parse, format, validate);
+  (void)param(name,              t, get, set, parse, format, validate);
 
-  // missing one parameter{
-  // no validate
-  {
-    static constinit auto p = cli::param(
-      name, description, global_i, getter, setter, parser, formatter);
-    (void)p;
-  }
-  // no format and parse
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, getter, setter, validator);
-    (void)p;
-  }
-  // no get
-  {
-    static constexpr auto p = cli::param(
-      name, description, global_i, setter, parser, formatter, validator);
-    (void)p;
-  }
-  // no set
-  {
-    static constinit auto p = cli::param(
-      name, description, global_i, getter, parser, formatter, validator);
-    (void)p;
-  }
-  //}
+  // a parameter with default parser and formatter
+  (void)param(name, description, t, get, set,                validate);
+  (void)param(name,              t, get, set,                validate);
 
-  // missing two parameters{
-  // no validate and format/parse
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, getter, setter);
-    (void)p;
-  }
-  // no validate and get
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, setter, parser, formatter);
-    (void)p;
-  }
-  // no validate and set
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, getter, parser, formatter);
-    (void)p;
-  }
+  // a parameter with default validator
+  (void)param(name, description, t, get, set, parse, format);
+  (void)param(name,              t, get, set, parse, format);
 
-  // no format/parse and get
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, setter, validator);
-    (void)p;
-  }
-  // no format/parse and set
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, getter, validator);
-    (void)p;
-  }
-  // no set and get
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, parser, formatter, validator);
-    (void)p;
-  }
-  // }
+  // default parser, formatter and validator are used
+  (void)param(name, description, t, get, set);
+  (void)param(name,              t, get, set);
 
-  // missing three parameters {
-  // no validate, format/parse and set
-  {
-    static constinit auto p = cli::param(name, description, global_i, getter);
-    (void)p;
-  }
-  // no validate, format/parse and get
-  {
-    static constinit auto p = cli::param(name, description, global_i, setter);
-    (void)p;
-  }
-  // no get, set and validate
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, parser, formatter);
-    (void)p;
-  }
-  // no get, set and format/parse
-  {
-    static constinit auto p =
-      cli::param(name, description, global_i, validator);
-    (void)p;
-  }
-  // }
-  //
-  {
-    static constinit auto p = cli::param(name, description, global_i);
-    (void)p;
-  }
+  // default getter is used
+  (void)param(name, description, t,      set, parse, format, validate);
+  (void)param(name,              t,      set, parse, format, validate);
+
+  // default getter, parser and formatter are used
+  (void)param(name, description, t,      set,                validate);
+  (void)param(name,              t,      set,                validate);
+
+  // default getter and validator are used
+  (void)param(name, description, t,      set, parse, format);
+  (void)param(name,              t,      set, parse, format);
+
+  // default getter, parser, formatter and validator are used
+  (void)param(name, description, t,      set);
+  (void)param(name,              t,      set);
+
+  // default setter is used
+  (void)param(name, description, t, get,      parse, format, validate);
+  (void)param(name,              t, get,      parse, format, validate);
+
+  // default setter, parser, and formatter are used
+  (void)param(name, description, t, get,                     validate);
+  (void)param(name,              t, get,                     validate);
+
+  // default setter and validator are used
+  (void)param(name, description, t, get,      parse, format);
+  (void)param(name,              t, get,      parse, format);
+
+  // default setter, parser, formatter and validator are used
+  (void)param(name, description, t, get);
+  (void)param(name,              t, get);
+
+  // default getter and setter are used
+  (void)param(name, description, t,           parse, format, validate);
+  (void)param(name,              t,           parse, format, validate);
+
+  // default getter, setter, parser, and formatter are used
+  (void)param(name, description, t,                          validate);
+  (void)param(name,              t,                          validate);
+
+  // default getter, setter and validator are used
+  (void)param(name, description, t,           parse, format);
+  (void)param(name,              t,           parse, format);
+
+  // default setter, getter, parser, formatter and validator are used
+  (void)param(name, description, t);
+  (void)param(name,              t);
+
+
+  // the basic/full form, where t is passed as a template parameter.
+  (void)param<t>(description, get, set, parse, format, validate);
+  (void)param<t>(             get, set, parse, format, validate);
+
+  // a parameter with default parser and formatter
+  (void)param<t>(description, get, set,                validate);
+  (void)param<t>(             get, set,                validate);
+
+  // a parameter with default validator
+  (void)param<t>(description, get, set, parse, format);
+  (void)param<t>(             get, set, parse, format);
+
+  // default parser, formatter and validator are used
+  (void)param<t>(description, get, set);
+  (void)param<t>(             get, set);
+
+  // default getter is used
+  (void)param<t>(description,      set, parse, format, validate);
+  (void)param<t>(                  set, parse, format, validate);
+
+  // default getter, parser and formatter are used
+  (void)param<t>(description,      set,                validate);
+  (void)param<t>(                  set,                validate);
+
+  // default getter, parser and formatter are used
+  (void)param<t>(description,                          validate);
+  (void)param<t>(                                      validate);
+
+  // default getter and validator are used
+  (void)param<t>(description,      set, parse, format);
+  (void)param<t>(                  set, parse, format);
+
+  // default getter, parser, formatter and validator are used
+  (void)param<t>(description,      set);
+  (void)param<t>(                  set);
+
+  // default setter is used
+  (void)param<t>(description, get,      parse, format, validate);
+  (void)param<t>(             get,      parse, format, validate);
+
+  // default setter, parser, and formatter are used
+  (void)param<t>(description, get,                     validate);
+  (void)param<t>(             get,                     validate);
+
+  // default setter and validator are used
+  (void)param<t>(description, get,      parse, format);
+  (void)param<t>(             get,      parse, format);
+  // clang-format on
 }
 
 TEST_CASE("params with const object", "[param]") {
+  // clang-format off
+  // base form with t as argument
+  (void)param(name, description, t, get, format);
+  (void)param(name,              t, get, format);
 
-  static const int i{5};
+  // default getter is used
+  (void)param(name, description, t,      format);
+  (void)param(name,              t,      format);
 
-  // base form
-  {
-    static constinit auto p =
-      cli::param(name, description, i, getter, formatter);
-    (void)p;
-  }
+  // default formatter is used
+  (void)param(name, description, cli::as_const(t), get);
+  (void)param(name,              cli::as_const(t), get);
 
-  // missing one parameter
-  //{
-  //  no format
-  {
-    static constinit auto p = cli::param(name, description, i, getter);
-    (void)p;
-  }
-  // no get
-  {
-    static constinit auto p = cli::param(name, description, i, formatter);
-    (void)p;
-  }
-  //}
+  // default formatter and getter are used
+  (void)param(name, description, cli::as_const(t));
+  (void)param(name,              cli::as_const(t));
 
-  // missing two parameters
-  {
-    static constinit auto p = cli::param(name, description, i);
-    (void)p;
-  }
+  // base form with t as template parameter
+  (void)param<t>(description, get, format);
+  (void)param<t>(             get, format);
+
+  // default getter is used
+  (void)param<t>(description,      format);
+  (void)param<t>(                  format);
+
+  #if !defined(_MSC_VER)
+  // default formatter is used
+  (void)param<ct>(description, get);
+  (void)param<ct>(             get);
+
+  // default formatter and getter are used
+  (void)param<ct>(description);
+  (void)param<ct>(           );
+  #endif
+  // clang-format on
 }
 
 struct S {
@@ -257,75 +233,53 @@ struct S {
   const int k{5};
 };
 
+constexpr auto ptr_to_member = &S::foo;
+constexpr auto const_ptr_to_member = &S::k;
+
 TEST_CASE("member data commands", "[param]") {
-  static constinit S s;
-  // base form
-  {
-    static constinit auto p = cli::param(
-      name,
-      description,
-      s,
-      cli::param(
-        "foo"_sc, "foo mode"_sc, &S::foo, parser, formatter, validator));
-    (void)p;
-  }
+  // clang-format off
+  (void)param(name, description, ptr_to_member, parse, format, validate);
+  (void)param(name,              ptr_to_member, parse, format, validate);
+  (void)param(name, description, ptr_to_member,                validate);
+  (void)param(name,              ptr_to_member,                validate);
+  (void)param(name, description, ptr_to_member, parse, format);
+  (void)param(name,              ptr_to_member, parse, format);
+  (void)param(name, description, ptr_to_member);
+  (void)param(name,              ptr_to_member);
 
-  // no validate
-  {
-    static constinit auto p = cli::param(
-      name,
-      description,
-      s,
-      cli::param("foo"_sc, "foo mode"_sc, &S::foo, parser, formatter));
-    (void)p;
-  }
-
-  // no parse/format
-  {
-    static constinit auto p =
-      cli::param(name,
-                 description,
-                 s,
-                 cli::param("foo"_sc, "foo mode"_sc, &S::foo, validator));
-    (void)p;
-  }
-  // no parse/format and validate
-  {
-    static constinit auto p = cli::param(
-      name, description, s, cli::param("foo"_sc, "foo mode"_sc, &S::foo));
-    (void)p;
-  }
+  (void)param<ptr_to_member>(description, parse, format, validate);
+  (void)param<ptr_to_member>(             parse, format, validate);
+  (void)param<ptr_to_member>(description,                validate);
+  (void)param<ptr_to_member>(                            validate);
+  (void)param<ptr_to_member>(description, parse, format);
+  (void)param<ptr_to_member>(             parse, format);
+  (void)param<ptr_to_member>(description);
+  (void)param<ptr_to_member>(           );
+  // clang-format on
 }
 
 TEST_CASE("const member data commands", "[param]") {
-  static constexpr S s{};
-  // base form
-  {
-    static constinit auto p =
-      cli::param(name,
-                 description,
-                 s,
-                 cli::param("foo"_sc, "foo mode"_sc, &S::foo, formatter));
-    (void)p;
-  }
-  {
-    static constinit auto p = cli::param(
-      name, description, s, cli::param("k"_sc, "k mode"_sc, &S::k, formatter));
-    (void)p;
-  }
+  // clang-format off
+  (void)param(name, description, const_ptr_to_member, format);
+  (void)param(name,              const_ptr_to_member, format);
+  (void)param(name, description, ptr_to_member,       format);
+  (void)param(name,              ptr_to_member,       format);
+  (void)param(name, description, const_ptr_to_member);
+  (void)param(name,              const_ptr_to_member);
+  (void)param(name, description, cli::as_const(ptr_to_member));
+  (void)param(name,              cli::as_const(ptr_to_member));
 
-  // no parse/format and validate
-  {
-    static constinit auto p = cli::param(
-      name, description, s, cli::param("foo"_sc, "foo mode"_sc, &S::foo));
-    (void)p;
-  }
 
-  {
-    static constinit auto p =
-      cli::param(name, description, s, cli::param("k"_sc, "k mode"_sc, &S::k));
-    (void)p;
-  }
+  (void)param<const_ptr_to_member>(description, format);
+  (void)param<const_ptr_to_member>(             format);
+  (void)param<const_ptr_to_member>(description);
+  (void)param<const_ptr_to_member>();
+
+  (void)param<ptr_to_member>(description, format);
+  (void)param<ptr_to_member>(             format);
+  (void)param<cli::as_const(ptr_to_member)>(description);
+  (void)param<cli::as_const(ptr_to_member)>();
+  // clang-format on
 }
 
 TEST_CASE("param", "[param]") {
@@ -366,7 +320,7 @@ TEST_CASE("param", "[param]") {
     return cli::Error::unknown;
   };
 
-  auto p = cli::param<int>("i"_sc, "i desc"_sc, get_var, set_var, validate_var);
+  auto p = param<int>("i"_sc, "i desc"_sc, get_var, set_var, validate_var);
   REQUIRE(p.name == "i"_sc);
   REQUIRE(p.description == "i desc"_sc);
   REQUIRE(p.type == "int"_sc);
@@ -396,7 +350,7 @@ TEST_CASE("param", "[param]") {
   REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
   REQUIRE(exec_result.error() == cli::Error::unexpected_characters);
 
-  auto const_p = cli::param<int>("i"_sc, "i desc"_sc, get_var);
+  auto const_p = param<int>("i"_sc, "i desc"_sc, get_var);
 
   exec_result = const_p.execute("=21", {buffer, 10});
   REQUIRE_FALSE(exec_result);
@@ -407,8 +361,7 @@ TEST_CASE("param", "[param]") {
   REQUIRE(exec_result);
   REQUIRE(exec_result.result() == "21");
 
-  auto write_only_p =
-    cli::param<int>("i"_sc, "i desc"_sc, set_var, validate_var);
+  auto write_only_p = param<int>("i"_sc, "i desc"_sc, set_var, validate_var);
 
   exec_result = write_only_p.execute({}, {buffer, 10});
   REQUIRE_FALSE(exec_result);
@@ -418,27 +371,25 @@ TEST_CASE("param", "[param]") {
   REQUIRE(exec_result);
   REQUIRE(var == 10);
 
-  auto inv_get_var_p = cli::param<int>("i"_sc, "i desc"_sc, invalid_get_var);
+  auto inv_get_var_p = param<int>("i"_sc, "i desc"_sc, invalid_get_var);
   exec_result = inv_get_var_p.execute("", {buffer, 10});
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
   REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
 
-  auto inv_set_var_p = cli::param<int>("i"_sc, "i desc"_sc, invalid_set_var);
+  auto inv_set_var_p = param<int>("i"_sc, "i desc"_sc, invalid_set_var);
   exec_result = inv_set_var_p.execute("=21", {buffer, 10});
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
   REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
 
-  auto bogus_format_p =
-    cli::param<int>("i"_sc, "i desc"_sc, get_var, bogus_format);
+  auto bogus_format_p = param<int>("i"_sc, "i desc"_sc, get_var, bogus_format);
   exec_result = bogus_format_p.execute("", {buffer, 10});
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::format_error);
   REQUIRE(exec_result.error() == cli::Error::buffer_overflow);
 
-  auto bogus_parse_p =
-    cli::param<int>("i"_sc, "i desc"_sc, set_var, bogus_parse);
+  auto bogus_parse_p = param<int>("i"_sc, "i desc"_sc, set_var, bogus_parse);
   exec_result = bogus_parse_p.execute("=21", {buffer, 10});
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
@@ -488,12 +439,12 @@ TEST_CASE("recursive param with callback and validate") {
   static_assert(cli::validate::ValidatorOf<decltype(validate), Settings>);
 
   static constinit Settings settings;
-  auto p = cli::param("settings"_sc,
-                      "description"_sc,
-                      settings,
-                      callback,
-                      validate,
-                      cli::recursive);
+  auto p = param("settings"_sc,
+                 "description"_sc,
+                 settings,
+                 callback,
+                 validate,
+                 cli::params::recursive);
   using cli::get;
   auto &var = get<0>(p);
   auto &c = get<1>(p);
@@ -519,4 +470,10 @@ TEST_CASE("recursive param with callback and validate") {
   a.execute("=z", {});
   REQUIRE(settings.subsettings.subsubsettings.a == 'x');
   REQUIRE_FALSE(callback_called);
+}
+
+TEST_CASE("const recursive param") {
+  static constinit Settings settings;
+  (void)param(name, description, cli::as_const(settings), cli::recursive);
+  (void)param(name, cli::as_const(settings), cli::recursive);
 }

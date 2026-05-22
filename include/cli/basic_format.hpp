@@ -73,9 +73,10 @@ namespace cli::format {
    * @tparam CharT the character type of the buffer
    */
   template<typename F, typename T, typename CharT>
-  concept FormatterOf = requires(F &&f, View<CharT> buf, const T &t) {
-    { f(buf, t) } -> std::same_as<FormatResult>;
-  } and not std::is_const_v<CharT>;
+  concept FormatterOf =
+    Callable<F> && requires(F &&f, View<CharT> buf, const T &t) {
+      { f(buf, t) } -> std::same_as<FormatResult>;
+    } and not std::is_const_v<CharT>;
 
   /**
    * A Formatter takes a cli::View<CharT> as its first argument and a ``T`` as
@@ -88,8 +89,9 @@ namespace cli::format {
    */
   template<class F>
   concept Formatter =
+    Callable<F> &&
     cli::dtl::is_non_const_view_v<
-      typename cli::format::formatter_buffer_type<F>::type> and
+      typename cli::format::formatter_buffer_type<F>::type> &&
     (not std::same_as<void,
                       typename cli::format::formatter_value_type<F>::type>);
 

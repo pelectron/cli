@@ -57,7 +57,6 @@ TEST_CASE("format::Enum") {
       TV1(cant_read_param),
       TV1(invalid_cmd),
       TV1(buffer_overflow),
-      TV1(too_few_arguments),
       TV1(expected_value),
       TV1(unexpected_characters_after_closing_paren),
       TV1(expected_rparen),

@@ -282,7 +282,7 @@ namespace cli::format {
     constexpr FormatResult operator()(View<CharT> buf,
                                       const T &t) const noexcept {
       if (buf.size() == 0)
-        return Error::too_few_characters;
+        return Error::buffer_overflow;
 
       std::size_t written = 0;
       if constexpr (Name::string_size > 0) {
