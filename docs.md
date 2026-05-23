@@ -537,6 +537,11 @@ Enumerates all errors originating from `CLI`. Defined in `cli/enums.hpp`.
 | expected_field                            | expected a field                                                      |
 | expected_args                             | expected argument(s)                                                  |
 | unexpected_characters_after_closing_paren | unexpected characters after `)`                                       |
+| expected_space                            | expected a space character                                            |
+| expected_arg_name                         | expected an argument name                                             |
+| expected_field_name                       | expected a field name                                                 |
+| invalid_arg_name                          | invalid argment name encountered                                      |
+| invalid_field_name                        | invalid field name encountered                                        |
 | invalid_value                             | invalid value encountered                                             |
 | unknown                                   | unknown error                                                         |
 

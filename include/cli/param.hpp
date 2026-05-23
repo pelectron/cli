@@ -5304,7 +5304,7 @@ namespace cli::params {
    * @return a Command
    */
   template<Id Name, typename T, CmdOrMemDataOrMemFun... SubCommands>
-    requires(not std::is_member_pointer_v<std::remove_cvref_t<T>>)
+    requires(not std::is_member_pointer_v<std::remove_cvref_t<T>> and not SC<T>)
   [[nodiscard]] constexpr concepts::Command auto
   param(Name name, const T &t, SubCommands &&...cmds) noexcept {
     (void)name;

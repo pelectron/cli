@@ -1183,6 +1183,44 @@ namespace cli::parse {
     Parser parse{};
   };
 
+  template<typename CharT>
+  struct id_result {
+    bool is_id{false};
+    View<const CharT> ident{};
+  };
+
+  template<typename CharT,
+           CharT Assignment = '=',
+           CharT MemberSeparator = ',',
+           CharT Prefix = '{',
+           CharT Postfix = '}'>
+  id_result<CharT> parse_identifier(View<const CharT> str) {
+    constexpr auto is_alpha = [](CharT c) {
+      return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z');
+    };
+
+    constexpr auto is_number = [](CharT c) { return (c >= '0' and c <= '9'); };
+
+    if (str.size() == 0 or not is_alpha(str[0])) {
+      return {};
+    }
+
+    const View rest = str.substr(1);
+    std::size_t i = 1;
+    for (const auto &c : rest) {
+      if ((is_alpha(c) or is_number(c) or c == '_') and
+          (c != '-' and c != Assignment and c != MemberSeparator and
+           c != Prefix and c != Postfix)) {
+        ++i;
+        continue;
+      } else {
+        return {true, str.substr(0, i)};
+      }
+      break;
+    }
+    return {true, str};
+  }
+
   template<typename CharT,
            CharT Assignment = '=',
            CharT MemberSeparator = ',',
@@ -1233,6 +1271,14 @@ namespace cli::parse {
            }}
       ...
     };
+
+    static constexpr const Pair *find_parser(View<const CharT> ident) {
+      for (const auto &elem : parsers) {
+        if (elem.first == ident)
+          return &elem;
+      }
+      return nullptr;
+    }
 
     State s;
 
@@ -1375,60 +1421,73 @@ namespace cli::parse {
       }
 
       std::size_t pos_index = 0;
-      while (s.error == Error::none and s.consumed < sizeof...(Fields)) {
-        std::size_t parser_index = 0;
-        bool is_named_member = false;
-        for (const auto &[name, parser] : parsers) {
-          if (sv.starts_with(name)) {
-            // stripping name
-            auto rest = skip_ws(sv.substr(name.size()));
+      bool encountered_named_member = false;
+      const auto postfix_error =
+        [this, &sv]() -> ParseResult<cli::Tuple<Fields...>, CharT> {
+        reset_state();
+        if constexpr (Postfix == ' ') {
+          return {Error::expected_space, sv};
+        } else if constexpr (Postfix == ')') {
+          return {Error::expected_rparen, sv};
+        } else if constexpr (Postfix == '}') {
+          return {Error::expected_rbrace, sv};
+        } else {
+          return {Error::expected_group_closing, sv};
+        }
+      };
+
+      while (true) {
+        id_result id = parse_identifier(sv);
+        const Pair *name_parser = nullptr;
+        if (id.is_id) {
+          name_parser = find_parser(id.ident);
+          if (encountered_named_member and not name_parser) {
+            // Error: expected named argument/parameter name error
+            if constexpr (Prefix == ')') {
+              return {Error::invalid_arg_name, sv};
+            } else {
+              return {Error::invalid_field_name, sv};
+            }
+          } else if (not name_parser) {
+            // has to be value, else an error
+            name_parser = &parsers[pos_index];
+            ++pos_index;
+          } else {
+            // either a named argument, or a string value that fits a name
+            auto rest = skip_ws(sv.substr(name_parser->first.size()));
             // now the assignment character is expected. If it is not present,
             // then this has to be a value
-            if (rest.size() == 0 or rest[0] != Assignment) {
-              // wasn't really the name -> try value
-              break;
-            }
-
-            // consume the assignment character and trailing whitespace
-            rest = skip_ws(rest.substr(1));
             if (rest.size() == 0) {
-              reset_state();
-              return {Error::expected_value, sv};
+              // must be a value with postfix, else error
+              if constexpr (Postfix != ' ')
+                return {Error::expected_assignment, rest};
+              if (encountered_named_member)
+                return {Error::expected_assignment, rest};
+            } else if (rest[0] != Assignment) {
+              // must be a value
+              if (encountered_named_member)
+                return {Error::expected_assignment, rest};
+              name_parser = &parsers[pos_index];
+              ++pos_index;
+            } else {
+              encountered_named_member = true;
+              sv = skip_ws(rest.substr(1));
             }
-
-            sv = rest;
-            is_named_member = true;
-            break;
           }
-          ++parser_index;
+        } else {
+          if (encountered_named_member) {
+            // error: expected field name
+            if constexpr (Prefix == ')') {
+              return {Error::expected_arg_name, sv};
+            } else {
+              return {Error::expected_field_name, sv};
+            }
+          }
+          name_parser = &parsers[pos_index];
+          ++pos_index;
         }
 
-        if (not is_named_member) {
-          const auto cache_idx = pos_index;
-          // member is unnamed, put it into the first uninitialized slot
-          for (; pos_index < sizeof...(Fields); ++pos_index) {
-            if (not s.initialized[pos_index]) {
-              break;
-            }
-          }
-          if (pos_index >= sizeof...(Fields)) {
-            pos_index = cache_idx;
-            bool found = false;
-            for (; pos_index < sizeof...(Fields); ++pos_index) {
-              if (s.optional[pos_index]) {
-                found = true;
-                break;
-              }
-            }
-            if (not found) {
-              reset_state();
-              return Error::implementation_error;
-            }
-          }
-          parser_index = pos_index;
-        }
-
-        (*(parsers[parser_index].second))(s, sv);
+        (*(name_parser->second))(s, sv);
 
         if (s.error != Error::none) {
           auto err = s.error;
@@ -1437,44 +1496,28 @@ namespace cli::parse {
         }
 
         if (s.consumed == sizeof...(Fields)) {
-          // TODO: check that fields are initialized
           if constexpr (Postfix == ' ') {
-            auto fields = s.fields;
-            reset_state();
-            return {std::move(fields), sv};
-          } else {
-            if (sv.size() == 0) {
-              reset_state();
-              if constexpr (Postfix == ')') {
-                return {Error::expected_rparen, str};
-              } else if constexpr (Postfix == '}') {
-                return {Error::expected_rbrace, str};
-              } else {
-                return {Error::expected_group_opening, str};
-              }
+            if (sv.size() != 0 and sv[0] != Postfix) {
+              return postfix_error();
             }
-            if (sv[0] != Postfix) {
-              reset_state();
-              if constexpr (Postfix == ')') {
-                return {Error::expected_rparen, str};
-              } else if constexpr (Postfix == '}') {
-                return {Error::expected_rbrace, str};
-              } else {
-                return {Error::expected_group_opening, str};
-              }
-            } else {
-              auto fields = s.fields;
-              reset_state();
-              return {std::move(fields), sv.substr(1)};
+          } else {
+            if (sv.size() == 0 or sv[0] != Postfix) {
+              return postfix_error();
             }
           }
+
+          auto fields = s.fields;
+          reset_state();
+          return {std::move(fields), sv.substr(1)};
         }
 
         if (sv.size() == 0) {
-          if (s.all_fields_have_a_value() and Postfix == ' ') {
-            auto fields = s.fields;
-            reset_state();
-            return {std::move(fields)};
+          if constexpr (Postfix == ' ') {
+            if (s.all_fields_have_a_value()) {
+              auto fields = s.fields;
+              reset_state();
+              return {std::move(fields)};
+            }
           }
 
           reset_state();
@@ -1484,7 +1527,13 @@ namespace cli::parse {
             return {Error::expected_another_field, sv};
         }
 
-        if (sv[0] == Postfix and s.all_fields_have_a_value()) {
+        if (sv[0] == Postfix) {
+          if (not s.all_fields_have_a_value()) {
+            if constexpr (Postfix == ')')
+              return {Error::expected_another_arg, sv};
+            else
+              return {Error::expected_another_field, sv};
+          }
           auto fields = s.fields;
           reset_state();
           return {std::move(fields), sv.substr(1)};
@@ -1497,6 +1546,7 @@ namespace cli::parse {
 
         sv = skip_ws(sv.substr(1));
       }
+
       auto err = s.error;
       auto fields = s.fields;
       reset_state();

@@ -7,7 +7,9 @@
 
 template<cli::concepts::Command... Commands>
 struct MockEngine {
-  using config_type = cli::default_config;
+  struct config_type : cli::default_config {
+    static constexpr bool use_detailed_error_messages = true;
+  };
   using char_type = typename config_type::char_type;
   using display_type = MultilineDisplay;
 

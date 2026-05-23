@@ -56,6 +56,11 @@ namespace cli {
     expected_field,         //< expected a field value
     expected_args,          //< expected argument(s)
     unexpected_characters_after_closing_paren, //< characters after )
+    expected_space,                            //< expected whitespace
+    expected_arg_name,
+    expected_field_name,
+    invalid_arg_name,
+    invalid_field_name,
 
     // validation errors
     invalid_value, //< encountered an invalid value

@@ -1,4 +1,5 @@
 #include "cli/sim.hpp"
+#include "cli/ctti.hpp"
 
 #include <cpp-terminal/exception.hpp>
 #include <cpp-terminal/input.hpp>
@@ -105,9 +106,12 @@ namespace cli::sim {
       // call process()
       error_ = engine_->process();
 
-      if (error_ != Error::none)
+      if (error_ != Error::none) {
+        auto error_name = cli::ctti::enum_name(error_);
+        Term::cout << "\nEngine error: "
+                   << std::string_view{error_name.data(), error_name.size()};
         return false;
-
+      }
       return true;
     } catch (const Term::Exception &re) {
       Term::cerr << "cpp-terminal error: " << re.what() << std::endl;
