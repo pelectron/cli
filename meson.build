@@ -208,6 +208,7 @@ if (build_tests.allowed())
     'tests/help.cpp',
     'tests/line.cpp',
     'tests/param.cpp',
+    'tests/param_mem_data.cpp',
     'tests/ring_buffer.cpp',
     'tests/simple_input.cpp',
     'tests/string.cpp',

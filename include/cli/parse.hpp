@@ -166,9 +166,9 @@ namespace cli::parse {
 
     constexpr auto operator<=>(const ParseResult &) const noexcept = default;
 
-    Error error;
-    T value;
-    View<const CharT> rest;
+    Error error{};
+    T value{};
+    View<const CharT> rest{};
   };
 
   template<typename T>

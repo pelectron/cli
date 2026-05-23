@@ -1297,20 +1297,20 @@ The parts that can be left out are:
 
 ```cpp
 // base form, where t is passed as an argument
-param<t>(name, description, t, get, format);
-param<t>(name,              t, get, format);
+param(name, description, t, get, format);
+param(name,              t, get, format);
 
 // default getter is used
-param<t>(name, description, t,      format);
-param<t>(name,              t,      format);
+param(name, description, t,      format);
+param(name,              t,      format);
 
 // default formatter is used
-param<t>(name, description, t, get);
-param<t>(name,              t, get);
+param(name, description, t, get);
+param(name,              t, get);
 
 // default formatter and getter are used
-param<t>(name, description, t);
-param<t>(name,              t);
+param(name, description, t);
+param(name,              t);
 
 // base form, where t is passed as a template parameter
 param<t>(description, get, format);

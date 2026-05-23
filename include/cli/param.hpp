@@ -489,6 +489,11 @@ namespace cli::params {
       CLI_NO_UNIQUE_ADDRESS Format format;
       CLI_NO_UNIQUE_ADDRESS Validate validate;
 
+      constexpr MemberData(const MemberData &) = default;
+      constexpr MemberData(MemberData &&) = default;
+      constexpr MemberData &operator=(const MemberData &) = default;
+      constexpr MemberData &operator=(MemberData &&) = default;
+
       template<parse::Parser Parse_,
                format::Formatter Format_,
                validate::Validator Validate_,
@@ -659,20 +664,20 @@ namespace cli::params {
 
     template<typename T, typename MemberPtr>
     struct MemDataGet {
-      const T &value_;
+      const T *value_;
       MemberPtr member;
       constexpr Error operator()(mem_data_type<MemberPtr> &t) noexcept {
-        t = (value_.*member);
+        t = value_->*member;
         return Error::none;
       }
     };
 
     template<typename T, typename MemberPtr>
     struct MemDataSet {
-      T &value_;
+      T *value_;
       MemberPtr member;
       constexpr Error operator()(const mem_data_type<MemberPtr> &t) noexcept {
-        value_.*member = t;
+        value_->*member = t;
         return Error::none;
       }
     };
@@ -723,8 +728,8 @@ namespace cli::params {
           Name{},
           Description{},
           Help{},
-          MemDataGet<T, MemberPointer>{obj, member_data.member},
-          MemDataSet<T, MemberPointer>{obj, member_data.member},
+          MemDataGet<T, MemberPointer>{&obj, member_data.member},
+          MemDataSet<T, MemberPointer>{&obj, member_data.member},
           std::move(member_data.parse),
           std::move(member_data.format),
           std::move(member_data.validate),
@@ -735,8 +740,8 @@ namespace cli::params {
           Name{},
           Description{},
           Help{},
-          MemDataGet<T, MemberPointer>{obj, member_data.member},
-          MemDataSet<T, MemberPointer>{obj, member_data.member},
+          MemDataGet<T, MemberPointer>{&obj, member_data.member},
+          MemDataSet<T, MemberPointer>{&obj, member_data.member},
           std::move(member_data.parse),
           std::move(member_data.format),
           std::move(member_data.validate)
@@ -766,7 +771,7 @@ namespace cli::params {
           Name{},
           Description{},
           Help{},
-          MemDataGet<T, MemberPointer>{obj, member_data.member},
+          MemDataGet<T, MemberPointer>{&obj, member_data.member},
           MemDataSet<const T, MemberPointer>{},
           std::move(member_data.parse),
           std::move(member_data.format),
@@ -778,7 +783,7 @@ namespace cli::params {
           Name{},
           Description{},
           Help{},
-          MemDataGet<T, MemberPointer>{obj, member_data.member},
+          MemDataGet<T, MemberPointer>{&obj, member_data.member},
           MemDataSet<const T, MemberPointer>{},
           std::move(member_data.parse),
           std::move(member_data.format),
@@ -6481,9 +6486,9 @@ namespace cli::params {
         Description{},
         cli::ctti::name<std::remove_const_t<T>, get_char_t<Name>>(),
         member,
-        parse::NoParse<T, get_char_t<Name>>{},
-        format::Format<T, get_char_t<Name>>{},
-        validate::DefaultValidate<mem_data_type<MemberPointer>>{},
+        parse::NoParse<std::remove_const_t<T>, get_char_t<Name>>{},
+        format::Format<std::remove_const_t<T>, get_char_t<Name>>{},
+        validate::DefaultValidate<std::remove_const_t<T>>{},
         std::forward<SubCommands>(cmds)...};
     } else
       return MemberData{

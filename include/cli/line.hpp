@@ -423,6 +423,76 @@ namespace cli {
                                                '\'',
                                                ')',
                                                '\''>{});
+              case Error::expected_space:
+                display_.write(expected_str);
+                display_.write(
+                  string_constant<CharT, 's', 'p', 'a', 'c', 'e'>{});
+                break;
+              case Error::expected_arg_name:
+                display_.write(expected_str);
+                display_.write(string_constant<CharT,
+                                               'a',
+                                               'r',
+                                               'g',
+                                               ' ',
+                                               'n',
+                                               'a',
+                                               'm',
+                                               'e'>{});
+                break;
+              case Error::expected_field_name:
+                display_.write(expected_str);
+                display_.write(string_constant<CharT,
+                                               'f',
+                                               'i',
+                                               'e',
+                                               'l',
+                                               'd',
+                                               ' ',
+                                               'n',
+                                               'a',
+                                               'm',
+                                               'e'>{});
+                break;
+              case Error::invalid_arg_name:
+                display_.write(string_constant<CharT,
+                                               'i',
+                                               'n',
+                                               'v',
+                                               'a',
+                                               'l',
+                                               'i',
+                                               'd',
+                                               ' ',
+                                               'a',
+                                               'r',
+                                               'g',
+                                               ' ',
+                                               'n',
+                                               'a',
+                                               'm',
+                                               'e'>{});
+                break;
+              case Error::invalid_field_name:
+                display_.write(string_constant<CharT,
+                                               'i',
+                                               'n',
+                                               'v',
+                                               'a',
+                                               'l',
+                                               'i',
+                                               'd',
+                                               ' ',
+                                               'f',
+                                               'i',
+                                               'e',
+                                               'l',
+                                               'd',
+                                               ' ',
+                                               'n',
+                                               'a',
+                                               'm',
+                                               'e'>{});
                 break;
               default:
                 display_.write(

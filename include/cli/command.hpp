@@ -148,7 +148,6 @@ namespace cli {
       }
     }
   };
-
   /**
    * The CRTP base class for commands
    *
@@ -207,19 +206,17 @@ namespace cli {
       return static_cast<Derived *>(this)->execute(args, out);
     }
 
-  protected:
     template<std::size_t I>
-      requires(sizeof...(SubCommands) > 0)
     constexpr friend auto &get(CommandBase &cmd) {
       return get<I>(cmd.subcommands);
     }
 
     template<std::size_t I>
-      requires(sizeof...(SubCommands) > 0)
     constexpr friend const auto &get(const CommandBase &cmd) {
       return get<I>(cmd.subcommands);
     }
 
+  private:
     template<class D, SC C, SC Desc, SC H, concepts::Command... SubC>
     constexpr auto count_cmds(const CommandBase<D, C, Desc, H, SubC...> &c);
     template<class F,

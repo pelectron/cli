@@ -1,8 +1,10 @@
 #include "cli/param.hpp"
-#include "cli.hpp"
+#include "cli/enums.hpp"
+#include "cli/exec_result.hpp"
 #include "cli/util.hpp"
 
 #include <catch2/catch_all.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using cli::operator""_sc;
 using cli::params::param;
@@ -282,7 +284,7 @@ TEST_CASE("const member data commands", "[param]") {
   // clang-format on
 }
 
-TEST_CASE("param", "[param]") {
+TEST_CASE("param<T>", "[param]") {
   static constinit int var = 42;
 
   char buffer[10]{};
@@ -396,6 +398,322 @@ TEST_CASE("param", "[param]") {
   REQUIRE(exec_result.error() == cli::Error::unknown);
 }
 
+TEST_CASE("param(t)", "[param]") {
+  static constinit int var = 42;
+
+  char buffer[10]{};
+  auto get_var = [](int &i_) {
+    i_ = var;
+    return cli::Error::none;
+  };
+
+  auto invalid_get_var = [](int &) {
+    return cli::Error::invalid_sequence_value;
+  };
+
+  static_assert(cli::params::Getter<decltype(get_var)>);
+  auto set_var = [](int i_) {
+    var = i_;
+    return cli::Error::none;
+  };
+
+  auto invalid_set_var = [](int) { return cli::Error::invalid_sequence_value; };
+
+  static_assert(cli::params::Setter<decltype(set_var)>);
+
+  auto validate_var = [](int i) { return i >= 0 and i <= 42; };
+
+  static_assert(cli::validate::Validator<decltype(validate_var)>);
+
+  auto bogus_format = [](cli::View<char>, int) -> cli::format::FormatResult {
+    return cli::Error::buffer_overflow;
+  };
+
+  static_assert(cli::format::Formatter<decltype(bogus_format)>);
+
+  auto bogus_parse =
+    [](cli::View<const char>) -> cli::parse::ParseResult<int, char> {
+    return cli::Error::unknown;
+  };
+
+  auto p = param("i"_sc, "i desc"_sc, var, get_var, set_var, validate_var);
+  REQUIRE(p.name == "i"_sc);
+  REQUIRE(p.description == "i desc"_sc);
+  REQUIRE(p.type == "int"_sc);
+  auto exec_result = p.execute({}, {buffer, 10});
+  REQUIRE(exec_result);
+  REQUIRE(exec_result.result() == "42");
+
+  exec_result = p.execute("=21", {buffer, 10});
+
+  REQUIRE(exec_result);
+  REQUIRE(var == 21);
+
+  // validation failure
+  exec_result = p.execute("=100", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_value);
+
+  // no value given
+  exec_result = p.execute("=", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::expected_value);
+
+  // parse error assignment misssing
+  exec_result = p.execute("k", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::expected_assignment);
+
+  // parse error too many characters
+  exec_result = p.execute("=100 k", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::unexpected_characters);
+
+  auto const_p = param("i"_sc, "i desc"_sc, var, get_var, invalid_set_var);
+
+  // cant set because of set error
+  exec_result = const_p.execute("=21", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
+
+  // can get the result
+  exec_result = const_p.execute({}, {buffer, 10});
+  REQUIRE(exec_result);
+  REQUIRE(exec_result.result() == "21");
+
+  auto write_only_p =
+    param("i"_sc, "i desc"_sc, var, invalid_get_var, set_var, validate_var);
+
+  // cant get because of get error
+  exec_result = write_only_p.execute({}, {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
+
+  // can set
+  exec_result = write_only_p.execute("=10", {buffer, 10});
+  REQUIRE(exec_result);
+  REQUIRE(var == 10);
+
+  // cant get because of format error
+  auto bogus_p = param("i"_sc, "i desc"_sc, var, bogus_parse, bogus_format);
+  exec_result = bogus_p.execute("", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::format_error);
+  REQUIRE(exec_result.error() == cli::Error::buffer_overflow);
+
+  // cant set because of parse error
+  exec_result = bogus_p.execute("=21", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::unknown);
+}
+
+TEST_CASE("param<t>()", "[param]") {
+  static constinit int var = 42;
+
+  char buffer[10]{};
+  auto get_var = [](int &i_) {
+    i_ = var;
+    return cli::Error::none;
+  };
+
+  auto invalid_get_var = [](int &) {
+    return cli::Error::invalid_sequence_value;
+  };
+
+  static_assert(cli::params::Getter<decltype(get_var)>);
+  auto set_var = [](int i_) {
+    var = i_;
+    return cli::Error::none;
+  };
+
+  auto invalid_set_var = [](int) { return cli::Error::invalid_sequence_value; };
+
+  static_assert(cli::params::Setter<decltype(set_var)>);
+
+  auto validate_var = [](int i) { return i >= 0 and i <= 42; };
+
+  static_assert(cli::validate::Validator<decltype(validate_var)>);
+
+  auto bogus_format = [](cli::View<char>, int) -> cli::format::FormatResult {
+    return cli::Error::buffer_overflow;
+  };
+
+  static_assert(cli::format::Formatter<decltype(bogus_format)>);
+
+  auto bogus_parse =
+    [](cli::View<const char>) -> cli::parse::ParseResult<int, char> {
+    return cli::Error::unknown;
+  };
+
+  auto p = param<var>("i desc"_sc, get_var, set_var, validate_var);
+  REQUIRE(p.name == "var"_sc);
+  REQUIRE(p.description == "i desc"_sc);
+  REQUIRE(p.type == "int"_sc);
+  auto exec_result = p.execute({}, {buffer, 10});
+  REQUIRE(exec_result);
+  REQUIRE(exec_result.result() == "42");
+
+  exec_result = p.execute("=21", {buffer, 10});
+
+  REQUIRE(exec_result);
+  REQUIRE(var == 21);
+
+  // validation failure
+  exec_result = p.execute("=100", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_value);
+
+  // no value given
+  exec_result = p.execute("=", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::expected_value);
+
+  // parse error assignment misssing
+  exec_result = p.execute("k", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::expected_assignment);
+
+  // parse error too many characters
+  exec_result = p.execute("=100 k", {buffer, 10});
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::unexpected_characters);
+
+  auto const_p = param<var>("i desc"_sc, get_var, invalid_set_var);
+
+  // cant set because of set error
+  exec_result = const_p.execute("=21", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
+
+  // can get the result
+  exec_result = const_p.execute({}, {buffer, 10});
+  REQUIRE(exec_result);
+  REQUIRE(exec_result.result() == "21");
+
+  auto write_only_p =
+    param<var>("i desc"_sc, invalid_get_var, set_var, validate_var);
+
+  // cant get because of get error
+  exec_result = write_only_p.execute({}, {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
+
+  // can set
+  exec_result = write_only_p.execute("=10", {buffer, 10});
+  REQUIRE(exec_result);
+  REQUIRE(var == 10);
+
+  // cant get because of format error
+  auto bogus_p = param<var>("i desc"_sc, bogus_parse, bogus_format);
+  exec_result = bogus_p.execute("", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::format_error);
+  REQUIRE(exec_result.error() == cli::Error::buffer_overflow);
+
+  // cant set because of parse error
+  exec_result = bogus_p.execute("=21", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::parse_error);
+  REQUIRE(exec_result.error() == cli::Error::unknown);
+}
+
+TEST_CASE("param(const t)", "[param]") {
+  static constexpr int var = 42;
+
+  char buffer[10]{};
+  auto get_var = [](int &i_) {
+    i_ = var;
+    return cli::Error::none;
+  };
+
+  auto invalid_get_var = [](int &) {
+    return cli::Error::invalid_sequence_value;
+  };
+
+  auto bogus_format = [](cli::View<char>, int) -> cli::format::FormatResult {
+    return cli::Error::buffer_overflow;
+  };
+
+  auto p = param("i"_sc, "i desc"_sc, var, get_var);
+
+  // cant set because of set error
+  auto exec_result = p.execute("=21", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::cant_set_param);
+
+  // can get the result
+  exec_result = p.execute({}, {buffer, 10});
+  REQUIRE(exec_result);
+  REQUIRE(exec_result.result() == "42");
+
+  // cant get because of format error
+  auto bogus_p = param("i"_sc, "i desc"_sc, var, bogus_format);
+  exec_result = bogus_p.execute("", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::format_error);
+  REQUIRE(exec_result.error() == cli::Error::buffer_overflow);
+
+  // cant get because of invalid get
+  auto invalid_get_p = param("i"_sc, "i desc"_sc, var, invalid_get_var);
+  exec_result = invalid_get_p.execute("", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
+}
+
+TEST_CASE("param<const t>()", "[param]") {
+  static constexpr int var = 42;
+
+  char buffer[10]{};
+  auto get_var = [](int &i_) {
+    i_ = var;
+    return cli::Error::none;
+  };
+
+  auto invalid_get_var = [](int &) {
+    return cli::Error::invalid_sequence_value;
+  };
+
+  auto bogus_format = [](cli::View<char>, int) -> cli::format::FormatResult {
+    return cli::Error::buffer_overflow;
+  };
+
+  auto p = param<var>("i desc"_sc, get_var);
+
+  // cant set because of set error
+  auto exec_result = p.execute("=21", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::cant_set_param);
+
+  // can get the result
+  exec_result = p.execute({}, {buffer, 10});
+  REQUIRE(exec_result);
+  REQUIRE(exec_result.result() == "42");
+
+  // cant get because of format error
+  auto bogus_p = param<var>("i desc"_sc, bogus_format);
+  exec_result = bogus_p.execute("", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::format_error);
+  REQUIRE(exec_result.error() == cli::Error::buffer_overflow);
+
+  // cant get because of invalid get
+  auto invalid_get_p = param<var>("i desc"_sc, invalid_get_var);
+  exec_result = invalid_get_p.execute("", {buffer, 10});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
+  REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
+}
+
 TEST_CASE("DefaultGet") {
   static constexpr int i = 5;
   constexpr cli::params::dtl::DefaultGet<int> get{i};
@@ -474,6 +792,11 @@ TEST_CASE("recursive param with callback and validate") {
 
 TEST_CASE("const recursive param") {
   static constinit Settings settings;
-  (void)param(name, description, cli::as_const(settings), cli::recursive);
-  (void)param(name, cli::as_const(settings), cli::recursive);
+  (void)param(
+    name, description, cli::as_const(settings), cli::params::recursive);
+  auto p = param(name, cli::as_const(settings), cli::params::recursive);
+  auto exec_result = p.execute(" = 10", {});
+  REQUIRE_FALSE(exec_result);
+  REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
+  REQUIRE(exec_result.error() == cli::Error::cant_set_param);
 }
