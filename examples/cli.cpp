@@ -128,8 +128,8 @@ static cli::sim::Engine engine{
         settings,
         // member data parameters
         param("b"_sc, &Settings::b),
-        param<&Settings::a>(),
-        param<&Settings::a_long_param>(),
+        param("a"_sc,&Settings::a),
+        param("a_long_param"_sc, &Settings::a_long_param),
         param("c"_sc, &Settings::c),
         // member function command
         func<&Settings::apply>()),
