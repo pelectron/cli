@@ -1,5 +1,15 @@
 #include "cli-term/cli-term.hpp"
 #include "asio/io_context.hpp"
+#include "cli/ctti.hpp"
+#include "cli/parse.hpp"
+
+#include <cpp-terminal/color.hpp>
+#include <cpp-terminal/event.hpp>
+#include <cpp-terminal/exception.hpp>
+#include <cpp-terminal/input.hpp>
+#include <cpp-terminal/iostream.hpp>
+#include <cpp-terminal/terminal.hpp>
+#include <cpp-terminal/tty.hpp>
 #include <system_error>
 
 namespace cli::term {
@@ -21,21 +31,18 @@ namespace cli::term {
 
   void print_settings(const Settings &settings) {
     Term::cout << "Settings:\n";
-    Term::cout
-      << std::format(
-           "  address: {}\n  size: {}\n  delimiter: {}\n  endian: {}\n",
-           settings.address,
-           settings.char_size,
-           std::string_view{cli::ctti::enum_name(settings.delim).data()},
-           std::string_view{cli::ctti::enum_name(settings.endian).data()})
-      << std::flush;
+    Term::cout << "  address: " << settings.address
+               << "\n  size: " << settings.char_size << "\n  delimiter: "
+               << std::string_view{cli::ctti::enum_name(settings.delim).data()}
+               << "\n endian: "
+               << std::string_view{cli::ctti::enum_name(settings.endian).data()}
+               << std::endl;
 
     if (settings.address.find(":") != std::string::npos) {
       return;
     }
 
-    Term::cout << std::format("  baudrate: {}\n", settings.baudrate);
-
+    Term::cout << "  baudrate: " << settings.baudrate << '\n';
     Term::cout << "  stop bits: ";
     switch (settings.stopbits) {
       case asio::serial_port::stop_bits::one:
@@ -80,9 +87,9 @@ namespace cli::term {
         } else if (arg == "32") {
           settings.char_size = 32;
         } else {
-          Term::cerr << std::format("Invalid argument value for size, expected "
-                                    "one of [8, 16, 32], got '{}'\n",
-                                    arg);
+          Term::cerr << "Invalid argument value for size, expected "
+                        "one of [8, 16, 32], got '"
+                     << arg << "'\n";
           print_usage();
           exit(-1);
         }
@@ -94,10 +101,10 @@ namespace cli::term {
         } else if (arg == "2" or arg == "two") {
           settings.stopbits = asio::serial_port::stop_bits::two;
         } else {
-          Term::cerr << std::format(
-            "Invalid argument value for stopbits, expected one of [1, 1.5, 2, "
-            "one, one_point_five,two], got '{}'\n",
-            arg);
+          Term::cerr << "Invalid argument value for stopbits, expected one of "
+                        "[1, 1.5, 2, "
+                        "one, one_point_five,two], got '"
+                     << arg << "'\n";
           print_usage();
           exit(-1);
         }
@@ -109,10 +116,9 @@ namespace cli::term {
         } else if (arg == "even") {
           settings.parity = asio::serial_port::parity::even;
         } else {
-          Term::cerr << std::format(
-            "Invalid argument value for parity, expected "
-            "one of [none, odd, even], got '{}'\n",
-            arg);
+          Term::cerr << "Invalid argument value for parity, expected "
+                        "one of [none, odd, even], got '"
+                     << arg << "'\n";
           print_usage();
           exit(-1);
         }
@@ -124,11 +130,10 @@ namespace cli::term {
         } else if (arg == "crlf") {
           settings.delim = cli::Delimiter::crlf;
         } else {
-          Term::cerr << std::format(
-            "Invalid argument value for delimiter, expected "
-            "one of [none, odd, even], got '{}'\n",
-            arg);
-          print_usage();
+          Term::cerr << "Invalid argument value for delimiter, expected "
+                        "one of [none, odd, even], got '"
+                     << arg << "'\n",
+            print_usage();
           exit(-1);
         }
       } else if (args[i] == "-e" or args[i] == "--endian") {
@@ -137,10 +142,9 @@ namespace cli::term {
         } else if (arg == "little") {
           settings.endian = std::endian::little;
         } else {
-          Term::cerr << std::format(
-            "Invalid argument value for endian, expected "
-            "one of [little, big], got '{}'\n",
-            arg);
+          Term::cerr << "Invalid argument value for endian, expected "
+                        "one of [little, big], got '"
+                     << arg << "'\n";
           print_usage();
           exit(-1);
         }
@@ -148,16 +152,15 @@ namespace cli::term {
         cli::parse::Parse<uint32_t, char> parse;
         auto res = parse({arg.data(), arg.size()});
         if ((not res) or res.rest.size() != 0) {
-          Term::cerr << std::format(
-            "Invalid argument value for baudrate, expected "
-            "a positive number, got '{}'\n",
-            arg);
+          Term::cerr << "Invalid argument value for baudrate, expected "
+                        "a positive number, got '"
+                     << arg << "'\n";
           print_usage();
           exit(-1);
         }
         settings.baudrate = res.value;
       } else {
-        Term::cerr << std::format("unknown argument '{}'\n", args[i]);
+        Term::cerr << "unknown argument '" << args[i] << "'\n";
         print_usage();
         exit(-1);
       }
@@ -312,10 +315,8 @@ namespace cli::term {
       return;
 
     Term::cout << Term::color_fg(Term::Color::Name::BrightRed)
-               << std::format("Error during communication. "
-                              "{}: {}\n",
-                              ec.value(),
-                              ec.message())
+               << "Error during communication. " << ec.value() << ": "
+               << ec.message() << '\n'
                << Term::color_fg(Term::Color::Name::Default) << std::flush;
     close();
     return;
@@ -471,8 +472,8 @@ namespace cli::term {
         try {
           stream.open(settings.address);
         } catch (...) {
-          Term::cerr << std::format("Couldn't open serial port '{}'",
-                                    settings.address);
+          Term::cerr << "Couldn't open serial port '" << settings.address
+                     << "'\n";
           exit(-1);
         }
         try {
@@ -481,9 +482,8 @@ namespace cli::term {
           stream.set_option(asio::serial_port::parity(settings.parity));
           stream.set_option(asio::serial_port::stop_bits(settings.stopbits));
         } catch (const asio::system_error &e) {
-          Term::cerr << std::format("couldn set serial port options. {}:{}",
-                                    e.code().value(),
-                                    e.code().message());
+          Term::cerr << "couldn't set serial port options. " << e.code().value()
+                     << ": " << e.code().message() << "\n";
           exit(-1);
         }
       } else {
@@ -500,10 +500,9 @@ namespace cli::term {
         auto port_res = parse({port.data(), port.size()});
 
         if ((not port_res) or port_res.rest.size() != 0) {
-          Term::cerr << std::format(
-            "Invalid port '{}': Expected 'ip-address:port', where port is an "
-            "unsigned 16 bit integer.",
-            port);
+          Term::cerr << "Invalid port '" << port
+                     << "': Expected 'ip-address:port', where port is an "
+                        "unsigned 16 bit integer.\n";
           exit(-1);
         }
 
@@ -512,21 +511,17 @@ namespace cli::term {
           ep = asio::ip::tcp::endpoint(asio::ip::make_address(addr),
                                        port_res.value);
         } catch (...) {
-          Term::cerr << std::format(
-            "Invalid ip address '{}'. Expected an address "
-            "in the form of 'ip-address:port'",
-            addr);
+          Term::cerr << "Invalid ip address '" << addr
+                     << "'. Expected an address "
+                        "in the form of 'ip-address:port'\n";
           exit(-1);
         }
 
         std::error_code ec;
         stream.connect(ep, ec);
         if (ec) {
-          Term::cerr << std::format("Couldn't open socket {}:{}. {}: {}",
-                                    addr,
-                                    port_res.value,
-                                    ec.value(),
-                                    ec.message());
+          Term::cerr << "Couldn't open socket " << addr << ":" << port_res.value
+                     << ". " << ec.value() << ": " << ec.message();
           exit(-1);
         }
       }

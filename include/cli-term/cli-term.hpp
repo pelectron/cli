@@ -5,36 +5,22 @@
 #define _WIN32_WINNT 0x0601
 #endif
 
-#include "cli/ctti.hpp"
 #include "cli/enums.hpp"
-#include "cli/parse.hpp"
 
-#include "cpp-terminal/color.hpp"
-#include "cpp-terminal/event.hpp"
-#include "cpp-terminal/exception.hpp"
-#include "cpp-terminal/input.hpp"
-#include "cpp-terminal/iostream.hpp"
-#include "cpp-terminal/key.hpp"
-#include "cpp-terminal/options.hpp"
-#include "cpp-terminal/terminal.hpp"
-#include "cpp-terminal/tty.hpp"
 #include <asio.hpp>
 #include <bit>
+#include <cpp-terminal/key.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <cuchar>
-#include <format>
 #include <functional>
-#include <iostream>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <thread>
-#include <type_traits>
 #include <vector>
 
 namespace cli::term {
@@ -53,7 +39,6 @@ namespace cli::term {
   void print_usage();
 
   void print_settings(const Settings &settings);
-
 
   Settings get_settings_from_args(const std::vector<std::string_view> &args);
 

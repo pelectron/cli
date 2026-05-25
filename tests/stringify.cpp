@@ -1,7 +1,6 @@
 #include "stringify.hpp"
 #include "cli/ctti.hpp"
 
-#include <format>
 #include <string_view>
 
 namespace cli {
@@ -21,7 +20,7 @@ namespace cli {
 
   std::ostream &operator<<(std::ostream &os, const cli::Event<char> &ev) {
     if (ev.type() == cli::Control::character) {
-      return os << std::format("{{char: {}}}", ev.as_char());
+      return os << "{char: " << ev.as_char() << "}";
     } else {
       return os << "{ctrl: " << ctti::enum_name(ev.type())
                 << ",param: " << static_cast<unsigned>(ev.param()) << "}";

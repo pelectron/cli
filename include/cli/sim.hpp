@@ -114,14 +114,6 @@ namespace cli::sim {
         engine;
     };
 
-    template<concepts::Config Config,
-             auto NumLines,
-             concepts::Command... Commands>
-    EngineImpl(Config, constant<NumLines>, Commands &&...)
-      -> EngineImpl<std::remove_cvref_t<Config>,
-                    NumLines,
-                    std::remove_cvref_t<Commands>...>;
-
     EngineInterface *engine_;
     cli::Error error_{cli::Error::none};
   };

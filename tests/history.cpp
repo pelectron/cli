@@ -31,7 +31,7 @@ TEST_CASE("History") {
   REQUIRE(h.cursor_down(1) == "cmd3");
 
   for (std::size_t i = 4; i < 20; ++i) {
-    auto s = std::format("cmd{}", i);
+    auto s = "cmd" + std::to_string(i);
     h.push(s.data());
   }
 

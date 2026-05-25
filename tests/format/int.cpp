@@ -3,7 +3,9 @@
 
 #include <catch2/catch_all.hpp>
 #include <cstdint>
-#include <format>
+#include <cstdio>
+#include <cstring>
+#include <inttypes.h>
 #include <limits>
 #include <string>
 #include <type_traits>
@@ -41,10 +43,10 @@ template<class Int>
 void test_hex(FmtIntTestVector<Int> &tv) {
   constexpr cli::format::Int<Int, char, cli::Fmt::hex, false> format;
   auto res = format({tv.buffer.data(), tv.buffer.size()}, tv.input);
-  REQUIRE(res);
+  CHECK(res);
   CHECK(res.size_written == tv.expected_output.size());
   tv.buffer.resize(res.size_written);
-  REQUIRE(tv.expected_output == tv.buffer);
+  CHECK(tv.expected_output == tv.buffer);
 }
 
 template<class Int>
@@ -58,45 +60,118 @@ void test_bin(FmtIntTestVector<Int> &tv) {
 }
 
 template<class T>
-std::string max_string(cli::Fmt fmt = cli::Fmt::normal) {
-  switch (fmt) {
-    case cli::Fmt::normal:
-      return std::format("{}", std::numeric_limits<T>::max());
-    case cli::Fmt::hex:
-      return "0x" + std::format("{:X}", std::numeric_limits<T>::max());
-    case cli::Fmt::binary:
-      return std::format("{:#b}", std::numeric_limits<T>::max());
-    default:
-      assert(false);
+std::string hex_fmt(T val) {
+  static_assert(sizeof(T) == sizeof(std::make_unsigned_t<T>));
+  std::make_unsigned_t<T> v{0};
+  std::memcpy(&v, &val, sizeof(T));
+  if (v == 0)
+    return "0x0";
+  std::string ret;
+  bool started = false;
+  for (std::size_t i = 2 * sizeof(T) - 1; i < 2 * sizeof(T); --i) {
+    auto nibble = (v >> (4u * i)) & 0xFu;
+    if (not started) {
+      if (nibble == 0)
+        continue;
+      else
+        started = true;
+    }
+    if (nibble <= 9)
+      ret += nibble + '0';
+    else
+      ret += nibble - 10 + 'A';
   }
+  return "0x" + ret;
+}
 
-  if constexpr (std::is_signed_v<T>)
-    return std::to_string(int64_t{std::numeric_limits<T>::max()});
-  else
-    return std::to_string(uint64_t{std::numeric_limits<T>::max()});
+template<class T>
+std::string bin_fmt(T val) {
+  std::string ret = "0b";
+  bool started = false;
+  auto ui = static_cast<std::make_unsigned_t<T>>(val);
+  if (ui == 0)
+    return "0b0";
+  std::size_t size = 0;
+  for (std::size_t i = 8 * sizeof(T) - 1; i <= 8 * sizeof(T) - 1; --i) {
+    if (ui & (1u << i)) {
+      started = true;
+      ret += '1';
+    } else {
+      if (started)
+        ret += '0';
+    }
+    if (started)
+      ++size;
+  }
+  ret.resize(size + 2);
+  return ret;
+}
+
+template<class T>
+std::string max_string(cli::Fmt fmt = cli::Fmt::normal) {
+  std::string ret(std::size_t{256}, 0);
+
+  if constexpr (std::is_signed_v<T>) {
+    if (fmt == cli::Fmt::normal) {
+      ret.resize(
+        std::snprintf(ret.data(),
+                      ret.size(),
+                      "%" PRId64,
+                      static_cast<int64_t>(std::numeric_limits<T>::max())));
+      return ret;
+    }
+  } else {
+    if (fmt == cli::Fmt::normal) {
+      ret.resize(
+        std::snprintf(ret.data(),
+                      ret.size(),
+                      "%" PRIu64,
+                      static_cast<uint64_t>(std::numeric_limits<T>::max())));
+      return ret;
+    }
+  }
+  switch (fmt) {
+    case cli::Fmt::hex:
+      return hex_fmt(std::numeric_limits<T>::max());
+    case cli::Fmt::binary:
+      return bin_fmt(std::numeric_limits<T>::max());
+    default:
+      break;
+  }
+  return {};
 }
 
 template<class T>
 std::string min_string(cli::Fmt fmt = cli::Fmt::normal) {
-  switch (fmt) {
-    case cli::Fmt::normal:
-      return std::format("{}", std::numeric_limits<T>::min());
-    case cli::Fmt::hex:
-      return "0x" + std::format("{:X}",
-                                static_cast<std::make_unsigned_t<T>>(
-                                  std::numeric_limits<T>::min()));
-    case cli::Fmt::binary:
-      return std::format(
-        "{:#b}",
-        static_cast<std::make_unsigned_t<T>>(std::numeric_limits<T>::min()));
-    default:
-      assert(false);
+  std::string ret(std::size_t{256}, 0);
+  if constexpr (std::is_signed_v<T>) {
+    if (fmt == cli::Fmt::normal) {
+      ret.resize(
+        std::snprintf(ret.data(),
+                      ret.size(),
+                      "%" PRIi64,
+                      static_cast<uint64_t>(std::numeric_limits<T>::min())));
+      return ret;
+    }
+  } else {
+    if (fmt == cli::Fmt::normal) {
+      ret.resize(
+        std::snprintf(ret.data(),
+                      ret.size(),
+                      "%" PRIu64,
+                      static_cast<uint64_t>(std::numeric_limits<T>::min())));
+      return ret;
+    }
   }
-
-  if constexpr (std::is_signed_v<T>)
-    return std::to_string(int64_t{std::numeric_limits<T>::max()});
-  else
-    return std::to_string(uint64_t{std::numeric_limits<T>::max()});
+  switch (fmt) {
+    case cli::Fmt::hex:
+      return hex_fmt(std::numeric_limits<T>::min());
+    case cli::Fmt::binary:
+      return bin_fmt(std::numeric_limits<T>::min());
+    default:
+      break;
+  }
+  return {};
 }
 
 #define TV1(value)                                                             \
@@ -225,6 +300,7 @@ TEMPLATE_TEST_CASE(
   int32_t,
   int16_t,
   int8_t) {
+  REQUIRE(hex_fmt(std::numeric_limits<uint32_t>::max()) == "0xFFFFFFFF");
   if constexpr (std::is_signed_v<TestType>) {
     SECTION("positive values") {
       FmtIntTestVector<TestType> vectors[]{

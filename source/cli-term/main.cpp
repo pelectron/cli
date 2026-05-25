@@ -1,5 +1,7 @@
 #include "cli-term/cli-term.hpp"
 
+#include <cpp-terminal/exception.hpp>
+#include <cpp-terminal/iostream.hpp>
 #include <exception>
 
 int main(int argc, const char **argv) {
@@ -25,7 +27,7 @@ int main(int argc, const char **argv) {
     Term::cerr << "cpp-terminal error: " << re.what() << std::flush;
     return -1;
   } catch (const asio::system_error &e) {
-    Term::cerr << std::format("IO Error: {}:{}", e.code().value(), e.what())
+    Term::cerr << "IO Error: " << e.code().value() << ":" << e.what()
                << std::flush;
     return -1;
   } catch (const std::exception &e) {
