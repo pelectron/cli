@@ -662,7 +662,7 @@ namespace cli {
   };
 
   template<class MemberPtr>
-  using mem_data_type = typename member_traits<MemberPtr>::type;
+  using mem_data_type = typename member_traits<std::decay_t<MemberPtr>>::type;
 
   template<class F, typename = void>
   struct is_callable : std::false_type {};

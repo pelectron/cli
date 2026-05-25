@@ -137,8 +137,8 @@ TEST_CASE("View::find") {
   REQUIRE(CharView{"hello"}.find("lowerr") == CharView::npos);
 }
 
+using cli::operator""_sc;
 TEST_CASE("operator _sc") {
-  using cli::operator""_sc;
   SECTION("char") {
     STATIC_REQUIRE(
       std::is_same_v<decltype("hello"_sc),

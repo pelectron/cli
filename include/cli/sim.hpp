@@ -36,7 +36,7 @@ namespace cli::sim {
              auto NumLines,
              concepts::Command... Commands>
     Engine(Config config,
-           constant<NumLines> number_of_lines,
+           cli::constant<NumLines> number_of_lines,
            Commands &&...commands)
       : engine_{
           new EngineImpl{Config{},
@@ -105,7 +105,7 @@ namespace cli::sim {
         return cli::config::input_delimiter_v<Config>;
       }
 
-      virtual bool has_multiline_display() const { return NumLines > 0; }
+      bool has_multiline_display() const override { return NumLines > 0; }
 
       cli::Engine<Config,
                   cli::AnsiDisplay<decltype(&Engine::write_view),

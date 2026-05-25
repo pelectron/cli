@@ -58,6 +58,7 @@
     - [Recursive Parameters](#recursive-parameters)
     - [Getters](#getters)
     - [Setters](#setters)
+    - [ParamType](#paramtype)
   - [Functions](#functions)
     - [Free Functions And Callables](#free-functions-and-callables)
     - [Member Functions](#member-functions)
@@ -1027,7 +1028,7 @@ param<T>(name, description, get, set, parse, format, validate, subcommands...);
 
 The parts have the following functions:
 
-- **T**: the parameter's type
+- **T**: the parameter's type. Must satisfy the [ParamType](#paramtype) concept.
 - **name**: a [cli::string_constant](#string-constant) that makes up the
   command name. Must be an [Id](#id).
 - **description**: a [cli::string_constant](#string-constant) that describes
@@ -1102,13 +1103,49 @@ param<T>(name,              get,             format);
 // a read-only parameter
 param<T>(name, description, get);
 param<T>(name,              get);
+```
+
+**Example**:
+
+```cpp
+// the namespace api contains the actual api of the parameter
+namespace api{
+  // set the percentage. i must be in the range [0, 100].
+  void set_percent(int i);
+  // get the percentage
+  int get_percent();
+}
+
+bool is_valid_percent(int i) { return i >= 0 and i <=100; }
+
+cli::Error set_value(int i){
+  api::set_percent(i);
+  return cli::Error::none;
+}
+
+cli::Error get_value(int &i){
+  i = get_precent();
+  return cli::Error::none;
+}
+
+auto read_only_param =  cli::param<int>("percent"_sc,
+                                        get_value);
+
+auto write_only_param = cli::param<int>("percent"_sc,
+                                        set_value,
+                                        is_valid_percent);
+
+auto read_write_param = cli::param<int>("percent"_sc,
+                                        get_value,
+                                        set_value,
+                                        is_valid_percent);
 
 ```
 
 #### Parameters With Object/Variable Declarations
 
 The following functions can be used to setup parameters with object/variable
-declarations.
+declarations. These parameters are always readable and writeable.
 
 There are two basic forms:
 
@@ -1123,7 +1160,8 @@ The arguments have the following functions:
   command name. Must be an [Id](#id).
 - **description**: a [cli::string_constant](#string-constant) that describes
   the command.
-- **t**: the variable/object of type T that holds the value of the parameter.
+- **t**: the variable/object of type `T` that holds the value of the
+  parameter. `T` must satisfy the [ParamType](#paramtype) concept.
 - **get**: a [Getter](#getters) for a T. It retrieves the value associated with
   the parameter.
 - **set**: a [Setter](#setters) for a T. It sets the value associated with the
@@ -1131,7 +1169,7 @@ The arguments have the following functions:
 - **parse**: a [Parser](#parsing) for a T. It parses a T from a string.
 - **format**: a [Formatter](#formatting) for a T. It formats a T to a string.
 - **validate**: a [Validator](#validation) for a T. It validates parsed values
-  before they are set.
+  before they are passed to **set**.
 - **subcommands**: any amount of subcommands, either further parameters or
   functions.
 
@@ -1147,7 +1185,8 @@ The parts that can be left out are:
 - **set**: in that case, `cli::param::DefaultSet` is used.
 - **validate**: in that case, `cli::validate::DefaultValidate` is used.
 - **parse** and **format**: in that case, `cli::parse::Parse` and
-  `cli::format::Format` are used.
+  `cli::format::Format` are used. Must be left out or specified together to
+  ensure that both fit together.
 
 The full list:
 
@@ -1262,9 +1301,48 @@ param<t>(description, get,      parse, format);
 param<t>(             get,      parse, format);
 ```
 
+**Example**:
+
+```cpp
+static constinit int percent = 50;
+
+bool is_valid_percent(int i) { return i >= 0 and i <=100; }
+
+cli::Error set_value(int i){
+  percent = i;
+  return cli::Error::none;
+}
+
+cli::Error get_value(int &i){
+  i = percent;
+  return cli::Error::none;
+}
+
+// the cli::param calls will all create a read-write
+// parameter with the name "percent".
+
+auto percent1 = cli::param("percent"_sc,
+                           percent,
+                           get_percent,
+                           set_percent,
+                           is_valid_percent);
+
+auto percent2 = cli::param("percent"_sc,
+                           percent,
+                           set_percent,
+                           is_valid_percent);
+
+auto percent3 = cli::param<percent>(get_percent,
+                                    set_percent,
+                                    is_valid_percent);
+
+auto percent4 = cli::param<percent>(set_percent,
+                                    is_valid_percent);
+```
+
 #### Parameters With const Object/Variable Declarations
 
-Read-only parameters for const objects can be defined with the following
+Read-only parameters for const objects can be created with the following
 functions:
 
 There are two basic forms:
@@ -1331,6 +1409,33 @@ param<t>();
 ```
 
 **Note**: use `cli::as_const` to use the const overloads with non-const ts.
+
+**Example**:
+
+```cpp
+static constinit int percent = 50;
+
+bool is_valid_percent(int i) { return i >= 0 and i <=100; }
+
+cli::Error get_value(int &i){
+  i = percent;
+  return cli::Error::none;
+}
+
+// the cli::param calls will all create a read-only
+// parameter with the name "percent".
+
+auto percent1 = cli::param("percent"_sc,
+                           cli::as_const(percent),
+                           get_percent);
+
+auto percent2 = cli::param("percent"_sc,
+                           cli::as_const(percent));
+
+auto percent3 = cli::param<cli::as_const(percent)>(get_percent);
+
+auto percent4 = cli::param<cli::as_const(percent)>();
+```
 
 #### Member Data Parameters
 
@@ -1411,6 +1516,16 @@ The arguments have the following functions:
 - **subcommands**: any amount of subcommands, either further parameters or
   functions.
 
+The parts that can be left out are:
+
+- **name**: in that case, the overload that takes **ptr_to_member** as a
+  template parameter must be taken. The name of the parameter will be the name of
+  the member that is pointed to.
+- **description**
+- **parse** and **format**: if left out, `cli::parse::Parse` and
+  `cli::format::Format` will be used.
+- **validate**: if left out, `cli::validate::DefaultValidate` will be used.
+
 The full list of member data parameter functions is:
 
 ```cpp
@@ -1432,16 +1547,6 @@ param<ptr_to_member>(             parse, format);
 param<ptr_to_member>(description);
 param<ptr_to_member>(           );
 ```
-
-The parts that can be left out are:
-
-- **name**: in that case, the overload that takes **ptr_to_member** as a
-  template parameter must be taken. The name of the parameter will be the name of
-  the member that is pointed to.
-- **description**
-- **parse** and **format**: if left out, `cli::parse::Parse` and
-  `cli::format::Format` will be used.
-- **validate**: if left out, `cli::validate::DefaultValidate` will be used.
 
 There are also overloads available for const member data, where
 **ptr_to_member** points to const data, i.e. it's type is `const T Struct::*`.
@@ -1540,7 +1645,7 @@ engine when a parameter retrieval command has been issued.
 The concepts `cli::params::Getter` and `cli::params:GetterOf` check the interface.
 
 ```cpp
-// denotes a getter. Requires that G is not templated.
+// denotes a getter. G can't have a templated call operator.
 template<typename G>
 concept cli::params::Getter;
 
@@ -1572,7 +1677,7 @@ static_assert(cli::concept::GetterOf<decltype(get_int), int>);
 
 Setters set a parameter value. They are callables that take an argument by
 value or const reference and return a `cli::Error`. The return value dictates
-if settings the value was successful. Setter are called by the engine when a
+if setting the value was successful. Setter are called by the engine when a
 parameter set command has been issued.
 
 The concepts `cli::params::Setter` and `cli::params::SetterOf` check the
@@ -1596,6 +1701,19 @@ cli::Error set_int(int i){
 static_assert(cli::concept::Setter<decltype(set_int)>);
 static_assert(cli::concept::SetterOf<decltype(set_int), int>);
 ```
+
+#### ParamType
+
+The `ParamType` concept defines what is required for a type `T` be useable with
+the `cli::param` overload set.
+
+To satisfy the `ParamType` concept, a `T` :
+
+- must not be a [string_constant](#string-constant)
+- must not be a reference, const, or a pointer of any kind (normal pointer,
+  function pointer, pointer to member, and pointer to member function).
+- must be constructible without any arguments (`std::is_constructible_v<T>`)
+- must be copy assignable (`std::is_copy_assignable_v<T>`)
 
 ### Functions
 

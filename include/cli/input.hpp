@@ -1,8 +1,8 @@
 /**
  * @defgroup Input Input
  *
- * Character input to the CLI system is handled by @ref cli::Input and classes
- * that satisfy the @ref cli::concepts::Input "Input concept".
+ * Character input to the CLI system is handled by @ref cli::AnsiInput and
+ * classes that satisfy the @ref cli::concepts::Input "Input concept".
  *
  * See [here](docs.md#input) for a detailed explanation.
  *

@@ -2041,6 +2041,9 @@ namespace cli::funcs {
     to_cmd(const T &obj,
            const MemberFunction<Name, Description, Help, F, Args...>
              &member_function) noexcept {
+      static_assert(
+        function_traits<F>::is_const,
+        "Can't bind non-const member functions to const parameters");
       if constexpr (sizeof...(Args) == 0)
         return Function(Name{},
                         Description{},
