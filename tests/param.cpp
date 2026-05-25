@@ -669,7 +669,6 @@ TEST_CASE("param(const t)", "[param]") {
   REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
 }
 
-#if !defined(_MSC_VER)
 TEST_CASE("param<const t>()", "[param]") {
   static constexpr int var = 42;
 
@@ -714,7 +713,6 @@ TEST_CASE("param<const t>()", "[param]") {
   REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
   REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
 }
-#endif
 
 TEST_CASE("DefaultGet") {
   static constexpr int i = 5;

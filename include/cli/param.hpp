@@ -42,10 +42,10 @@ namespace cli::params {
   inline constexpr bool is_member_pointer =
     IsMemberPointer<std::remove_cvref_t<decltype(Ptr)>>;
 
-  template<auto &Object>
+  template<const auto &Object>
   struct is_object_t : std::false_type {};
 
-  template<auto &Object>
+  template<const auto &Object>
     requires(not std::is_member_pointer_v<
               std::remove_cvref_t<decltype(Object)>>) and
             (not std::is_pointer_v<
@@ -54,11 +54,11 @@ namespace cli::params {
               std::remove_reference_t<decltype(Object)>>)
   struct is_object_t<Object> : std::true_type {};
 
-  template<auto &Object>
+  template<const auto &Object>
   inline constexpr bool is_object = is_object_t<Object>::value;
 
   /**
-   * @brief
+   * @brief checks that T can be used with the param overload set.
    *
    * @tparam T
    */
@@ -4817,7 +4817,7 @@ namespace cli::params {
       dtl::ObjectGet<Object>{},
       dtl::InvalidSet<T>{},
       parse::NoParse<T, char_type>{},
-      format::Format<T, char_type>{},
+      std::forward<Format>(format),
       validate::DefaultValidate<T>{},
       dtl::transform<Object, true>(std::forward<SubCommands>(cmds))...};
   }
