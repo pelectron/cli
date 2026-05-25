@@ -192,6 +192,16 @@ TEST_CASE("params with object", "[param]") {
   // clang-format on
 }
 
+static constexpr struct Const_t {
+  int i = 0;
+} const_t{};
+
+constexpr auto get_const_t(Const_t &) { return cli::Error::none; };
+
+constexpr cli::format::FormatResult format_const_t(cli::View<char>, Const_t) {
+  return 0;
+}
+
 TEST_CASE("params with const object", "[param]") {
   // clang-format off
   // base form with t as argument
@@ -211,22 +221,20 @@ TEST_CASE("params with const object", "[param]") {
   (void)param(name,              cli::as_const(t));
 
   // base form with t as template parameter
-  (void)param<t>(description, get, format);
-  (void)param<t>(             get, format);
+  (void)cli::params::param<const_t>(description, get_const_t, format_const_t);
+  (void)cli::params::param<const_t>(             get_const_t, format_const_t);
 
   // default getter is used
-  (void)param<t>(description,      format);
-  (void)param<t>(                  format);
+  (void)cli::params::param<const_t>(description,              format_const_t);
+  (void)cli::params::param<const_t>(                          format_const_t);
 
-  #if !defined(_MSC_VER)
   // default formatter is used
-  (void)param<ct>(description, get);
-  (void)param<ct>(             get);
+  (void)cli::params::param<const_t>(description, get_const_t);
+  (void)cli::params::param<const_t>(             get_const_t);
 
   // default formatter and getter are used
-  (void)param<ct>(description);
-  (void)param<ct>(           );
-  #endif
+  (void)cli::params::param<const_t>(description);
+  (void)cli::params::param<const_t>(           );
   // clang-format on
 }
 
@@ -249,6 +257,7 @@ TEST_CASE("member data commands", "[param]") {
   (void)param(name, description, ptr_to_member);
   (void)param(name,              ptr_to_member);
 
+  #ifndef _MSC_VER
   (void)param<ptr_to_member>(description, parse, format, validate);
   (void)param<ptr_to_member>(             parse, format, validate);
   (void)param<ptr_to_member>(description,                validate);
@@ -257,6 +266,7 @@ TEST_CASE("member data commands", "[param]") {
   (void)param<ptr_to_member>(             parse, format);
   (void)param<ptr_to_member>(description);
   (void)param<ptr_to_member>(           );
+  #endif
   // clang-format on
 }
 
@@ -272,6 +282,7 @@ TEST_CASE("const member data commands", "[param]") {
   (void)param(name,              cli::as_const(ptr_to_member));
 
 
+  #ifndef _MSC_VER
   (void)param<const_ptr_to_member>(description, format);
   (void)param<const_ptr_to_member>(             format);
   (void)param<const_ptr_to_member>(description);
@@ -281,6 +292,7 @@ TEST_CASE("const member data commands", "[param]") {
   (void)param<ptr_to_member>(             format);
   (void)param<cli::as_const(ptr_to_member)>(description);
   (void)param<cli::as_const(ptr_to_member)>();
+  #endif
   // clang-format on
 }
 
@@ -669,12 +681,14 @@ TEST_CASE("param(const t)", "[param]") {
   REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
 }
 
+#ifndef _MSC_VER
 TEST_CASE("param<const t>()", "[param]") {
-  static constexpr int var = 42;
+
+  static constexpr int cvar = 42;
 
   char buffer[10]{};
   auto get_var = [](int &i_) {
-    i_ = var;
+    i_ = cvar;
     return cli::Error::none;
   };
 
@@ -686,7 +700,7 @@ TEST_CASE("param<const t>()", "[param]") {
     return cli::Error::buffer_overflow;
   };
 
-  auto p = param<var>("i desc"_sc, get_var);
+  auto p = cli::params::param<cvar>("i desc"_sc, get_var);
 
   // cant set because of set error
   auto exec_result = p.execute("=21", {buffer, 10});
@@ -700,19 +714,20 @@ TEST_CASE("param<const t>()", "[param]") {
   REQUIRE(exec_result.result() == "42");
 
   // cant get because of format error
-  auto bogus_p = param<var>("i desc"_sc, bogus_format);
+  auto bogus_p = param<cvar>("i desc"_sc, bogus_format);
   exec_result = bogus_p.execute("", {buffer, 10});
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::format_error);
   REQUIRE(exec_result.error() == cli::Error::buffer_overflow);
 
   // cant get because of invalid get
-  auto invalid_get_p = param<var>("i desc"_sc, invalid_get_var);
+  auto invalid_get_p = param<cvar>("i desc"_sc, invalid_get_var);
   exec_result = invalid_get_p.execute("", {buffer, 10});
   REQUIRE_FALSE(exec_result);
   REQUIRE(exec_result.type() == cli::ExecResult<char>::get_error);
   REQUIRE(exec_result.error() == cli::Error::invalid_sequence_value);
 }
+#endif
 
 TEST_CASE("DefaultGet") {
   static constexpr int i = 5;

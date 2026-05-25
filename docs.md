@@ -1410,6 +1410,9 @@ param<t>();
 
 **Note**: use `cli::as_const` to use the const overloads with non-const ts.
 
+**Note**: the overloads that take **t** as a template parameter can't be used
+with msvc when **t**s type is builtin (for example int).
+
 **Example**:
 
 ```cpp
@@ -1565,6 +1568,9 @@ param<ptr_to_member>(           );
 
 **Note**: use `cli::as_const` to use the const overloads with pointers to
 mutable members, i.e. if the type of **ptr_to_member** is `T Struct::*`.
+
+**Note**: the overloads that take **ptr_to_member** as a template parameter
+can't be used with msvc.
 
 #### Recursive Parameters
 

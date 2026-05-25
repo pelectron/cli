@@ -6,7 +6,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 using cli::operator""_sc;
-using cli::params::param;
 
 struct Struct {
   int i = 42;
@@ -16,16 +15,14 @@ static constinit Struct s{};
 
 static_assert(cli::ctti::dtl::num_members<Struct>() == 1);
 
-static constinit auto p =
-  param("s"_sc, "s desc"_sc, s, param("i"_sc, &Struct::i));
+static constinit auto p = cli::params::param(
+  "s"_sc, "s desc"_sc, s, cli::params::param("i"_sc, &Struct::i));
 
 static constinit auto const_p =
-  param("s"_sc, "s desc"_sc, cli::as_const(s), param("i"_sc, &Struct::i));
-
-static constinit auto tp = param("s"_sc, "s desc"_sc, s, param<&Struct::i>());
-
-static constinit auto const_tp =
-  param("s"_sc, "s desc"_sc, cli::as_const(s), param<&Struct::i>());
+  cli::params::param("s"_sc,
+                     "s desc"_sc,
+                     cli::as_const(s),
+                     cli::params::param("i"_sc, &Struct::i));
 
 TEST_CASE("param(mem_data)", "[param]") {
 
@@ -69,7 +66,13 @@ TEST_CASE("param(mem_data)", "[param]") {
   REQUIRE(exec_result.error() == cli::Error::cant_set_param);
 }
 
+#ifndef _MSC_VER
 TEST_CASE("param<mem_data>()", "[param]") {
+  static constinit auto tp = cli::params::param(
+    "s"_sc, "s desc"_sc, s, cli::params::param<&Struct::i>());
+
+  static constinit auto const_tp = cli::params::param(
+    "s"_sc, "s desc"_sc, cli::as_const(s), cli::params::param<&Struct::i>());
 
   char buffer[10]{};
 
@@ -110,3 +113,4 @@ TEST_CASE("param<mem_data>()", "[param]") {
   REQUIRE(exec_result.type() == cli::ExecResult<char>::set_error);
   REQUIRE(exec_result.error() == cli::Error::cant_set_param);
 }
+#endif

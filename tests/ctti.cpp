@@ -82,6 +82,21 @@ TEST_CASE("ctti::value_name", "[ctti]") {
   REQUIRE(cli::ctti::value_name<&F2::ret<int>>() == "ret"_sc);
 }
 
+struct CttiTest {};
+
+static constexpr CttiTest ctti_test_1{};
+static constinit CttiTest ctti_test_2{};
+static constexpr int ivar_1{0};
+static constinit int ivar_2{0};
+
+TEST_CASE("ctti::object_name", "ctti") {
+  REQUIRE(cli::ctti::object_name<ctti_test_1>() == "ctti_test_1"_sc);
+  REQUIRE(cli::ctti::object_name<ctti_test_2>() == "ctti_test_2"_sc);
+#ifndef _MSC_VER
+  REQUIRE(cli::ctti::object_name<ivar_1>() == "ivar_1"_sc);
+  REQUIRE(cli::ctti::object_name<ivar_2>() == "ivar_2"_sc);
+#endif
+}
 // template<class Field, class... Fields>
 // void print_fields(cli::TypeList<Field, Fields...>, std::size_t indent = 0) {
 //   if constexpr (sizeof...(Fields) == 0) {
