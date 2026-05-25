@@ -6,13 +6,13 @@
 
 using IntList = cli::FixedCapacityVector<int, 10>;
 
-struct S {
+struct ParseStructTest {
   IntList ints;
   uint16_t index;
   int16_t special;
   char character;
   bool enable;
-  constexpr bool operator==(const S &s) const {
+  constexpr bool operator==(const ParseStructTest &s) const {
     return ints == s.ints and index == s.index and special == s.special and
            character == s.character;
   }
@@ -25,35 +25,35 @@ struct S2 {
 
 struct StructTestVector {
   cli::CharView input;
-  cli::parse::ParseResult<S, char> output;
+  cli::parse::ParseResult<ParseStructTest, char> output;
 };
 
 TEST_CASE("Struct", "[parse][Struct]") {
   using cli::parse::ok;
-  using Parser = cli::parse::Parse<S, char>;
+  using Parser = cli::parse::Parse<ParseStructTest, char>;
 
   SECTION("unnamed members") {
     StructTestVector vectors[] = {
       {"{[1,2,3,4], 12, -20, 0x41, true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
       {"{[1,2,3,4], 12, -20, 0x41, true }",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
       {"{ [1,2,3,4], 12, -20, 0x41, true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
       {"{ [1,2,3,4], 12, -20, 0x41, true }",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
       {"{[1,2,3,4],12,-20,0x41,true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
       {"{[1,2,3,4], 12 , -20, 0x41 , true }",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
       {"{ [1,2,3,4], 12 , -20, 0x41 , true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
       {"{ [1,2,3,4], 12, -20 , 0x41, true }",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}) },
       {"{ [1,2,3,4], 12, -20, 0x41, true} rest",
-       {S{{1, 2, 3, 4}, 12, -20, 0x41, true}, " rest"}},
+       {ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}, " rest"}},
       {"{ [1,2,3,4], 12, -20, 0x41, true }xasdc",
-       {S{{1, 2, 3, 4}, 12, -20, 0x41, true}, "xasdc"}}
+       {ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true}, "xasdc"}}
     };
     for (const auto &tv : vectors) {
       auto res = Parser{}(tv.input);
@@ -68,25 +68,25 @@ TEST_CASE("Struct", "[parse][Struct]") {
 
     StructTestVector vectors[] = {
       {"{ints=[1,2,3,4], index =12, special = -20,character = "
-       "'a',enable=true}",                                                ok<char>(S{{1, 2, 3, 4}, 12, -20, 'a', true}) },
+       "'a',enable=true}",                                                ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 'a', true}) },
       {"{ints=[1,2,3,4], index =12, special = -20,character = "
-       "0x41,enable=true}",                                               ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       "0x41,enable=true}",                                               ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
       {"{ints=[1,2,3,4], index =12, special = -20,character = "
-       "0x41,enable=true}",                                               ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       "0x41,enable=true}",                                               ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
       {"{ ints=[1,2,3,4], index=12,special=-20, character=  0x41, enable=true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})                                                                          },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})                                                                          },
       {"{ints =[1,2,3,4], index=12, special=  -20, character  "
-       "=0x41,enable=true }",                                             ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       "=0x41,enable=true }",                                             ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
       {"{ ints =[1,2,3,4], index=12, special= -20, character= "
-       "0x41,enable=true}",                                               ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       "0x41,enable=true}",                                               ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
       {"{ints=[1,2,3,4], index=12 , special=   -20, character "
-       "=0x41,enable=true }",                                             ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       "=0x41,enable=true }",                                             ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
       {"{ ints=[1,2,3,4], index=12, special=  -20     , character = "
-       "0x41,enable=true }",                                              ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       "0x41,enable=true }",                                              ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
       {"{ints =[1,2,3,4], index=12, special=-20,character=0x41, enable=true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})                                                                          },
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})                                                                          },
       {"{ints=[1,2,3,4],index=12,special=-20,character=0x41,enable=true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})                                                                          }
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})                                                                          }
     };
     for (const auto &tv : vectors) {
       auto res = Parser{}(tv.input);
@@ -101,9 +101,9 @@ TEST_CASE("Struct", "[parse][Struct]") {
 
     StructTestVector vectors[] = {
       {"{[1,2,3,4], 12, special = -20 ,character =  0x41, enable=true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
       {"{[1,2,3,4],index= 12, special = -20 ,character =  0x41, enable=true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
     };
     for (const auto &tv : vectors) {
       auto res = Parser{}(tv.input);
@@ -118,9 +118,9 @@ TEST_CASE("Struct", "[parse][Struct]") {
 
     StructTestVector vectors[] = {
       {"{ints=[1,2,3,4],character=0x41,special=-20,index=12,enable=true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
       {"{index=12,character=0x41,special=-20,enable=true,ints=[1,2,3,4]}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
     };
     for (const auto &tv : vectors) {
       auto res = Parser{}(tv.input);
@@ -139,7 +139,7 @@ TEST_CASE("Struct", "[parse][Struct]") {
 
     StructTestVector vectors[] = {
       {"{[1,2,3,4],  12, character=0x41, special=-20,enable=true}",
-       ok<char>(S{{1, 2, 3, 4}, 12, -20, 0x41, true})},
+       ok<char>(ParseStructTest{{1, 2, 3, 4}, 12, -20, 0x41, true})},
     };
     for (const auto &tv : vectors) {
       auto res = Parser{}(tv.input);

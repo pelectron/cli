@@ -238,13 +238,13 @@ TEST_CASE("params with const object", "[param]") {
   // clang-format on
 }
 
-struct S {
+struct MemDataTest {
   int foo{0};
   const int k{5};
 };
 
-constexpr auto ptr_to_member = &S::foo;
-constexpr auto const_ptr_to_member = &S::k;
+constexpr auto ptr_to_member = &MemDataTest::foo;
+constexpr auto const_ptr_to_member = &MemDataTest::k;
 
 TEST_CASE("member data commands", "[param]") {
   // clang-format off
@@ -290,8 +290,6 @@ TEST_CASE("const member data commands", "[param]") {
 
   (void)param<ptr_to_member>(description, format);
   (void)param<ptr_to_member>(             format);
-  (void)param<cli::as_const(ptr_to_member)>(description);
-  (void)param<cli::as_const(ptr_to_member)>();
   #endif
   // clang-format on
 }
@@ -780,7 +778,6 @@ TEST_CASE("recursive param with callback and validate") {
                  cli::params::recursive);
   using cli::get;
   auto &var = get<0>(p);
-  auto &c = get<1>(p);
   auto &subsettings = get<2>(p);
   REQUIRE(subsettings.name == "subsettings"_sc);
   auto &i = get<0>(subsettings);

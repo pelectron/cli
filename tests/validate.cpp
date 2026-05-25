@@ -2,11 +2,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-struct S {};
+struct ValidateTest {};
 
 TEST_CASE("validate::DefaultValidate") {
-  S s;
-  cli::validate::DefaultValidate<S> validate;
+  ValidateTest s;
+  cli::validate::DefaultValidate<ValidateTest> validate;
   REQUIRE(validate(s));
 }
 

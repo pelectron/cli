@@ -6,13 +6,13 @@
 
 using IntList = cli::FixedCapacityVector<int, 10>;
 
-struct S {
+struct FormatTestStruct {
   IntList ints;
   uint16_t index;
   int16_t special;
   char character;
   bool enable;
-  constexpr bool operator==(const S &s) const {
+  constexpr bool operator==(const FormatTestStruct &s) const {
     return ints == s.ints and index == s.index and special == s.special and
            character == s.character;
   }
@@ -20,17 +20,17 @@ struct S {
 
 struct StructTestVector {
   cli::CharView input;
-  S value;
+  FormatTestStruct value;
 };
 
-using Parse = cli::parse::Parse<S, char>;
-using Format = cli::format::Format<S, char>;
+using Parse = cli::parse::Parse<FormatTestStruct, char>;
+using Format = cli::format::Format<FormatTestStruct, char>;
 
 TEST_CASE("parse-format Struct") {
   Parse parse;
   Format format;
   char buffer[256]{};
-  const S s{
+  const FormatTestStruct s{
     {1, 2, 3, 4},
     12, -20, 'a', true
   };
