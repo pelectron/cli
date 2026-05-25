@@ -3,8 +3,9 @@ on: [push]
 jobs:
   test:
     strategy:
-    matrix:
-      os: [ubuntu-latest, windows, macos-latest]
+      matrix:
+        os: [ubuntu-latest, windows, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-python@v6
