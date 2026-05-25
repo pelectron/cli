@@ -142,6 +142,7 @@ static cli::sim::Engine engine{
 // clang-format on
 
 int main() {
+
   if (not cli::sim::init())
     return -1;
 
