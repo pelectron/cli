@@ -76,6 +76,28 @@ static constinit struct Settings2 {
   BazSettings baz{};
 } settings2;
 
+static constinit BazSettings baz1{};
+static constinit BazSettings baz2{};
+static constinit BazSettings baz3{};
+static constinit BazSettings baz4{};
+static constinit BazSettings baz5{};
+static constinit BazSettings baz6{};
+static constinit BazSettings baz7{};
+static constinit BazSettings baz8{};
+static constinit BazSettings baz9{};
+static constinit BazSettings baz10{};
+static constinit BazSettings baz11{};
+
+static constexpr BazSettings cbaz1{};
+static constexpr BazSettings cbaz2{};
+static constexpr BazSettings cbaz3{};
+static constexpr BazSettings cbaz4{};
+static constexpr BazSettings cbaz5{};
+static constexpr BazSettings cbaz6{};
+static constexpr BazSettings cbaz7{};
+static constexpr BazSettings cbaz8{};
+static constexpr BazSettings cbaz9{};
+
 // using declarations for literal operators
 using cli::operator""_sc;
 using cli::operator""_arg;
@@ -95,20 +117,20 @@ struct Config : cli::default_config {
 static cli::sim::Engine engine{
   Config{},
   // parameter without object
-  param<int>("foo"_sc, 
-            "foo description"_sc, 
-            &foo_getter, 
-            &foo_setter, 
-            &validate_foo),
-  // free function
-  func("free1"_sc, &free1, cli::arg("param"_sc,"a parameter"_sc)),
-  // lambdas without templated call operator
-  func("lambda"_sc, 
-      [](int /*i*/, char /*arg*/='k') {},
-      "i"_arg, 
-      cli::arg<'k'>("k"_sc,"k desc"_sc)),
-  // and any other functor without templated call operator
-  func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
+  // param<int>("foo"_sc, 
+  //           "foo description"_sc, 
+  //           &foo_getter, 
+  //           &foo_setter, 
+  //           &validate_foo),
+  // // free function
+  // func("free1"_sc, &free1, cli::arg("param"_sc,"a parameter"_sc)),
+  // // lambdas without templated call operator
+  // func("lambda"_sc, 
+  //     [](int /*i*/, char /*arg*/='k') {},
+  //     "i"_arg, 
+  //     cli::arg<'k'>("k"_sc,"k desc"_sc)),
+  // // and any other functor without templated call operator
+  // func("functor"_sc, MyFunctor{} ,"x"_arg,"c"_arg),
   func(MyFunctor2{}, "f"_arg),
   // member functions
   func("free2"_sc, s_, &S::free2, "x"_arg),
@@ -137,7 +159,31 @@ static cli::sim::Engine engine{
   param("settings2"_sc,
         "settings 2 description"_sc,
         settings2,
-        cli::recursive)
+        cli::recursive),
+  param("csettings2"_sc,
+        "settings 2 description"_sc,
+        cli::as_const(settings2),
+        cli::recursive),
+  param<baz1>(),
+  param<baz2>("baz description"_sc),
+  param<baz3>("baz description"_sc, [](BazSettings&s){s=baz3;return cli::Error::none;}),
+  param<baz4>("baz description"_sc, [](BazSettings&s){s=baz4;return cli::Error::none;}, cli::format::Format<BazSettings,char>{}),
+  param<baz5>("baz description"_sc,                                                     cli::format::Format<BazSettings,char>{}),
+  param<baz6>(                      [](BazSettings&s){s=baz6;return cli::Error::none;}),
+  param<baz7>(                      [](BazSettings&s){s=baz7;return cli::Error::none;}, cli::format::Format<BazSettings,char>{}),
+  param<baz8>(                                                                          cli::format::Format<BazSettings,char>{}),
+  param<baz9>("baz description"_sc, [](BazSettings&s){s=baz9;return cli::Error::none;}, [](const BazSettings&s){baz9=s;return cli::Error::none;}),
+  param<baz10>(                     [](BazSettings&s){s=baz9;return cli::Error::none;}, [](const BazSettings&s){baz9=s;return cli::Error::none;}),
+  param<baz11>(param<&BazSettings::num>()),
+  param<cbaz1>(),
+  param<cbaz2>("baz description"_sc),
+  param<cbaz3>("baz description"_sc, [](BazSettings&s){s=baz3;return cli::Error::none;}),
+  param<cbaz4>("baz description"_sc, [](BazSettings&s){s=baz4;return cli::Error::none;}, cli::format::Format<BazSettings,char>{}),
+  param<cbaz5>("baz description"_sc,                                                     cli::format::Format<BazSettings,char>{}),
+  param<cbaz6>(                      [](BazSettings&s){s=baz6;return cli::Error::none;}),
+  param<cbaz7>(                      [](BazSettings&s){s=baz7;return cli::Error::none;}, cli::format::Format<BazSettings,char>{}),
+  param<cbaz8>(                                                                          cli::format::Format<BazSettings,char>{}),
+  param<cbaz9>(param<&BazSettings::num>()),
 };
 // clang-format on
 

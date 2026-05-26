@@ -93,9 +93,12 @@ namespace cli {
                         char_type,
                         Commands>() and
        ...),
-      "A command with the name 'help' is detected. This is not valid because "
-      "'use_help' is true. Either remove said command or set 'use_help' to "
-      "false.");
+      "A top-level command with the name 'help' is detected. This is not valid "
+      "because 'use_help' is true. Either remove said command or set "
+      "'use_help' to false.");
+
+    static_assert(commands_dont_contain_duplicate_names<Commands...>(),
+                  "Duplicate command names detected!");
 
     template<concepts::Config C,
              concepts::Display<config::char_type_t<Cfg>> D,

@@ -57,20 +57,6 @@ namespace cli::params {
   template<const auto &Object>
   inline constexpr bool is_object = is_object_t<Object>::value;
 
-  /**
-   * @brief checks that T can be used with the param overload set.
-   *
-   * @tparam T
-   */
-  template<typename T>
-  concept ParamType =
-    std::is_constructible_v<T> and std::is_copy_assignable_v<T> and
-    (not SC<T>) and (not std::is_const_v<T>) and
-    (not std::is_reference_v<T>) and
-    (not std::is_member_pointer_v<std::remove_cvref_t<T>>) and
-    (not std::is_pointer_v<std::remove_cvref_t<T>>) and
-    (not std::is_member_function_pointer_v<std::remove_cvref_t<T>>);
-
   template<auto &Object>
   struct is_mut_object_t : std::false_type {};
 
@@ -1140,6 +1126,20 @@ namespace cli::params {
     dtl::is_member_data_v<std::remove_cvref_t<T>> or
     dtl::is_member_data_t_v<std::remove_cvref_t<T>> or
     funcs::is_member_function_v<std::remove_cvref_t<T>>;
+
+  /**
+   * @brief checks that T can be used with the param overload set.
+   *
+   * @tparam T
+   */
+  template<typename T>
+  concept ParamType =
+    std::is_constructible_v<T> and std::is_copy_assignable_v<T> and
+    (not CmdOrMemDataOrMemFun<T>) and (not SC<T>) and
+    (not std::is_const_v<T>) and (not std::is_reference_v<T>) and
+    (not std::is_member_pointer_v<std::remove_cvref_t<T>>) and
+    (not std::is_pointer_v<std::remove_cvref_t<T>>) and
+    (not std::is_member_function_pointer_v<std::remove_cvref_t<T>>);
 
   /**
    * @brief This class can be used to set a parameter with a callback. See
@@ -5590,8 +5590,25 @@ namespace cli::params {
     requires is_member_pointer<MemberPointer>
   [[nodiscard]] constexpr auto param(SubCommands &&...cmds) noexcept {
     using namespace dtl;
-    return param<MemberPointer>(NoDescription<char>{},
-                                std::forward<SubCommands>(cmds)...);
+    using T = mem_data_type<decltype(MemberPointer)>;
+    if constexpr (std::is_const_v<T>) {
+      return make_member_data<MemberPointer>(
+        ctti::value_name<MemberPointer, char>(),
+        NoDescription<char>{},
+        cli::ctti::name<std::remove_const_t<T>, char>(),
+        parse::NoParse<std::remove_const_t<T>, char>{},
+        format::Format<std::remove_const_t<T>, char>{},
+        validate::DefaultValidate<std::remove_const_t<T>>{},
+        std::forward<SubCommands>(cmds)...);
+    } else
+      return dtl::make_member_data<MemberPointer>(
+        ctti::value_name<MemberPointer, char>(),
+        NoDescription<char>{},
+        cli::ctti::name<T, char>(),
+        parse::Parse<T, char>{},
+        format::Format<T, char>{},
+        validate::DefaultValidate<T>{},
+        std::forward<SubCommands>(cmds)...);
   }
 
   /// @}

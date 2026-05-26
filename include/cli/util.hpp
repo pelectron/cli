@@ -79,8 +79,42 @@ namespace cli {
     }
   } // namespace dtl
 
+  constexpr bool all_unique_strings() { return true; }
+
+  template<typename S1, typename... S>
+  constexpr bool all_unique_strings(S1 s1, S... s) {
+    if constexpr (sizeof...(S) == 0)
+      return true;
+    return ((s1 != s) and ...) and all_unique_strings(s...);
+  }
+
+  template<typename List>
+  struct doesnt_have_duplicate_names;
+
+  template<template<typename...> typename L>
+  struct doesnt_have_duplicate_names<L<>> {
+    static constexpr bool value = true;
+  };
+
+  template<template<typename...> typename L, typename... SubC>
+  struct doesnt_have_duplicate_names<L<SubC...>> {
+    static constexpr bool value =
+      all_unique_strings(SubC::name...) and
+      (doesnt_have_duplicate_names<typename SubC::sub_command_list>::value and
+       ...);
+  };
+
+  template<typename... Cmds>
+  consteval bool commands_dont_contain_duplicate_names() {
+    return all_unique_strings(Cmds::name...) and
+           (doesnt_have_duplicate_names<
+              typename Cmds::sub_command_list>::value and
+            ...);
+  }
+
   template<class>
   inline constexpr bool always_false = false;
+
   template<auto V>
   using smallest_type_for_value_t = std::conditional_t<
     V <= std::numeric_limits<uint8_t>::max(),
