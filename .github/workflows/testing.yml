@@ -5,6 +5,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        buildtype: [debug, release]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v6
@@ -12,5 +13,5 @@ jobs:
     - uses: BSFishy/meson-build@v1.0.3
       with:
         action: test
-        setup-options: -Dauto_features=disabled -Dtests=enabled
+        setup-options: -Dauto_features=disabled -Dtests=enabled --buildtype=${{ matrix.buildtype }}
         meson-version: 1.1.0
