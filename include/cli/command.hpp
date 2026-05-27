@@ -109,7 +109,7 @@ namespace cli {
     constexpr cli::View<const CharT>
     help_context(cli::View<const CharT> arg) const noexcept {
       if (help_context_)
-        return (*help_context_)(this, arg);
+        return (*help_context_)(this_, arg);
       else
         return {};
     }

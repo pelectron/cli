@@ -406,12 +406,13 @@ namespace cli {
     template<class T>
     concept Sequence =
       cli::traits::is_sequence<T>::value and std::copy_constructible<T> and
-      requires(T a, typename T::value_type value) {
+      requires(T a, std::size_t i, typename T::value_type value) {
         { T{} };
         { a.begin() };
         { a.end() };
         { a.max_size() } -> std::convertible_to<std::size_t>;
         { a.push_back(value) };
+        { a[i] = value };
       };
 
     /**
@@ -433,6 +434,9 @@ namespace cli {
         { a.size() } -> std::convertible_to<std::size_t>;
         { a[i] = value };
       };
+
+    template<class T>
+    concept ASequence = Sequence<T> or FixedSizeSequence<T>;
 
     /**
      * @brief This concept denotes a "struct".
